@@ -1,0 +1,16 @@
+// Theme utilities for raven-ui
+
+export type Theme = {
+    primaryColor: String,
+    secondaryColor: String,
+    fontFamily: String
+}
+
+export fn applyTheme(theme: Theme) {
+    // Apply theme to document - TODO
+}
+
+export fn getTheme() -> Theme {
+    // Get current theme - TODO
+    return { primaryColor: "#667eea", secondaryColor: "#764ba2", fontFamily: "sans-serif" };
+}

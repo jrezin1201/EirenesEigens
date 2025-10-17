@@ -1,0 +1,80 @@
+// Card Component
+// A container component with optional header and footer
+
+export type CardProps = {
+    title: String,
+    subtitle: String,
+    footer: Any,
+    hoverable: Bool,
+    children: Any
+}
+
+export component Card(props: CardProps) {
+    let hoverClass = if props.hoverable { "card-hoverable" } else { "" };
+
+    <div class={`card ${hoverClass}`}>
+        {if props.title || props.subtitle {
+            <div class="card-header">
+                {if props.title {
+                    <h3 class="card-title">{props.title}</h3>
+                }}
+                {if props.subtitle {
+                    <p class="card-subtitle">{props.subtitle}</p>
+                }}
+            </div>
+        }}
+
+        <div class="card-body">
+            {props.children}
+        </div>
+
+        {if props.footer {
+            <div class="card-footer">
+                {props.footer}
+            </div>
+        }}
+    </div>
+
+    <style>
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .card-hoverable:hover {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #111827;
+            margin: 0 0 0.25rem 0;
+        }
+
+        .card-subtitle {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .card-footer {
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+        }
+    </style>
+}

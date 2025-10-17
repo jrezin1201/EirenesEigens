@@ -1,0 +1,200 @@
+// Dropdown Component
+// A dropdown menu component with keyboard navigation
+
+export type DropdownItem = {
+    label: String,
+    value: String,
+    disabled: Bool,
+    divider: Bool
+}
+
+export type DropdownProps = {
+    items: Array<DropdownItem>,
+    placeholder: String,
+    selected: String,
+    onSelect: (String) -> Void,
+    disabled: Bool
+}
+
+export component Dropdown(props: DropdownProps) {
+    let isOpen = Signal::new(false);
+    let selectedLabel = Signal::new(props.placeholder || "Select an option");
+
+    // Update selected label when props change
+    Effect::new(|| {
+        if props.selected {
+            let item = props.items.find(|i| i.value === props.selected);
+            if item {
+                selectedLabel.set(item.label);
+            }
+        }
+    });
+
+    let toggleDropdown = () => {
+        if !props.disabled {
+            isOpen.set(!isOpen.get());
+        }
+    };
+
+    let selectItem = (item: DropdownItem) => {
+        if !item.disabled && !item.divider {
+            selectedLabel.set(item.label);
+            isOpen.set(false);
+            if props.onSelect {
+                props.onSelect(item.value);
+            }
+        }
+    };
+
+    let handleClickOutside = (e) => {
+        // Close dropdown when clicking outside
+        isOpen.set(false);
+    };
+
+    <div class={props.disabled ? "dropdown dropdown-disabled" : "dropdown"}>
+        <button
+            class="dropdown-trigger"
+            onclick={toggleDropdown}
+            disabled={props.disabled}
+        >
+            <span class="dropdown-label">{selectedLabel.get()}</span>
+            <span class={isOpen.get() ? "dropdown-arrow dropdown-arrow-up" : "dropdown-arrow"}>
+                ▼
+            </span>
+        </button>
+
+        {if isOpen.get() {
+            <div class="dropdown-menu">
+                {props.items.map(|item| {
+                    if item.divider {
+                        <div class="dropdown-divider"></div>
+                    } else {
+                        <button
+                            class={item.disabled ? "dropdown-item dropdown-item-disabled" : "dropdown-item"}
+                            onclick={() => selectItem(item)}
+                            disabled={item.disabled}
+                        >
+                            {item.label}
+                        </button>
+                    }
+                })}
+            </div>
+        }}
+    </div>
+
+    <style>
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .dropdown-trigger {
+            width: 100%;
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+            font-family: inherit;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+        }
+
+        .dropdown-trigger:hover:not(:disabled) {
+            border-color: #667eea;
+        }
+
+        .dropdown-trigger:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .dropdown-trigger:disabled {
+            background: #f3f4f6;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .dropdown-label {
+            flex: 1;
+            text-align: left;
+        }
+
+        .dropdown-arrow {
+            font-size: 0.75rem;
+            color: #6b7280;
+            transition: transform 0.2s ease;
+        }
+
+        .dropdown-arrow-up {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin-top: 0.25rem;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 100;
+            animation: dropdownSlide 0.2s ease;
+        }
+
+        @keyframes dropdownSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-item {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 1rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .dropdown-item:hover:not(:disabled) {
+            background: #f3f4f6;
+        }
+
+        .dropdown-item:active:not(:disabled) {
+            background: #e5e7eb;
+        }
+
+        .dropdown-item-disabled {
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 0.25rem 0;
+        }
+
+        .dropdown-disabled {
+            opacity: 0.6;
+        }
+    </style>
+}

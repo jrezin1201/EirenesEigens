@@ -1,0 +1,181 @@
+// Accordion Component
+// A collapsible content component
+
+export type AccordionItemData = {
+    title: String,
+    content: Any,
+    key: String,
+    disabled: Bool
+}
+
+export type AccordionProps = {
+    items: Array<AccordionItemData>,
+    multiple: Bool, // Allow multiple panels open
+    defaultOpen: Array<String>
+}
+
+export component Accordion(props: AccordionProps) {
+    let openKeys = Signal::new(props.defaultOpen || []);
+    let multiple = props.multiple || false;
+
+    let toggleItem = (key: String, disabled: Bool) => {
+        if disabled { return; }
+
+        let current = openKeys.get();
+        if current.includes(key) {
+            // Close this item
+            openKeys.set(current.filter(|k| k !== key));
+        } else {
+            // Open this item
+            if multiple {
+                openKeys.set([...current, key]);
+            } else {
+                openKeys.set([key]);
+            }
+        }
+    };
+
+    <div class="accordion">
+        {props.items.map(|item| {
+            let isOpen = openKeys.get().includes(item.key);
+
+            <div class={item.disabled ? "accordion-item accordion-item-disabled" : "accordion-item"}>
+                <button
+                    class={isOpen ? "accordion-header accordion-header-active" : "accordion-header"}
+                    onclick={() => toggleItem(item.key, item.disabled)}
+                    disabled={item.disabled}
+                >
+                    <span class="accordion-title">{item.title}</span>
+                    <span class={isOpen ? "accordion-icon accordion-icon-open" : "accordion-icon"}>
+                        ▼
+                    </span>
+                </button>
+
+                {if isOpen {
+                    <div class="accordion-content">
+                        <div class="accordion-content-inner">
+                            {item.content}
+                        </div>
+                    </div>
+                }}
+            </div>
+        })}
+    </div>
+
+    <style>
+        .accordion {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .accordion-item {
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .accordion-item:last-child {
+            border-bottom: none;
+        }
+
+        .accordion-item-disabled {
+            opacity: 0.5;
+        }
+
+        .accordion-header {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            font-size: 1rem;
+            font-family: inherit;
+            font-weight: 500;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+
+        .accordion-header:hover:not(:disabled) {
+            background: #f9fafb;
+        }
+
+        .accordion-header:disabled {
+            cursor: not-allowed;
+        }
+
+        .accordion-header-active {
+            background: #f3f4f6;
+        }
+
+        .accordion-title {
+            flex: 1;
+            color: #111827;
+        }
+
+        .accordion-icon {
+            font-size: 0.75rem;
+            color: #6b7280;
+            transition: transform 0.2s ease;
+        }
+
+        .accordion-icon-open {
+            transform: rotate(180deg);
+        }
+
+        .accordion-content {
+            animation: accordionSlide 0.3s ease;
+            overflow: hidden;
+        }
+
+        @keyframes accordionSlide {
+            from {
+                max-height: 0;
+                opacity: 0;
+            }
+            to {
+                max-height: 500px;
+                opacity: 1;
+            }
+        }
+
+        .accordion-content-inner {
+            padding: 1rem 1.5rem;
+            color: #6b7280;
+            line-height: 1.6;
+        }
+    </style>
+}
+
+// Individual AccordionItem component (for manual composition)
+export type AccordionItemProps = {
+    title: String,
+    isOpen: Bool,
+    onToggle: () -> Void,
+    disabled: Bool,
+    children: Any
+}
+
+export component AccordionItem(props: AccordionItemProps) {
+    <div class={props.disabled ? "accordion-item accordion-item-disabled" : "accordion-item"}>
+        <button
+            class={props.isOpen ? "accordion-header accordion-header-active" : "accordion-header"}
+            onclick={props.onToggle}
+            disabled={props.disabled}
+        >
+            <span class="accordion-title">{props.title}</span>
+            <span class={props.isOpen ? "accordion-icon accordion-icon-open" : "accordion-icon"}>
+                ▼
+            </span>
+        </button>
+
+        {if props.isOpen {
+            <div class="accordion-content">
+                <div class="accordion-content-inner">
+                    {props.children}
+                </div>
+            </div>
+        }}
+    </div>
+}

@@ -1,0 +1,165 @@
+// Button Component
+// A versatile button component with multiple variants and sizes
+
+export enum ButtonVariant {
+    Primary,
+    Secondary,
+    Danger,
+    Success,
+    Ghost,
+    Link
+}
+
+export enum ButtonSize {
+    Small,
+    Medium,
+    Large
+}
+
+export type ButtonProps = {
+    variant: ButtonVariant,
+    size: ButtonSize,
+    disabled: Bool,
+    loading: Bool,
+    fullWidth: Bool,
+    onclick: () -> Void,
+    children: Any
+}
+
+export component Button(props: ButtonProps) {
+    let variant = props.variant || ButtonVariant::Primary;
+    let size = props.size || ButtonSize::Medium;
+    let disabled = props.disabled || false;
+    let loading = props.loading || false;
+    let fullWidth = props.fullWidth || false;
+
+    let baseClasses = "btn";
+    let variantClass = match variant {
+        ButtonVariant::Primary => "btn-primary",
+        ButtonVariant::Secondary => "btn-secondary",
+        ButtonVariant::Danger => "btn-danger",
+        ButtonVariant::Success => "btn-success",
+        ButtonVariant::Ghost => "btn-ghost",
+        ButtonVariant::Link => "btn-link"
+    };
+    let sizeClass = match size {
+        ButtonSize::Small => "btn-sm",
+        ButtonSize::Medium => "btn-md",
+        ButtonSize::Large => "btn-lg"
+    };
+    let widthClass = if fullWidth { "btn-full" } else { "" };
+    let disabledClass = if disabled { "btn-disabled" } else { "" };
+
+    let className = `${baseClasses} ${variantClass} ${sizeClass} ${widthClass} ${disabledClass}`;
+
+    <button
+        class={className}
+        disabled={disabled || loading}
+        onclick={props.onclick}
+    >
+        {if loading {
+            <span class="btn-spinner"></span>
+        }}
+        <span class="btn-content">
+            {props.children}
+        </span>
+    </button>
+
+    <style>
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            line-height: 1.5;
+        }
+
+        .btn:hover:not(.btn-disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:active:not(.btn-disabled) {
+            transform: translateY(0);
+        }
+
+        /* Variants */
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+        }
+
+        .btn-link {
+            background: transparent;
+            color: #667eea;
+            padding: 0;
+        }
+
+        /* Sizes */
+        .btn-sm {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+        }
+
+        .btn-md {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+        }
+
+        .btn-lg {
+            padding: 0.75rem 1.5rem;
+            font-size: 1.125rem;
+        }
+
+        /* States */
+        .btn-full {
+            width: 100%;
+        }
+
+        .btn-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-spinner {
+            width: 1em;
+            height: 1em;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+}

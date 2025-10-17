@@ -1,0 +1,170 @@
+// Tabs Component
+// A tabbed interface component for organizing content
+
+export type TabItem = {
+    label: String,
+    key: String,
+    disabled: Bool,
+    content: Any
+}
+
+export type TabsProps = {
+    items: Array<TabItem>,
+    activeKey: String,
+    onChange: (String) -> Void,
+    variant: String // "default" | "pills" | "underline"
+}
+
+export component Tabs(props: TabsProps) {
+    let activeTab = Signal::new(props.activeKey || (props.items[0] && props.items[0].key) || "");
+    let variant = props.variant || "default";
+
+    // Update active tab when props change
+    Effect::new(|| {
+        if props.activeKey {
+            activeTab.set(props.activeKey);
+        }
+    });
+
+    let selectTab = (key: String, disabled: Bool) => {
+        if !disabled {
+            activeTab.set(key);
+            if props.onChange {
+                props.onChange(key);
+            }
+        }
+    };
+
+    let activeContent = props.items.find(|item| item.key === activeTab.get());
+
+    <div class="tabs-container">
+        <div class={`tabs-header tabs-${variant}`}>
+            {props.items.map(|item| {
+                let isActive = item.key === activeTab.get();
+                let className = if isActive {
+                    if item.disabled { "tab-button tab-active tab-disabled" } else { "tab-button tab-active" }
+                } else {
+                    if item.disabled { "tab-button tab-disabled" } else { "tab-button" }
+                };
+
+                <button
+                    class={className}
+                    onclick={() => selectTab(item.key, item.disabled)}
+                    disabled={item.disabled}
+                >
+                    {item.label}
+                </button>
+            })}
+        </div>
+
+        <div class="tabs-content">
+            {if activeContent {
+                activeContent.content
+            }}
+        </div>
+    </div>
+
+    <style>
+        .tabs-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .tabs-header {
+            display: flex;
+            gap: 0.25rem;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            font-family: inherit;
+            font-weight: 500;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .tab-button:hover:not(:disabled) {
+            color: #667eea;
+        }
+
+        .tab-active {
+            color: #667eea;
+        }
+
+        .tab-active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #667eea;
+        }
+
+        .tab-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Pills variant */
+        .tabs-pills {
+            border-bottom: none;
+            background: #f3f4f6;
+            padding: 0.25rem;
+            border-radius: 0.5rem;
+        }
+
+        .tabs-pills .tab-button {
+            border-radius: 0.375rem;
+        }
+
+        .tabs-pills .tab-active {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .tabs-pills .tab-active::after {
+            display: none;
+        }
+
+        /* Underline variant */
+        .tabs-underline {
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .tabs-underline .tab-active::after {
+            height: 3px;
+            bottom: -1px;
+        }
+
+        .tabs-content {
+            padding: 1.5rem 0;
+        }
+    </style>
+}
+
+// Individual Tab component (for manual composition)
+export type TabProps = {
+    label: String,
+    active: Bool,
+    disabled: Bool,
+    onclick: () -> Void,
+    children: Any
+}
+
+export component Tab(props: TabProps) {
+    <button
+        class={props.active ? "tab-button tab-active" : "tab-button"}
+        onclick={props.onclick}
+        disabled={props.disabled}
+    >
+        {props.label}
+    </button>
+}
