@@ -1,0 +1,19 @@
+[package]
+name = "raven-router"
+version = "0.1.0"
+authors = ["RavensOne Team <team@ravensone.dev>"]
+description = "Client-side routing library for RavensOne single-page applications"
+license = "MIT"
+repository = "https://github.com/jrezin1201/RavensOne"
+keywords = ["router", "routing", "spa", "navigation", "history"]
+categories = ["web-programming"]
+
+[dependencies]
+
+[features]
+default = ["history", "hash"]
+history = []
+hash = []
+nested = []
+guards = []
+lazy = []

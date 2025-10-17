@@ -1,0 +1,167 @@
+// Mocking and Spying
+// Mock functions, spies, and stubs
+
+export type MockCall = {
+    args: Vec<Any>,
+    result: Any,
+    error: Any,
+    timestamp: Int
+}
+
+export type MockFunction = {
+    _isMock: Bool,
+    _implementation: (Vec<Any>) -> Any,
+    calls: Vec<MockCall>,
+    returnValue: Any,
+    returnValues: Vec<Any>,
+
+    mockReturnValue: (Any) -> MockFunction,
+    mockReturnValueOnce: (Any) -> MockFunction,
+    mockImplementation: ((Vec<Any>) -> Any) -> MockFunction,
+    mockResolvedValue: (Any) -> MockFunction,
+    mockRejectedValue: (Any) -> MockFunction,
+    mockReset: () -> Void,
+    mockClear: () -> Void
+}
+
+// Create a mock function
+export fn mock(implementation: (Vec<Any>) -> Any) -> MockFunction {
+    let calls = Vec::new();
+    let returnValues = Vec::new();
+    let defaultReturnValue = undefined;
+    let currentImplementation = implementation;
+
+    let mockFn = (...args: Vec<Any>) => {
+        let result = null;
+        let error = null;
+
+        try {
+            // Use return values if set
+            if returnValues.length > 0 {
+                result = returnValues.shift();
+            } else if defaultReturnValue !== undefined {
+                result = defaultReturnValue;
+            } else if currentImplementation {
+                result = currentImplementation(...args);
+            }
+        } catch (e) {
+            error = e;
+        }
+
+        calls.push({
+            args,
+            result,
+            error,
+            timestamp: Date.now()
+        });
+
+        if error {
+            throw error;
+        }
+
+        return result;
+    };
+
+    // Attach mock metadata
+    mockFn._isMock = true;
+    mockFn._implementation = currentImplementation;
+    mockFn.calls = calls;
+    mockFn.returnValue = defaultReturnValue;
+    mockFn.returnValues = returnValues;
+
+    // Mock control methods
+    mockFn.mockReturnValue = (value: Any) => {
+        defaultReturnValue = value;
+        return mockFn;
+    };
+
+    mockFn.mockReturnValueOnce = (value: Any) => {
+        returnValues.push(value);
+        return mockFn;
+    };
+
+    mockFn.mockImplementation = (impl: (Vec<Any>) -> Any) => {
+        currentImplementation = impl;
+        return mockFn;
+    };
+
+    mockFn.mockResolvedValue = (value: Any) => {
+        currentImplementation = () => Promise.resolve(value);
+        return mockFn;
+    };
+
+    mockFn.mockRejectedValue = (value: Any) => {
+        currentImplementation = () => Promise.reject(value);
+        return mockFn;
+    };
+
+    mockFn.mockReset = () => {
+        calls.length = 0;
+        returnValues.length = 0;
+        defaultReturnValue = undefined;
+        currentImplementation = implementation;
+    };
+
+    mockFn.mockClear = () => {
+        calls.length = 0;
+    };
+
+    return mockFn;
+}
+
+// Create a spy (mock that tracks calls but uses original implementation)
+export fn spy(obj: Any, method: String) -> MockFunction {
+    let original = obj[method];
+    let mockFn = mock((...args) => original.apply(obj, args));
+
+    obj[method] = mockFn;
+    mockFn._original = original;
+    mockFn._object = obj;
+    mockFn._method = method;
+
+    return mockFn;
+}
+
+// Create a stub (mock with no implementation)
+export fn stub() -> MockFunction {
+    return mock(null);
+}
+
+// Reset a single mock
+export fn resetMock(mockFn: MockFunction) {
+    if mockFn._original {
+        // Restore spied method
+        mockFn._object[mockFn._method] = mockFn._original;
+    }
+    mockFn.mockReset();
+}
+
+// Global mock registry
+let ALL_MOCKS: Vec<MockFunction> = Vec::new();
+
+export fn registerMock(mockFn: MockFunction) {
+    ALL_MOCKS.push(mockFn);
+}
+
+// Reset all registered mocks
+export fn resetAllMocks() {
+    for mockFn in ALL_MOCKS {
+        resetMock(mockFn);
+    }
+    ALL_MOCKS.length = 0;
+}
+
+// Module mocking
+let MODULE_MOCKS: Map<String, Any> = Map::new();
+
+export fn mockModule(modulePath: String, mockExports: Any) {
+    MODULE_MOCKS.insert(modulePath, mockExports);
+}
+
+export fn unmockModule(modulePath: String) {
+    MODULE_MOCKS.delete(modulePath);
+}
+
+export fn getMockModule(modulePath: String) -> Any | Null {
+    return MODULE_MOCKS.get(modulePath);
+}

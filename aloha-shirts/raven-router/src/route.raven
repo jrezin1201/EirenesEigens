@@ -1,0 +1,69 @@
+// Route matching and configuration
+
+export type RouteConfig = {
+    path: String,
+    component: Any,
+    name: String,
+    children: Vec<RouteConfig>,
+    beforeEnter: (Any) -> Bool, // Navigation guard
+    meta: Map<String, Any>
+}
+
+export type RouteMatch = {
+    matched: Bool,
+    params: Map<String, String>
+}
+
+// Match a route pattern against a path
+// Supports dynamic segments like /user/:id
+export fn matchRoute(pattern: String, path: String) -> RouteMatch {
+    let params = Map::new();
+
+    // Normalize paths (remove trailing slashes)
+    let normalizedPattern = pattern.trim_end_matches("/");
+    let normalizedPath = path.trim_end_matches("/");
+
+    // Handle exact root match
+    if normalizedPattern == "" && normalizedPath == "" {
+        return RouteMatch { matched: true, params };
+    }
+
+    let patternParts = normalizedPattern.split("/").filter(|p| p != "");
+    let pathParts = normalizedPath.split("/").filter(|p| p != "");
+
+    // Must have same number of segments
+    if patternParts.len() != pathParts.len() {
+        return RouteMatch { matched: false, params };
+    }
+
+    // Check each segment
+    for i in 0..patternParts.len() {
+        let patternPart = patternParts[i];
+        let pathPart = pathParts[i];
+
+        if patternPart.starts_with(":") {
+            // Dynamic segment - extract parameter
+            let paramName = patternPart.trim_start_matches(":");
+            params.insert(paramName, pathPart);
+        } else if patternPart.starts_with("*") {
+            // Wildcard - matches anything
+            let paramName = patternPart.trim_start_matches("*");
+            if paramName != "" {
+                params.insert(paramName, pathPart);
+            }
+        } else if patternPart != pathPart {
+            // Literal segment must match exactly
+            return RouteMatch { matched: false, params };
+        }
+    }
+
+    return RouteMatch { matched: true, params };
+}
+
+export component Route(config: RouteConfig) {
+    // Route component is mainly used for configuration
+    // Actual rendering is done by Router
+    <div class="route-wrapper">
+        <config.component />
+    </div>
+}

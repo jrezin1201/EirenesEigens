@@ -1,0 +1,145 @@
+// Helper functions for common HTTP operations
+
+import { HttpClient, HttpConfig } from "./client"
+import { RequestMethod } from "./request"
+import { Response } from "./response"
+
+// Create a default HTTP client instance
+let DEFAULT_CLIENT: HttpClient | Null = null;
+
+export fn createHttpClient(config: HttpConfig) -> HttpClient {
+    let client = HttpClient::new(config);
+    if !DEFAULT_CLIENT {
+        DEFAULT_CLIENT = client;
+    }
+    return client;
+}
+
+export fn getDefaultClient() -> HttpClient {
+    if !DEFAULT_CLIENT {
+        DEFAULT_CLIENT = createHttpClient({
+            baseURL: "",
+            timeout: 30000,
+            headers: {
+                "Content-Type": "application/json"
+            },
+            withCredentials: false,
+            responseType: "json"
+        });
+    }
+    return DEFAULT_CLIENT;
+}
+
+// Convenience functions using default client
+
+export fn get(url: String, config: Any) -> Promise<Response> {
+    return getDefaultClient().get(url, config);
+}
+
+export fn post(url: String, data: Any, config: Any) -> Promise<Response> {
+    return getDefaultClient().post(url, data, config);
+}
+
+export fn put(url: String, data: Any, config: Any) -> Promise<Response> {
+    return getDefaultClient().put(url, data, config);
+}
+
+export fn patch(url: String, data: Any, config: Any) -> Promise<Response> {
+    return getDefaultClient().patch(url, data, config);
+}
+
+export fn del(url: String, config: Any) -> Promise<Response> {
+    return getDefaultClient().delete(url, config);
+}
+
+// Specialized helpers
+
+// Download file
+export fn downloadFile(url: String, filename: String) -> Promise<Void> {
+    return get(url, { responseType: "blob" })
+        .then((response) => {
+            let blob = response.data;
+            let link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        });
+}
+
+// Upload file
+export fn uploadFile(url: String, file: File, fieldName: String) -> Promise<Response> {
+    let formData = new FormData();
+    formData.append(fieldName || "file", file);
+
+    return post(url, formData, {
+        headers: {
+            "Content-Type": "multipart/form-data"
+        }
+    });
+}
+
+// Batch requests
+export fn batch(requests: Vec<Promise<Response>>) -> Promise<Vec<Response>> {
+    return Promise.all(requests);
+}
+
+// Parallel requests with limit
+export fn parallel(requests: Vec<() => Promise<Response>>, limit: Int) -> Promise<Vec<Response>> {
+    let results = Vec::new();
+    let executing = Vec::new();
+    let index = 0;
+
+    return new Promise((resolve, reject) => {
+        let enqueue = () => {
+            if index >= requests.len() {
+                if executing.len() == 0 {
+                    resolve(results);
+                }
+                return;
+            }
+
+            let request = requests[index];
+            index += 1;
+
+            let promise = request()
+                .then((response) => {
+                    results.push(response);
+                    executing.remove(promise);
+                    enqueue();
+                })
+                .catch((error) => {
+                    reject(error);
+                });
+
+            executing.push(promise);
+
+            if executing.len() < limit {
+                enqueue();
+            }
+        };
+
+        // Start initial batch
+        for i in 0..limit {
+            enqueue();
+        }
+    });
+}
+
+// GraphQL helper
+export fn graphql(url: String, query: String, variables: Map<String, Any>) -> Promise<Response> {
+    return post(url, {
+        query,
+        variables
+    });
+}
+
+// JSON-RPC helper
+export fn jsonrpc(url: String, method: String, params: Vec<Any>, id: Int) -> Promise<Response> {
+    return post(url, {
+        jsonrpc: "2.0",
+        method,
+        params,
+        id: id || 1
+    });
+}

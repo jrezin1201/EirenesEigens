@@ -1,0 +1,20 @@
+[package]
+name = "raven-http"
+version = "0.1.0"
+authors = ["RavensOne Team <team@ravensone.dev>"]
+description = "HTTP client library for RavensOne applications"
+license = "MIT"
+repository = "https://github.com/jrezin1201/RavensOne"
+keywords = ["http", "fetch", "ajax", "client", "api"]
+categories = ["web-programming", "network-programming"]
+
+[dependencies]
+
+[features]
+default = ["fetch", "interceptors"]
+fetch = []
+interceptors = []
+retry = []
+cache = []
+sse = [] # Server-Sent Events
+websocket = []

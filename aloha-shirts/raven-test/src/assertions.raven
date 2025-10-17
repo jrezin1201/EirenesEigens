@@ -1,0 +1,233 @@
+// Assertions
+// Chainable assertion library (expect API)
+
+export class Expectation {
+    value: Any
+    not: Bool
+
+    pub fn new(value: Any) -> Expectation {
+        return Expectation {
+            value,
+            not: false
+        };
+    }
+
+    // Negate the assertion
+    pub fn not(mut self) -> Expectation {
+        self.not = !self.not;
+        return self;
+    }
+
+    // Equality
+    pub fn toBe(self, expected: Any) {
+        let passes = self.value === expected;
+        self.assert(passes, `Expected ${self.value} to be ${expected}`);
+    }
+
+    pub fn toEqual(self, expected: Any) {
+        let passes = self.deep_equal(self.value, expected);
+        self.assert(passes, `Expected ${JSON.stringify(self.value)} to equal ${JSON.stringify(expected)}`);
+    }
+
+    // Truthiness
+    pub fn toBeTruthy(self) {
+        let passes = !!self.value;
+        self.assert(passes, `Expected ${self.value} to be truthy`);
+    }
+
+    pub fn toBeFalsy(self) {
+        let passes = !self.value;
+        self.assert(passes, `Expected ${self.value} to be falsy`);
+    }
+
+    // Null/Undefined
+    pub fn toBeNull(self) {
+        let passes = self.value === null;
+        self.assert(passes, `Expected ${self.value} to be null`);
+    }
+
+    pub fn toBeUndefined(self) {
+        let passes = self.value === undefined;
+        self.assert(passes, `Expected ${self.value} to be undefined`);
+    }
+
+    pub fn toBeDefined(self) {
+        let passes = self.value !== undefined;
+        self.assert(passes, `Expected value to be defined`);
+    }
+
+    // Numbers
+    pub fn toBeGreaterThan(self, expected: Float) {
+        let passes = self.value > expected;
+        self.assert(passes, `Expected ${self.value} to be greater than ${expected}`);
+    }
+
+    pub fn toBeGreaterThanOrEqual(self, expected: Float) {
+        let passes = self.value >= expected;
+        self.assert(passes, `Expected ${self.value} to be >= ${expected}`);
+    }
+
+    pub fn toBeLessThan(self, expected: Float) {
+        let passes = self.value < expected;
+        self.assert(passes, `Expected ${self.value} to be less than ${expected}`);
+    }
+
+    pub fn toBeLessThanOrEqual(self, expected: Float) {
+        let passes = self.value <= expected;
+        self.assert(passes, `Expected ${self.value} to be <= ${expected}`);
+    }
+
+    pub fn toBeCloseTo(self, expected: Float, precision: Int) {
+        let diff = Math.abs(self.value - expected);
+        let threshold = Math.pow(10, -(precision || 2)) / 2;
+        let passes = diff < threshold;
+        self.assert(passes, `Expected ${self.value} to be close to ${expected}`);
+    }
+
+    // Strings
+    pub fn toContain(self, substring: String) {
+        let passes = if self.value is String {
+            self.value.includes(substring)
+        } else if self.value is Array {
+            self.value.includes(substring)
+        } else {
+            false
+        };
+        self.assert(passes, `Expected ${self.value} to contain ${substring}`);
+    }
+
+    pub fn toMatch(self, pattern: RegExp | String) {
+        let regex = if pattern is String {
+            new RegExp(pattern)
+        } else {
+            pattern
+        };
+        let passes = regex.test(self.value);
+        self.assert(passes, `Expected ${self.value} to match ${pattern}`);
+    }
+
+    pub fn toStartWith(self, prefix: String) {
+        let passes = self.value.startsWith(prefix);
+        self.assert(passes, `Expected ${self.value} to start with ${prefix}`);
+    }
+
+    pub fn toEndWith(self, suffix: String) {
+        let passes = self.value.endsWith(suffix);
+        self.assert(passes, `Expected ${self.value} to end with ${suffix}`);
+    }
+
+    // Arrays/Objects
+    pub fn toHaveLength(self, length: Int) {
+        let passes = self.value.length === length;
+        self.assert(passes, `Expected length ${self.value.length} to be ${length}`);
+    }
+
+    pub fn toHaveProperty(self, property: String, value: Any) {
+        let passes = self.value.hasOwnProperty(property);
+        if passes && value !== undefined {
+            passes = self.value[property] === value;
+        }
+        self.assert(passes, `Expected object to have property ${property}`);
+    }
+
+    // Functions
+    pub fn toThrow(self, expected: String | RegExp) {
+        let threw = false;
+        let error = null;
+
+        try {
+            self.value();
+        } catch (e) {
+            threw = true;
+            error = e;
+        }
+
+        let passes = threw;
+        if passes && expected {
+            if expected is String {
+                passes = error.message.includes(expected);
+            } else if expected is RegExp {
+                passes = expected.test(error.message);
+            }
+        }
+
+        self.assert(passes, `Expected function to throw`);
+    }
+
+    pub fn toHaveBeenCalled(self) {
+        if !self.value._isMock {
+            throw new Error("toHaveBeenCalled can only be used on mocks");
+        }
+        let passes = self.value.calls.length > 0;
+        self.assert(passes, `Expected mock to have been called`);
+    }
+
+    pub fn toHaveBeenCalledTimes(self, times: Int) {
+        if !self.value._isMock {
+            throw new Error("toHaveBeenCalledTimes can only be used on mocks");
+        }
+        let passes = self.value.calls.length === times;
+        self.assert(passes, `Expected mock to have been called ${times} times, but was called ${self.value.calls.length} times`);
+    }
+
+    pub fn toHaveBeenCalledWith(self, ...args: Vec<Any>) {
+        if !self.value._isMock {
+            throw new Error("toHaveBeenCalledWith can only be used on mocks");
+        }
+
+        let passes = self.value.calls.some((call) => {
+            return self.deep_equal(call.args, args);
+        });
+
+        self.assert(passes, `Expected mock to have been called with ${JSON.stringify(args)}`);
+    }
+
+    // Helper: Deep equality
+    fn deep_equal(self, a: Any, b: Any) -> Bool {
+        if a === b { return true; }
+        if a === null || b === null { return false; }
+        if typeof a !== typeof b { return false; }
+
+        if typeof a === "object" {
+            let aKeys = Object.keys(a);
+            let bKeys = Object.keys(b);
+
+            if aKeys.length !== bKeys.length { return false; }
+
+            for key in aKeys {
+                if !self.deep_equal(a[key], b[key]) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    // Helper: Assert with negation support
+    fn assert(self, condition: Bool, message: String) {
+        let shouldPass = if self.not { !condition } else { condition };
+
+        if !shouldPass {
+            let finalMessage = if self.not {
+                message.replace("to be", "not to be")
+                       .replace("to equal", "not to equal")
+                       .replace("to contain", "not to contain")
+                       .replace("to match", "not to match")
+                       .replace("to have", "not to have")
+                       .replace("to throw", "not to throw")
+            } else {
+                message
+            };
+
+            throw new Error(finalMessage);
+        }
+    }
+}
+
+// Main expect function
+export fn expect(value: Any) -> Expectation {
+    return Expectation::new(value);
+}

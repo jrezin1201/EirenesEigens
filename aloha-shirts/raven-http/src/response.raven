@@ -1,0 +1,40 @@
+// Response types
+
+import { RequestConfig } from "./request"
+
+export enum ResponseType {
+    JSON,
+    Text,
+    Blob,
+    ArrayBuffer
+}
+
+export type Response = {
+    data: Any,
+    status: Int,
+    statusText: String,
+    headers: Headers,
+    config: RequestConfig
+}
+
+impl Response {
+    // Check if response was successful (2xx)
+    pub fn is_ok(self) -> Bool {
+        return self.status >= 200 && self.status < 300;
+    }
+
+    // Check if response is client error (4xx)
+    pub fn is_client_error(self) -> Bool {
+        return self.status >= 400 && self.status < 500;
+    }
+
+    // Check if response is server error (5xx)
+    pub fn is_server_error(self) -> Bool {
+        return self.status >= 500 && self.status < 600;
+    }
+
+    // Get header value
+    pub fn get_header(self, name: String) -> String | Null {
+        return self.headers.get(name);
+    }
+}

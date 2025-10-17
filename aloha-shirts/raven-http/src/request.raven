@@ -1,0 +1,67 @@
+// Request types and configuration
+
+export enum RequestMethod {
+    GET,
+    POST,
+    PUT,
+    PATCH,
+    DELETE,
+    HEAD,
+    OPTIONS
+}
+
+impl RequestMethod {
+    pub fn to_string(self) -> String {
+        return match self {
+            RequestMethod::GET => "GET",
+            RequestMethod::POST => "POST",
+            RequestMethod::PUT => "PUT",
+            RequestMethod::PATCH => "PATCH",
+            RequestMethod::DELETE => "DELETE",
+            RequestMethod::HEAD => "HEAD",
+            RequestMethod::OPTIONS => "OPTIONS"
+        };
+    }
+}
+
+export type RequestConfig = {
+    url: String,
+    method: RequestMethod,
+    headers: Map<String, String>,
+    params: Map<String, String>, // Query parameters
+    data: Any, // Request body
+    timeout: Int,
+    responseType: String,
+    withCredentials: Bool,
+    onUploadProgress: (Event) -> Void,
+    onDownloadProgress: (Event) -> Void
+}
+
+export class Request {
+    config: RequestConfig
+
+    pub fn new(config: RequestConfig) -> Request {
+        return Request { config };
+    }
+
+    // Build query string from params
+    pub fn build_query_string(self) -> String {
+        if !self.config.params || self.config.params.is_empty() {
+            return "";
+        }
+
+        let parts = Vec::new();
+        for (key, value) in self.config.params {
+            parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+        }
+
+        return "?" + parts.join("&");
+    }
+
+    // Get full URL with query string
+    pub fn get_full_url(self) -> String {
+        let base = self.config.url;
+        let query = self.build_query_string();
+        return base + query;
+    }
+}

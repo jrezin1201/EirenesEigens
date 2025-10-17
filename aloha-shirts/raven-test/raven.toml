@@ -1,0 +1,19 @@
+[package]
+name = "raven-test"
+version = "0.1.0"
+authors = ["RavensOne Team <team@ravensone.dev>"]
+description = "Testing framework for RavensOne applications"
+license = "MIT"
+repository = "https://github.com/jrezin1201/RavensOne"
+keywords = ["testing", "test", "unit-test", "tdd", "bdd"]
+categories = ["development-tools", "testing"]
+
+[dependencies]
+
+[features]
+default = ["assertions", "mocking"]
+assertions = []
+mocking = []
+snapshot = []
+coverage = []
+watch = []

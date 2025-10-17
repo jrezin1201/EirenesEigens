@@ -1,0 +1,140 @@
+// Interceptors
+// Middleware for transforming requests and responses
+
+import { RequestConfig } from "./request"
+import { Response } from "./response"
+
+export type RequestInterceptor = (RequestConfig) -> RequestConfig
+export type ResponseInterceptor = (Response) -> Response
+
+export type Interceptor = {
+    request: RequestInterceptor,
+    response: ResponseInterceptor
+}
+
+// Common interceptors
+
+// Add authentication token to requests
+export fn authInterceptor(token: String) -> RequestInterceptor {
+    return (config: RequestConfig) => {
+        if !config.headers {
+            config.headers = Map::new();
+        }
+        config.headers.insert("Authorization", `Bearer ${token}`);
+        return config;
+    };
+}
+
+// Log requests
+export fn loggingRequestInterceptor() -> RequestInterceptor {
+    return (config: RequestConfig) => {
+        console.log(`[HTTP] ${config.method.to_string()} ${config.url}`);
+        return config;
+    };
+}
+
+// Log responses
+export fn loggingResponseInterceptor() -> ResponseInterceptor {
+    return (response: Response) => {
+        console.log(`[HTTP] ${response.status} ${response.config.url}`);
+        return response;
+    };
+}
+
+// Add API key to query params
+export fn apiKeyInterceptor(apiKey: String, paramName: String) -> RequestInterceptor {
+    return (config: RequestConfig) => {
+        if !config.params {
+            config.params = Map::new();
+        }
+        config.params.insert(paramName || "api_key", apiKey);
+        return config;
+    };
+}
+
+// Add timestamp to requests (cache busting)
+export fn timestampInterceptor() -> RequestInterceptor {
+    return (config: RequestConfig) => {
+        if !config.params {
+            config.params = Map::new();
+        }
+        config.params.insert("_t", Date.now().toString());
+        return config;
+    };
+}
+
+// Transform error responses
+export fn errorTransformInterceptor() -> ResponseInterceptor {
+    return (response: Response) => {
+        if !response.is_ok() {
+            // Add custom error message
+            if response.data && response.data.message {
+                response.data.friendlyMessage = match response.status {
+                    400 => "Invalid request. Please check your input.",
+                    401 => "You need to log in to continue.",
+                    403 => "You don't have permission to do that.",
+                    404 => "The requested resource was not found.",
+                    500 => "Server error. Please try again later.",
+                    _ => response.data.message
+                };
+            }
+        }
+        return response;
+    };
+}
+
+// Retry failed requests
+export fn retryInterceptor(maxRetries: Int, retryDelay: Int) -> ResponseInterceptor {
+    let retries = Map::new();
+
+    return (response: Response) => {
+        if response.status >= 500 {
+            let url = response.config.url;
+            let currentRetries = retries.get(url) || 0;
+
+            if currentRetries < maxRetries {
+                retries.insert(url, currentRetries + 1);
+
+                // Wait and retry
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        // Re-send request (would need access to client)
+                        console.log(`Retrying request (${currentRetries + 1}/${maxRetries}): ${url}`);
+                        resolve(response);
+                    }, retryDelay);
+                });
+            }
+        }
+
+        return response;
+    };
+}
+
+// Cache GET requests
+export fn cacheInterceptor(cacheDuration: Int) -> Interceptor {
+    let cache = Map::new();
+
+    return {
+        request: (config: RequestConfig) => {
+            if config.method == RequestMethod::GET {
+                let cached = cache.get(config.url);
+                if cached && Date.now() - cached.timestamp < cacheDuration {
+                    console.log(`[Cache] Hit: ${config.url}`);
+                    config._cached = cached.response;
+                }
+            }
+            return config;
+        },
+
+        response: (response: Response) => {
+            if response.config.method == RequestMethod::GET && response.is_ok() {
+                cache.insert(response.config.url, {
+                    response,
+                    timestamp: Date.now()
+                });
+                console.log(`[Cache] Stored: ${response.config.url}`);
+            }
+            return response;
+        }
+    };
+}

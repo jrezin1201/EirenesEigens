@@ -1,0 +1,59 @@
+// Snapshot Testing
+// Capture and compare snapshots of values
+
+let SNAPSHOTS: Map<String, Any> = Map::new();
+let SNAPSHOT_FILE = ".snapshots.json";
+let UPDATE_MODE = false;
+
+// Enable snapshot update mode
+export fn updateSnapshots() {
+    UPDATE_MODE = true;
+}
+
+// Load snapshots from file
+export fn loadSnapshots() {
+    try {
+        let content = readFileSync(SNAPSHOT_FILE, "utf-8");
+        SNAPSHOTS = JSON.parse(content);
+    } catch (e) {
+        SNAPSHOTS = Map::new();
+    }
+}
+
+// Save snapshots to file
+export fn saveSnapshots() {
+    let content = JSON.stringify(SNAPSHOTS, null, 2);
+    writeFileSync(SNAPSHOT_FILE, content);
+}
+
+// Create or compare snapshot
+export fn snapshot(name: String, value: Any) {
+    let serialized = JSON.stringify(value, null, 2);
+
+    if UPDATE_MODE || !SNAPSHOTS.has(name) {
+        // Update or create snapshot
+        SNAPSHOTS.insert(name, serialized);
+        saveSnapshots();
+    } else {
+        // Compare snapshot
+        let existing = SNAPSHOTS.get(name);
+        if existing !== serialized {
+            throw new Error(`Snapshot mismatch for "${name}"\n\nExpected:\n${existing}\n\nReceived:\n${serialized}`);
+        }
+    }
+}
+
+// Inline snapshot (stores snapshot in test file)
+export fn toMatchInlineSnapshot(value: Any, snapshot: String) {
+    let serialized = JSON.stringify(value, null, 2);
+
+    if snapshot === undefined {
+        // First run - snapshot will be written by tooling
+        console.log(`[Snapshot] First run for inline snapshot`);
+        return;
+    }
+
+    if serialized !== snapshot {
+        throw new Error(`Inline snapshot mismatch\n\nExpected:\n${snapshot}\n\nReceived:\n${serialized}`);
+    }
+}

@@ -1,0 +1,56 @@
+// Router Hooks
+// Composable functions to access router state
+
+import { getRouterInstance, RouterContextValue } from "./router"
+
+// Get the router instance
+export fn useRouter() -> RouterContextValue {
+    let router = getRouterInstance();
+
+    if !router {
+        panic("useRouter must be called inside a Router component");
+    }
+
+    return router;
+}
+
+// Get current route information
+export fn useRoute() -> Map<String, Any> {
+    let router = useRouter();
+
+    return {
+        path: router.currentPath.get(),
+        params: router.params.get(),
+        query: router.query.get()
+    };
+}
+
+// Get route parameters
+export fn useParams() -> Map<String, String> {
+    let router = useRouter();
+    return router.params.get();
+}
+
+// Get query parameters
+export fn useQuery() -> Map<String, String> {
+    let router = useRouter();
+    return router.query.get();
+}
+
+// Navigate programmatically
+export fn useNavigate() -> (String, Bool) -> Void {
+    let router = useRouter();
+    return router.navigate;
+}
+
+// Go back in history
+export fn useBack() -> () -> Void {
+    let router = useRouter();
+    return router.back;
+}
+
+// Go forward in history
+export fn useForward() -> () -> Void {
+    let router = useRouter();
+    return router.forward;
+}

@@ -1,0 +1,175 @@
+// HTTP Client
+// Main HTTP client class with fetch API wrapper
+
+import { RequestConfig, RequestMethod } from "./request"
+import { Response } from "./response"
+import { RequestInterceptor, ResponseInterceptor } from "./interceptors"
+
+export type HttpConfig = {
+    baseURL: String,
+    timeout: Int, // milliseconds
+    headers: Map<String, String>,
+    withCredentials: Bool,
+    responseType: String // "json" | "text" | "blob" | "arraybuffer"
+}
+
+export class HttpClient {
+    config: HttpConfig
+    requestInterceptors: Vec<RequestInterceptor>
+    responseInterceptors: Vec<ResponseInterceptor>
+
+    pub fn new(config: HttpConfig) -> HttpClient {
+        return HttpClient {
+            config,
+            requestInterceptors: Vec::new(),
+            responseInterceptors: Vec::new()
+        };
+    }
+
+    // Add request interceptor
+    pub fn use_request_interceptor(mut self, interceptor: RequestInterceptor) {
+        self.requestInterceptors.push(interceptor);
+    }
+
+    // Add response interceptor
+    pub fn use_response_interceptor(mut self, interceptor: ResponseInterceptor) {
+        self.responseInterceptors.push(interceptor);
+    }
+
+    // Main request method
+    pub fn request(self, config: RequestConfig) -> Promise<Response> {
+        return new Promise((resolve, reject) => {
+            // Apply request interceptors
+            let mut finalConfig = config;
+            for interceptor in self.requestInterceptors {
+                finalConfig = interceptor(finalConfig);
+            }
+
+            // Build full URL
+            let url = if finalConfig.url.starts_with("http") {
+                finalConfig.url
+            } else {
+                self.config.baseURL + finalConfig.url
+            };
+
+            // Merge headers
+            let mut headers = self.config.headers.clone();
+            if finalConfig.headers {
+                for (key, value) in finalConfig.headers {
+                    headers.insert(key, value);
+                }
+            }
+
+            // Build fetch options
+            let fetchOptions = {
+                method: finalConfig.method.to_string(),
+                headers: headers,
+                credentials: if self.config.withCredentials { "include" } else { "same-origin" }
+            };
+
+            // Add body if present
+            if finalConfig.data {
+                if headers.get("Content-Type") == "application/json" {
+                    fetchOptions.body = JSON.stringify(finalConfig.data);
+                } else {
+                    fetchOptions.body = finalConfig.data;
+                }
+            }
+
+            // Add timeout
+            let timeoutId = null;
+            let timeout = finalConfig.timeout || self.config.timeout;
+
+            if timeout > 0 {
+                timeoutId = setTimeout(() => {
+                    reject(new Error(`Request timeout after ${timeout}ms`));
+                }, timeout);
+            }
+
+            // Make request
+            fetch(url, fetchOptions)
+                .then((rawResponse) => {
+                    if timeoutId {
+                        clearTimeout(timeoutId);
+                    }
+
+                    // Parse response based on type
+                    let responseType = finalConfig.responseType || self.config.responseType;
+                    let dataPromise = match responseType {
+                        "json" => rawResponse.json(),
+                        "text" => rawResponse.text(),
+                        "blob" => rawResponse.blob(),
+                        "arraybuffer" => rawResponse.arrayBuffer(),
+                        _ => rawResponse.json()
+                    };
+
+                    return dataPromise.then((data) => {
+                        let response = Response {
+                            data,
+                            status: rawResponse.status,
+                            statusText: rawResponse.statusText,
+                            headers: rawResponse.headers,
+                            config: finalConfig
+                        };
+
+                        // Apply response interceptors
+                        let mut finalResponse = response;
+                        for interceptor in self.responseInterceptors {
+                            finalResponse = interceptor(finalResponse);
+                        }
+
+                        if rawResponse.ok {
+                            resolve(finalResponse);
+                        } else {
+                            reject(finalResponse);
+                        }
+                    });
+                })
+                .catch((error) => {
+                    if timeoutId {
+                        clearTimeout(timeoutId);
+                    }
+                    reject(error);
+                });
+        });
+    }
+
+    // Convenience methods
+    pub fn get(self, url: String, config: RequestConfig) -> Promise<Response> {
+        let mut requestConfig = config || {};
+        requestConfig.method = RequestMethod::GET;
+        requestConfig.url = url;
+        return self.request(requestConfig);
+    }
+
+    pub fn post(self, url: String, data: Any, config: RequestConfig) -> Promise<Response> {
+        let mut requestConfig = config || {};
+        requestConfig.method = RequestMethod::POST;
+        requestConfig.url = url;
+        requestConfig.data = data;
+        return self.request(requestConfig);
+    }
+
+    pub fn put(self, url: String, data: Any, config: RequestConfig) -> Promise<Response> {
+        let mut requestConfig = config || {};
+        requestConfig.method = RequestMethod::PUT;
+        requestConfig.url = url;
+        requestConfig.data = data;
+        return self.request(requestConfig);
+    }
+
+    pub fn patch(self, url: String, data: Any, config: RequestConfig) -> Promise<Response> {
+        let mut requestConfig = config || {};
+        requestConfig.method = RequestMethod::PATCH;
+        requestConfig.url = url;
+        requestConfig.data = data;
+        return self.request(requestConfig);
+    }
+
+    pub fn delete(self, url: String, config: RequestConfig) -> Promise<Response> {
+        let mut requestConfig = config || {};
+        requestConfig.method = RequestMethod::DELETE;
+        requestConfig.url = url;
+        return self.request(requestConfig);
+    }
+}

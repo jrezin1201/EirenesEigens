@@ -1,0 +1,147 @@
+// Code Coverage
+// Track code coverage during tests
+
+export type CoverageData = {
+    lines: Map<Int, Int>,      // Line number -> hit count
+    functions: Map<String, Int>, // Function name -> hit count
+    branches: Map<String, Int>   // Branch ID -> hit count
+}
+
+export type CoverageReport = {
+    files: Map<String, CoverageData>,
+    summary: {
+        linesTotal: Int,
+        linesCovered: Int,
+        functionsTotal: Int,
+        functionsCovered: Int,
+        branchesTotal: Int,
+        branchesCovered: Int,
+        linesPercent: Float,
+        functionsPercent: Float,
+        branchesPercent: Float
+    }
+}
+
+let COVERAGE_DATA: Map<String, CoverageData> = Map::new();
+let COVERAGE_ENABLED = false;
+
+// Enable coverage collection
+export fn coverage(enabled: Bool) {
+    COVERAGE_ENABLED = enabled;
+}
+
+// Record line hit
+export fn recordLine(file: String, line: Int) {
+    if !COVERAGE_ENABLED { return; }
+
+    if !COVERAGE_DATA.has(file) {
+        COVERAGE_DATA.insert(file, {
+            lines: Map::new(),
+            functions: Map::new(),
+            branches: Map::new()
+        });
+    }
+
+    let fileData = COVERAGE_DATA.get(file);
+    let currentCount = fileData.lines.get(line) || 0;
+    fileData.lines.insert(line, currentCount + 1);
+}
+
+// Record function hit
+export fn recordFunction(file: String, fnName: String) {
+    if !COVERAGE_ENABLED { return; }
+
+    if !COVERAGE_DATA.has(file) {
+        COVERAGE_DATA.insert(file, {
+            lines: Map::new(),
+            functions: Map::new(),
+            branches: Map::new()
+        });
+    }
+
+    let fileData = COVERAGE_DATA.get(file);
+    let currentCount = fileData.functions.get(fnName) || 0;
+    fileData.functions.insert(fnName, currentCount + 1);
+}
+
+// Record branch hit
+export fn recordBranch(file: String, branchId: String) {
+    if !COVERAGE_ENABLED { return; }
+
+    if !COVERAGE_DATA.has(file) {
+        COVERAGE_DATA.insert(file, {
+            lines: Map::new(),
+            functions: Map::new(),
+            branches: Map::new()
+        });
+    }
+
+    let fileData = COVERAGE_DATA.get(file);
+    let currentCount = fileData.branches.get(branchId) || 0;
+    fileData.branches.insert(branchId, currentCount + 1);
+}
+
+// Get coverage report
+export fn getCoverageReport() -> CoverageReport {
+    let summary = {
+        linesTotal: 0,
+        linesCovered: 0,
+        functionsTotal: 0,
+        functionsCovered: 0,
+        branchesTotal: 0,
+        branchesCovered: 0,
+        linesPercent: 0.0,
+        functionsPercent: 0.0,
+        branchesPercent: 0.0
+    };
+
+    for (file, data) in COVERAGE_DATA {
+        summary.linesTotal += data.lines.size();
+        summary.linesCovered += data.lines.values().filter(v => v > 0).length;
+
+        summary.functionsTotal += data.functions.size();
+        summary.functionsCovered += data.functions.values().filter(v => v > 0).length;
+
+        summary.branchesTotal += data.branches.size();
+        summary.branchesCovered += data.branches.values().filter(v => v > 0).length;
+    }
+
+    summary.linesPercent = (summary.linesCovered / summary.linesTotal) * 100;
+    summary.functionsPercent = (summary.functionsCovered / summary.functionsTotal) * 100;
+    summary.branchesPercent = (summary.branchesCovered / summary.branchesTotal) * 100;
+
+    return {
+        files: COVERAGE_DATA,
+        summary
+    };
+}
+
+// Print coverage report
+export fn printCoverageReport() {
+    let report = getCoverageReport();
+
+    console.log("\n" + "=".repeat(60));
+    console.log("Code Coverage Report");
+    console.log("=".repeat(60));
+
+    for (file, data) in report.files {
+        let covered = data.lines.values().filter(v => v > 0).length;
+        let total = data.lines.size();
+        let percent = ((covered / total) * 100).toFixed(2);
+
+        console.log(`\n${file}`);
+        console.log(`  Lines: ${covered}/${total} (${percent}%)`);
+    }
+
+    console.log("\n" + "=".repeat(60));
+    console.log("Summary");
+    console.log("=".repeat(60));
+    console.log(`Lines:     ${report.summary.linesCovered}/${report.summary.linesTotal} (${report.summary.linesPercent.toFixed(2)}%)`);
+    console.log(`Functions: ${report.summary.functionsCovered}/${report.summary.functionsTotal} (${report.summary.functionsPercent.toFixed(2)}%)`);
+    console.log(`Branches:  ${report.summary.branchesCovered}/${report.summary.branchesTotal} (${report.summary.branchesPercent.toFixed(2)}%)`);
+}
+
+// Reset coverage data
+export fn resetCoverage() {
+    COVERAGE_DATA = Map::new();
+}

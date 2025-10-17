@@ -1,0 +1,73 @@
+// Link Component
+// Declarative navigation link with active state detection
+
+import { getRouterInstance } from "./router"
+
+export type LinkProps = {
+    to: String,
+    replace: Bool, // Use replace instead of push
+    activeClass: String, // CSS class when link is active
+    exact: Bool, // Exact match for active state
+    children: Any
+}
+
+export component Link(props: LinkProps) {
+    let router = getRouterInstance();
+
+    if !router {
+        console.error("Link must be used inside a Router component");
+        return <a href={props.to}>{props.children}</a>;
+    }
+
+    let replace = props.replace || false;
+    let activeClass = props.activeClass || "router-link-active";
+    let exact = props.exact || false;
+
+    let handleClick = (event: Event) => {
+        event.preventDefault();
+        router.navigate(props.to, replace);
+    };
+
+    // Check if link is active
+    let isActive = () => {
+        let currentPath = router.currentPath.get();
+        let targetPath = props.to.split("?")[0]; // Remove query string
+
+        if exact {
+            return currentPath == targetPath;
+        } else {
+            return currentPath.starts_with(targetPath);
+        }
+    };
+
+    let className = if isActive() {
+        `router-link ${activeClass}`
+    } else {
+        "router-link"
+    };
+
+    <a
+        href={props.to}
+        class={className}
+        onclick={handleClick}
+    >
+        {props.children}
+    </a>
+
+    <style>
+        .router-link {
+            text-decoration: none;
+            color: #667eea;
+            transition: color 0.2s ease;
+        }
+
+        .router-link:hover {
+            color: #764ba2;
+        }
+
+        .router-link-active {
+            font-weight: 600;
+            color: #764ba2;
+        }
+    </style>
+}

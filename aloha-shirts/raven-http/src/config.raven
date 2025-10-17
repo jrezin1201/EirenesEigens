@@ -1,0 +1,56 @@
+// Advanced configuration types
+
+export type RetryConfig = {
+    maxRetries: Int,
+    retryDelay: Int, // milliseconds
+    retryCondition: (Response) -> Bool, // Custom retry logic
+    backoffFactor: Float // Exponential backoff multiplier
+}
+
+export type CacheConfig = {
+    enabled: Bool,
+    maxAge: Int, // milliseconds
+    maxSize: Int, // maximum cache entries
+    exclude: Vec<String>, // URLs to exclude from caching
+    keyGenerator: (RequestConfig) -> String // Custom cache key
+}
+
+export type RateLimitConfig = {
+    maxRequests: Int, // Maximum requests per window
+    windowMs: Int, // Time window in milliseconds
+    queueRequests: Bool // Queue requests instead of failing
+}
+
+// Default configurations
+
+export fn getDefaultRetryConfig() -> RetryConfig {
+    return {
+        maxRetries: 3,
+        retryDelay: 1000,
+        retryCondition: (response) => {
+            // Retry on 5xx errors and network failures
+            return response.status >= 500 || response.status == 0;
+        },
+        backoffFactor: 2.0
+    };
+}
+
+export fn getDefaultCacheConfig() -> CacheConfig {
+    return {
+        enabled: true,
+        maxAge: 300000, // 5 minutes
+        maxSize: 100,
+        exclude: Vec::new(),
+        keyGenerator: (config) => {
+            return `${config.method.to_string()}:${config.url}`;
+        }
+    };
+}
+
+export fn getDefaultRateLimitConfig() -> RateLimitConfig {
+    return {
+        maxRequests: 100,
+        windowMs: 60000, // 1 minute
+        queueRequests: true
+    };
+}

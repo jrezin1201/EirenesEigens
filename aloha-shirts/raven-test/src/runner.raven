@@ -1,0 +1,300 @@
+// Test Runner
+// Executes test suites and reports results
+
+import { TestSuite, TestCase, getRootSuite } from "./framework"
+import { resetAllMocks } from "./mocking"
+
+export type TestConfig = {
+    bail: Bool,           // Stop on first failure
+    verbose: Bool,        // Detailed output
+    timeout: Int,         // Global timeout
+    parallel: Bool,       // Run tests in parallel
+    coverage: Bool,       // Collect coverage
+    watch: Bool,          // Watch mode
+    pattern: String       // Test file pattern
+}
+
+export type TestResult = {
+    name: String,
+    passed: Bool,
+    error: Any,
+    duration: Int
+}
+
+export type SuiteResult = {
+    name: String,
+    passed: Int,
+    failed: Int,
+    skipped: Int,
+    duration: Int,
+    tests: Vec<TestResult>,
+    suites: Vec<SuiteResult>
+}
+
+export class TestRunner {
+    config: TestConfig
+    totalTests: Int
+    passedTests: Int
+    failedTests: Int
+    skippedTests: Int
+
+    pub fn new(config: TestConfig) -> TestRunner {
+        return TestRunner {
+            config,
+            totalTests: 0,
+            passedTests: 0,
+            failedTests: 0,
+            skippedTests: 0
+        };
+    }
+
+    // Run all tests
+    pub fn run(mut self) -> Promise<SuiteResult> {
+        let root = getRootSuite();
+        return self.run_suite(root);
+    }
+
+    // Run a test suite
+    pub fn run_suite(mut self, suite: TestSuite) -> Promise<SuiteResult> {
+        return new Promise((resolve, reject) => {
+            let startTime = Date.now();
+            let results: SuiteResult = {
+                name: suite.name,
+                passed: 0,
+                failed: 0,
+                skipped: 0,
+                duration: 0,
+                tests: Vec::new(),
+                suites: Vec::new()
+            };
+
+            // Run beforeAll hooks
+            for hook in suite.beforeAllHooks {
+                try {
+                    hook();
+                } catch (e) {
+                    console.error(`beforeAll hook failed: ${e.message}`);
+                    if self.config.bail {
+                        reject(e);
+                        return;
+                    }
+                }
+            }
+
+            // Check if we should only run specific tests
+            let hasOnly = suite.tests.some(t => t.only);
+
+            // Run tests sequentially
+            let runTests = () => {
+                let testPromises = Vec::new();
+
+                for test in suite.tests {
+                    // Skip test if not marked as "only" and other tests are
+                    if hasOnly && !test.only {
+                        continue;
+                    }
+
+                    if test.skip {
+                        results.skipped += 1;
+                        self.skippedTests += 1;
+                        results.tests.push({
+                            name: test.name,
+                            passed: null,
+                            error: null,
+                            duration: 0
+                        });
+                        continue;
+                    }
+
+                    testPromises.push(self.run_test(test, suite));
+                }
+
+                return Promise.all(testPromises).then((testResults) => {
+                    for result in testResults {
+                        results.tests.push(result);
+                        if result.passed {
+                            results.passed += 1;
+                            self.passedTests += 1;
+                        } else {
+                            results.failed += 1;
+                            self.failedTests += 1;
+
+                            if self.config.bail {
+                                reject(result.error);
+                                return;
+                            }
+                        }
+                        self.totalTests += 1;
+                    }
+                });
+            };
+
+            runTests()
+                .then(() => {
+                    // Run nested suites
+                    let suitePromises = Vec::new();
+                    for child in suite.suites {
+                        suitePromises.push(self.run_suite(child));
+                    }
+
+                    return Promise.all(suitePromises);
+                })
+                .then((suiteResults) => {
+                    results.suites = suiteResults;
+
+                    // Run afterAll hooks
+                    for hook in suite.afterAllHooks {
+                        try {
+                            hook();
+                        } catch (e) {
+                            console.error(`afterAll hook failed: ${e.message}`);
+                        }
+                    }
+
+                    results.duration = Date.now() - startTime;
+                    resolve(results);
+                })
+                .catch((error) => {
+                    reject(error);
+                });
+        });
+    }
+
+    // Run a single test
+    pub fn run_test(self, test: TestCase, suite: TestSuite) -> Promise<TestResult> {
+        return new Promise((resolve) => {
+            let startTime = Date.now();
+            let result: TestResult = {
+                name: test.name,
+                passed: false,
+                error: null,
+                duration: 0
+            };
+
+            let cleanup = () => {
+                // Run afterEach hooks
+                for hook in suite.afterEachHooks {
+                    try {
+                        hook();
+                    } catch (e) {
+                        console.error(`afterEach hook failed: ${e.message}`);
+                    }
+                }
+
+                // Reset mocks
+                resetAllMocks();
+
+                result.duration = Date.now() - startTime;
+            };
+
+            // Run beforeEach hooks
+            for hook in suite.beforeEachHooks {
+                try {
+                    hook();
+                } catch (e) {
+                    result.error = e;
+                    cleanup();
+                    resolve(result);
+                    return;
+                }
+            }
+
+            // Set up timeout
+            let timeoutId = null;
+            let timedOut = false;
+
+            if test.timeout > 0 {
+                timeoutId = setTimeout(() => {
+                    timedOut = true;
+                    result.error = new Error(`Test timeout after ${test.timeout}ms`);
+                    cleanup();
+                    resolve(result);
+                }, test.timeout);
+            }
+
+            // Run test
+            try {
+                let testResult = test.fn();
+
+                if testResult is Promise {
+                    testResult
+                        .then(() => {
+                            if !timedOut {
+                                if timeoutId { clearTimeout(timeoutId); }
+                                result.passed = true;
+                                cleanup();
+                                resolve(result);
+                            }
+                        })
+                        .catch((error) => {
+                            if !timedOut {
+                                if timeoutId { clearTimeout(timeoutId); }
+                                result.error = error;
+                                cleanup();
+                                resolve(result);
+                            }
+                        });
+                } else {
+                    if !timedOut {
+                        if timeoutId { clearTimeout(timeoutId); }
+                        result.passed = true;
+                        cleanup();
+                        resolve(result);
+                    }
+                }
+            } catch (error) {
+                if !timedOut {
+                    if timeoutId { clearTimeout(timeoutId); }
+                    result.error = error;
+                    cleanup();
+                    resolve(result);
+                }
+            }
+        });
+    }
+
+    // Print results
+    pub fn print_results(self, results: SuiteResult) {
+        self.print_suite_results(results, 0);
+
+        console.log("\n" + "=".repeat(50));
+        console.log(`Total: ${self.totalTests} | Passed: ${self.passedTests} | Failed: ${self.failedTests} | Skipped: ${self.skippedTests}`);
+
+        if self.failedTests > 0 {
+            console.log("\n❌ Tests failed");
+        } else {
+            console.log("\n✅ All tests passed!");
+        }
+    }
+
+    fn print_suite_results(self, results: SuiteResult, indent: Int) {
+        let indentStr = " ".repeat(indent * 2);
+
+        if results.name != "Root" {
+            console.log(`${indentStr}${results.name}`);
+        }
+
+        for test in results.tests {
+            let icon = if test.passed === null {
+                "⏭️"
+            } else if test.passed {
+                "✅"
+            } else {
+                "❌"
+            };
+
+            console.log(`${indentStr}  ${icon} ${test.name} (${test.duration}ms)`);
+
+            if test.error && self.config.verbose {
+                console.error(`${indentStr}    ${test.error.message}`);
+                if test.error.stack {
+                    console.error(`${indentStr}    ${test.error.stack}`);
+                }
+            }
+        }
+
+        for suite in results.suites {
+            self.print_suite_results(suite, indent + 1);
+        }
+    }
+}

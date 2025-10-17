@@ -1,0 +1,124 @@
+// History Management
+// Abstractions over browser history API
+
+export type History = {
+    push: (String) -> Void,
+    replace: (String) -> Void,
+    back: () -> Void,
+    forward: () -> Void,
+    go: (Int) -> Void,
+    getCurrentPath: () -> String
+}
+
+// Browser history (HTML5 History API)
+export fn createBrowserHistory(base: String) -> History {
+    let basePath = base || "";
+
+    return {
+        push: (path: String) => {
+            let fullPath = basePath + path;
+            window.history.pushState({}, "", fullPath);
+            window.dispatchEvent(new PopStateEvent("popstate"));
+        },
+
+        replace: (path: String) => {
+            let fullPath = basePath + path;
+            window.history.replaceState({}, "", fullPath);
+            window.dispatchEvent(new PopStateEvent("popstate"));
+        },
+
+        back: () => {
+            window.history.back();
+        },
+
+        forward: () => {
+            window.history.forward();
+        },
+
+        go: (delta: Int) => {
+            window.history.go(delta);
+        },
+
+        getCurrentPath: () => {
+            let path = window.location.pathname;
+            if basePath != "" && path.starts_with(basePath) {
+                return path.substring(basePath.len());
+            }
+            return path;
+        }
+    };
+}
+
+// Hash history (for older browsers or static hosting)
+export fn createHashHistory(base: String) -> History {
+    return {
+        push: (path: String) => {
+            window.location.hash = "#" + path;
+        },
+
+        replace: (path: String) => {
+            let url = window.location.href.split("#")[0];
+            window.location.replace(url + "#" + path);
+        },
+
+        back: () => {
+            window.history.back();
+        },
+
+        forward: () => {
+            window.history.forward();
+        },
+
+        go: (delta: Int) => {
+            window.history.go(delta);
+        },
+
+        getCurrentPath: () => {
+            let hash = window.location.hash;
+            return hash.substring(1); // Remove #
+        }
+    };
+}
+
+// Memory history (for testing or non-browser environments)
+export fn createMemoryHistory(initialPath: String) -> History {
+    let stack: Vec<String> = Vec::new();
+    stack.push(initialPath || "/");
+    let index = Signal::new(0);
+
+    return {
+        push: (path: String) => {
+            // Remove any forward history
+            stack.splice(index.get() + 1);
+            stack.push(path);
+            index.set(index.get() + 1);
+        },
+
+        replace: (path: String) => {
+            stack[index.get()] = path;
+        },
+
+        back: () => {
+            if index.get() > 0 {
+                index.set(index.get() - 1);
+            }
+        },
+
+        forward: () => {
+            if index.get() < stack.len() - 1 {
+                index.set(index.get() + 1);
+            }
+        },
+
+        go: (delta: Int) => {
+            let newIndex = index.get() + delta;
+            if newIndex >= 0 && newIndex < stack.len() {
+                index.set(newIndex);
+            }
+        },
+
+        getCurrentPath: () => {
+            return stack[index.get()];
+        }
+    };
+}

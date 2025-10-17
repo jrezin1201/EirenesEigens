@@ -1,0 +1,108 @@
+// Navigation Guards
+// Middleware for route navigation
+
+export type NavigationContext = {
+    to: String,
+    from: String,
+    params: Map<String, String>,
+    query: Map<String, String>
+}
+
+export type NavigationGuard = (NavigationContext) -> Bool | Promise<Bool>
+
+// Global before guards
+let BEFORE_GUARDS: Vec<NavigationGuard> = Vec::new();
+let AFTER_GUARDS: Vec<(NavigationContext) -> Void> = Vec::new();
+
+// Register a global before guard
+export fn BeforeEach(guard: NavigationGuard) {
+    BEFORE_GUARDS.push(guard);
+}
+
+// Register a global after guard
+export fn AfterEach(callback: (NavigationContext) -> Void) {
+    AFTER_GUARDS.push(callback);
+}
+
+// Execute all before guards
+export fn executeBeforeGuards(context: NavigationContext) -> Promise<Bool> {
+    return new Promise((resolve, reject) => {
+        let executeGuard = (index: Int) => {
+            if index >= BEFORE_GUARDS.len() {
+                resolve(true);
+                return;
+            }
+
+            let guard = BEFORE_GUARDS[index];
+            let result = guard(context);
+
+            if result is Promise {
+                result.then((allowed) => {
+                    if allowed {
+                        executeGuard(index + 1);
+                    } else {
+                        resolve(false);
+                    }
+                });
+            } else {
+                if result {
+                    executeGuard(index + 1);
+                } else {
+                    resolve(false);
+                }
+            }
+        };
+
+        executeGuard(0);
+    });
+}
+
+// Execute all after guards
+export fn executeAfterGuards(context: NavigationContext) {
+    for callback in AFTER_GUARDS {
+        callback(context);
+    }
+}
+
+// Common guard: Require authentication
+export fn requireAuth(context: NavigationContext) -> Bool {
+    // Check if user is authenticated
+    let isAuthenticated = localStorage.getItem("auth_token") != null;
+
+    if !isAuthenticated {
+        console.log("Navigation blocked: Authentication required");
+        return false;
+    }
+
+    return true;
+}
+
+// Common guard: Check permissions
+export fn requirePermission(permission: String) -> NavigationGuard {
+    return (context: NavigationContext) => {
+        let userPermissions = JSON.parse(
+            localStorage.getItem("user_permissions") || "[]"
+        );
+
+        if !userPermissions.includes(permission) {
+            console.log(`Navigation blocked: Missing permission '${permission}'`);
+            return false;
+        }
+
+        return true;
+    };
+}
+
+// Common guard: Redirect if authenticated (for login pages)
+export fn redirectIfAuth(redirectTo: String) -> NavigationGuard {
+    return (context: NavigationContext) => {
+        let isAuthenticated = localStorage.getItem("auth_token") != null;
+
+        if isAuthenticated {
+            window.location.href = redirectTo;
+            return false;
+        }
+
+        return true;
+    };
+}

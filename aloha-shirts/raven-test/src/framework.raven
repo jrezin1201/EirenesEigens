@@ -1,0 +1,139 @@
+// Test Framework Core
+// Main testing DSL (describe, it, beforeEach, etc.)
+
+import { Signal } from "raven:core"
+
+export type TestCase = {
+    name: String,
+    fn: () -> Void | Promise<Void>,
+    timeout: Int,
+    skip: Bool,
+    only: Bool
+}
+
+export type TestSuite = {
+    name: String,
+    tests: Vec<TestCase>,
+    suites: Vec<TestSuite>,
+    beforeEachHooks: Vec<() -> Void>,
+    afterEachHooks: Vec<() -> Void>,
+    beforeAllHooks: Vec<() -> Void>,
+    afterAllHooks: Vec<() -> Void>
+}
+
+// Global test registry
+let ROOT_SUITE: TestSuite = {
+    name: "Root",
+    tests: Vec::new(),
+    suites: Vec::new(),
+    beforeEachHooks: Vec::new(),
+    afterEachHooks: Vec::new(),
+    beforeAllHooks: Vec::new(),
+    afterAllHooks: Vec::new()
+};
+
+let CURRENT_SUITE: Signal<TestSuite> = Signal::new(ROOT_SUITE);
+
+// Define a test suite
+export fn describe(name: String, fn: () -> Void) {
+    let suite: TestSuite = {
+        name,
+        tests: Vec::new(),
+        suites: Vec::new(),
+        beforeEachHooks: Vec::new(),
+        afterEachHooks: Vec::new(),
+        beforeAllHooks: Vec::new(),
+        afterAllHooks: Vec::new()
+    };
+
+    let parent = CURRENT_SUITE.get();
+    parent.suites.push(suite);
+
+    // Enter suite context
+    CURRENT_SUITE.set(suite);
+    fn();
+    // Exit suite context
+    CURRENT_SUITE.set(parent);
+}
+
+// Define a test case
+export fn it(name: String, fn: () -> Void | Promise<Void>, timeout: Int) {
+    let suite = CURRENT_SUITE.get();
+    suite.tests.push({
+        name,
+        fn,
+        timeout: timeout || 5000,
+        skip: false,
+        only: false
+    });
+}
+
+// Alias for it()
+export fn test(name: String, fn: () -> Void | Promise<Void>, timeout: Int) {
+    it(name, fn, timeout);
+}
+
+// Skip a test
+export fn it_skip(name: String, fn: () -> Void) {
+    let suite = CURRENT_SUITE.get();
+    suite.tests.push({
+        name,
+        fn,
+        timeout: 5000,
+        skip: true,
+        only: false
+    });
+}
+
+// Only run this test
+export fn it_only(name: String, fn: () -> Void) {
+    let suite = CURRENT_SUITE.get();
+    suite.tests.push({
+        name,
+        fn,
+        timeout: 5000,
+        skip: false,
+        only: true
+    });
+}
+
+// Hooks
+
+export fn beforeEach(fn: () -> Void) {
+    let suite = CURRENT_SUITE.get();
+    suite.beforeEachHooks.push(fn);
+}
+
+export fn afterEach(fn: () -> Void) {
+    let suite = CURRENT_SUITE.get();
+    suite.afterEachHooks.push(fn);
+}
+
+export fn beforeAll(fn: () -> Void) {
+    let suite = CURRENT_SUITE.get();
+    suite.beforeAllHooks.push(fn);
+}
+
+export fn afterAll(fn: () -> Void) {
+    let suite = CURRENT_SUITE.get();
+    suite.afterAllHooks.push(fn);
+}
+
+// Get root test suite
+export fn getRootSuite() -> TestSuite {
+    return ROOT_SUITE;
+}
+
+// Reset test registry (for test isolation)
+export fn resetRegistry() {
+    ROOT_SUITE = {
+        name: "Root",
+        tests: Vec::new(),
+        suites: Vec::new(),
+        beforeEachHooks: Vec::new(),
+        afterEachHooks: Vec::new(),
+        beforeAllHooks: Vec::new(),
+        afterAllHooks: Vec::new()
+    };
+    CURRENT_SUITE.set(ROOT_SUITE);
+}

@@ -1,0 +1,182 @@
+// Router Component
+// Main router component that manages navigation and renders matched routes
+
+import { Signal, Effect } from "raven:core"
+import { RouteConfig, matchRoute } from "./route"
+import { History, createBrowserHistory } from "./history"
+
+export type RouterConfig = {
+    routes: Vec<RouteConfig>,
+    mode: String, // "history" | "hash" | "memory"
+    base: String,
+    fallback: Any // 404 component
+}
+
+export type RouterContextValue = {
+    currentPath: Signal<String>,
+    params: Signal<Map<String, String>>,
+    query: Signal<Map<String, String>>,
+    navigate: (String, Bool) -> Void,
+    back: () -> Void,
+    forward: () -> Void
+}
+
+// Global router instance for hooks
+let ROUTER_INSTANCE: Signal<RouterContextValue | Null> = Signal::new(null);
+
+export fn getRouterInstance() -> RouterContextValue | Null {
+    ROUTER_INSTANCE.get()
+}
+
+export component Router(config: RouterConfig) {
+    let mode = config.mode || "history";
+    let base = config.base || "";
+
+    // Current navigation state
+    let currentPath = Signal::new(window.location.pathname);
+    let params = Signal::new(Map::new());
+    let query = Signal::new(Map::new());
+
+    // History instance
+    let history = match mode {
+        "hash" => createHashHistory(base),
+        "memory" => createMemoryHistory(base),
+        _ => createBrowserHistory(base)
+    };
+
+    // Navigation function
+    let navigate = (path: String, replace: Bool) => {
+        if replace {
+            history.replace(path);
+        } else {
+            history.push(path);
+        }
+        currentPath.set(path);
+        updateQueryParams(path);
+    };
+
+    let back = () => {
+        history.back();
+    };
+
+    let forward = () => {
+        history.forward();
+    };
+
+    // Parse query parameters from path
+    let updateQueryParams = (path: String) => {
+        let parts = path.split("?");
+        if parts.len() > 1 {
+            let queryString = parts[1];
+            let queryMap = Map::new();
+            let pairs = queryString.split("&");
+
+            for pair in pairs {
+                let kv = pair.split("=");
+                if kv.len() == 2 {
+                    queryMap.insert(
+                        decodeURIComponent(kv[0]),
+                        decodeURIComponent(kv[1])
+                    );
+                }
+            }
+
+            query.set(queryMap);
+        } else {
+            query.set(Map::new());
+        }
+    };
+
+    // Store router instance globally for hooks
+    let routerContext: RouterContextValue = {
+        currentPath,
+        params,
+        query,
+        navigate,
+        back,
+        forward
+    };
+
+    ROUTER_INSTANCE.set(routerContext);
+
+    // Listen to browser back/forward
+    Effect::new(|| {
+        let handlePopState = (event: Event) => {
+            currentPath.set(window.location.pathname);
+            updateQueryParams(window.location.pathname);
+        };
+
+        window.addEventListener("popstate", handlePopState);
+
+        // Cleanup
+        return () => {
+            window.removeEventListener("popstate", handlePopState);
+        };
+    });
+
+    // Initial query params
+    updateQueryParams(currentPath.get());
+
+    // Match current route
+    let matchedRoute = Signal::new(null);
+
+    Effect::new(|| {
+        let path = currentPath.get();
+        let cleanPath = path.split("?")[0]; // Remove query string
+
+        for route in config.routes {
+            let match = matchRoute(route.path, cleanPath);
+
+            if match.matched {
+                params.set(match.params);
+                matchedRoute.set(route);
+                return;
+            }
+        }
+
+        // No match found, use fallback
+        matchedRoute.set(null);
+    });
+
+    <div class="raven-router">
+        {if matchedRoute.get() != null {
+            let route = matchedRoute.get();
+            <route.component {...routerContext} />
+        } else if config.fallback {
+            <config.fallback />
+        } else {
+            <div class="router-404">
+                <h1>404 - Page Not Found</h1>
+                <p>The page you're looking for doesn't exist.</p>
+            </div>
+        }}
+    </div>
+
+    <style>
+        .raven-router {
+            width: 100%;
+            height: 100%;
+        }
+
+        .router-404 {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .router-404 h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #374151;
+        }
+
+        .router-404 p {
+            font-size: 1.125rem;
+            color: #6b7280;
+        }
+    </style>
+}
