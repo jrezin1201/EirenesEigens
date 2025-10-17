@@ -72,6 +72,55 @@ pub fn extract_token(auth_header: &str) -> Option<&str> {
     auth_header.strip_prefix("Bearer ")
 }
 
+// Axum extractor for authenticated users
+use axum::{
+    async_trait,
+    extract::FromRequestParts,
+    http::{request::Parts, StatusCode},
+};
+
+use crate::error::AppError;
+
+#[derive(Debug, Clone)]
+pub struct AuthUser {
+    pub user_id: Uuid,
+    pub username: String,
+}
+
+#[async_trait]
+impl<S> FromRequestParts<S> for AuthUser
+where
+    S: Send + Sync,
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        // Get Authorization header
+        let auth_header = parts
+            .headers
+            .get("Authorization")
+            .and_then(|h| h.to_str().ok())
+            .ok_or(AppError::Unauthorized("Missing Authorization header".to_string()))?;
+
+        // Extract token
+        let token = extract_token(auth_header)
+            .ok_or(AppError::Unauthorized("Invalid Authorization header format".to_string()))?;
+
+        // Verify and decode token
+        let claims = verify_token(token)
+            .map_err(|_| AppError::Unauthorized("Invalid or expired token".to_string()))?;
+
+        // Parse user_id
+        let user_id = Uuid::parse_str(&claims.sub)
+            .map_err(|_| AppError::Unauthorized("Invalid user ID in token".to_string()))?;
+
+        Ok(AuthUser {
+            user_id,
+            username: claims.username,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

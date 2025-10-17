@@ -14,6 +14,7 @@ pub enum AppError {
     BadRequest(String),
     Conflict(String),
     InternalError(String),
+    InternalServerError(String),
     ValidationError(String),
     RateLimitExceeded,
 }
@@ -34,6 +35,11 @@ impl IntoResponse for AppError {
             AppError::InternalError(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal_error",
+                msg,
+            ),
+            AppError::InternalServerError(msg) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_server_error",
                 msg,
             ),
             AppError::ValidationError(msg) => (StatusCode::BAD_REQUEST, "validation_error", msg),
@@ -64,6 +70,18 @@ impl From<argon2::password_hash::Error> for AppError {
 impl From<jsonwebtoken::errors::Error> for AppError {
     fn from(err: jsonwebtoken::errors::Error) -> Self {
         AppError::Unauthorized(format!("Invalid token: {}", err))
+    }
+}
+
+impl From<std::io::Error> for AppError {
+    fn from(err: std::io::Error) -> Self {
+        AppError::InternalError(format!("IO error: {}", err))
+    }
+}
+
+impl From<serde_json::Error> for AppError {
+    fn from(err: serde_json::Error) -> Self {
+        AppError::BadRequest(format!("JSON error: {}", err))
     }
 }
 
