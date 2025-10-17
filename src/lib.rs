@@ -26,6 +26,7 @@ pub mod wasm_runtime; // WebAssembly runtime support
 pub mod lsp; // Language Server Protocol
 pub mod hmr; // Hot Module Replacement
 pub mod package_manager; // Package Manager
+pub mod registry_client; // Registry client for package publishing
 
 use borrow_checker::BorrowChecker;
 use codegen::CodeGenerator;

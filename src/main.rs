@@ -23,6 +23,20 @@ enum Commands {
     New {
         name: String,
     },
+    /// Initialize a new RavensOne project in the current directory
+    Init {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+    },
+    /// Start a local development server
+    Serve {
+        #[arg(short, long, default_value = "8000")]
+        port: u16,
+        #[arg(long)]
+        open: bool,
+    },
+    /// Diagnose common issues with your RavensOne setup
+    Doctor,
     /// Builds and deploys the project to a cloud provider
     Deploy {
         #[arg(long, default_value = "production")]
@@ -60,6 +74,16 @@ enum Commands {
         #[arg(short, long)]
         release: bool,
     },
+    /// Login to the package registry
+    Login {
+        #[arg(long, default_value = "http://localhost:4000")]
+        registry: String,
+    },
+    /// Register a new account with the package registry
+    Register {
+        #[arg(long, default_value = "http://localhost:4000")]
+        registry: String,
+    },
     /// Publish package to registry
     Publish {
         #[arg(long, default_value = "http://localhost:4000")]
@@ -76,11 +100,6 @@ enum Commands {
         package: String,
         #[arg(long)]
         version: Option<String>,
-        #[arg(long, default_value = "http://localhost:4000")]
-        registry: String,
-    },
-    /// Register with the package registry
-    Register {
         #[arg(long, default_value = "http://localhost:4000")]
         registry: String,
     },
@@ -156,6 +175,24 @@ fn main() {
             }
             println!("✅ Project '{}' created successfully! 🚀", name);
         }
+        Commands::Init { path } => {
+            println!("🚀 Initializing RavensOne project...");
+            if let Err(e) = init_project(&path) {
+                eprintln!("❌ Initialization failed: {}", e);
+                process::exit(1);
+            }
+        }
+        Commands::Serve { port, open } => {
+            println!("🌐 Starting local development server on port {}...", port);
+            if let Err(e) = serve_project(port, open) {
+                eprintln!("❌ Server failed: {}", e);
+                process::exit(1);
+            }
+        }
+        Commands::Doctor => {
+            println!("🏥 Running RavensOne diagnostics...\n");
+            run_doctor();
+        }
         Commands::Deploy { env } => {
             println!("🚀 Starting deployment to '{}'...", env);
             if let Err(e) = deployer::deploy_project() {
@@ -220,6 +257,13 @@ fn main() {
             }
             if let Err(e) = build_project(release) {
                 eprintln!("❌ Build failed: {}", e);
+                process::exit(1);
+            }
+        }
+        Commands::Login { registry } => {
+            println!("🔐 Logging in to package registry...");
+            if let Err(e) = login_to_registry(&registry) {
+                eprintln!("❌ Login failed: {}", e);
                 process::exit(1);
             }
         }
@@ -690,82 +734,124 @@ fn build_project(release: bool) -> std::io::Result<()> {
 
 // Package Registry Functions
 
-fn register_with_registry(registry_url: &str) -> std::io::Result<()> {
-    use std::io::{self, Write};
+fn login_to_registry(registry_url: &str) -> Result<(), Box<dyn std::error::Error>> {
+    use ravensone_compiler::registry_client::{RegistryClient, prompt_login};
 
-    print!("Username: ");
-    io::stdout().flush()?;
-    let mut username = String::new();
-    io::stdin().read_line(&mut username)?;
-    let username = username.trim();
+    let (username, password) = prompt_login()?;
 
-    print!("Email: ");
-    io::stdout().flush()?;
-    let mut email = String::new();
-    io::stdin().read_line(&mut email)?;
-    let email = email.trim();
+    let client = RegistryClient::new(Some(registry_url));
+    let response = client.login(&username, &password)?;
 
-    println!("\n📡 Registering with registry...");
+    client.save_token(&response.token)?;
 
-    // Use curl to register
-    let output = process::Command::new("curl")
-        .arg("-s")
-        .arg("-X")
-        .arg("POST")
-        .arg(format!("{}/api/register", registry_url))
-        .arg("-H")
-        .arg("Content-Type: application/json")
-        .arg("-d")
-        .arg(format!(r#"{{"username":"{}","email":"{}"}}"#, username, email))
-        .output()?;
-
-    if output.status.success() {
-        let response = String::from_utf8_lossy(&output.stdout);
-        println!("\n✅ Registration successful!");
-        println!("{}", response);
-
-        // Save token to .raven/config
-        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&response) {
-            if let Some(token) = parsed["token"].as_str() {
-                let config_dir = PathBuf::from(".raven");
-                fs::create_dir_all(&config_dir)?;
-                fs::write(config_dir.join("token"), token)?;
-                println!("\n🔐 Token saved to .raven/token");
-                println!("⚠️  Keep this file secure and add it to .gitignore!");
-            }
-        }
-    } else {
-        let error = String::from_utf8_lossy(&output.stderr);
-        eprintln!("❌ Registration failed: {}", error);
-    }
+    println!("\n✅ Login successful!");
+    println!("   User: {}", response.username);
+    println!("   ID: {}", response.user_id);
 
     Ok(())
 }
 
-fn publish_package(registry_url: &str) -> std::io::Result<()> {
+fn register_with_registry(registry_url: &str) -> Result<(), Box<dyn std::error::Error>> {
+    use ravensone_compiler::registry_client::{RegistryClient, prompt_register};
+
+    let (username, email, password) = prompt_register()?;
+
+    println!("\n📡 Registering with registry...");
+
+    let client = RegistryClient::new(Some(registry_url));
+    let response = client.register(&username, &email, &password)?;
+
+    client.save_token(&response.token)?;
+
+    println!("\n✅ Registration successful!");
+    println!("   User: {}", response.username);
+    println!("   ID: {}", response.user_id);
+
+    Ok(())
+}
+
+fn publish_package(registry_url: &str) -> Result<(), Box<dyn std::error::Error>> {
+    use ravensone_compiler::registry_client::{RegistryClient, PublishRequest};
+    use std::collections::HashMap;
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
+
     // Read package metadata from raven.toml
     let toml_path = PathBuf::from("raven.toml");
     if !toml_path.exists() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "raven.toml not found. Run 'raven new <project>' to create a project."
-        ));
+        return Err("raven.toml not found. Run 'raven pkg init' to create one.".into());
     }
 
     let toml_content = fs::read_to_string(&toml_path)?;
-    let (name, version, description, author) = parse_toml_metadata(&toml_content)?;
+    let manifest: toml::Value = toml::from_str(&toml_content)?;
+
+    // Extract package info
+    let package = manifest.get("package")
+        .ok_or("Missing [package] section in raven.toml")?;
+
+    let name = package.get("name")
+        .and_then(|v| v.as_str())
+        .ok_or("Missing 'name' in package")?
+        .to_string();
+
+    let version = package.get("version")
+        .and_then(|v| v.as_str())
+        .ok_or("Missing 'version' in package")?
+        .to_string();
+
+    let description = package.get("description")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let license = package.get("license")
+        .and_then(|v| v.as_str())
+        .unwrap_or("MIT")
+        .to_string();
+
+    let repository = package.get("repository")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let homepage = package.get("homepage")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let authors: Vec<String> = package.get("authors")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter()
+            .filter_map(|v| v.as_str())
+            .map(|s| s.to_string())
+            .collect())
+        .unwrap_or_else(|| vec!["Unknown <unknown@example.com>".to_string()]);
+
+    let keywords: Vec<String> = package.get("keywords")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter()
+            .filter_map(|v| v.as_str())
+            .map(|s| s.to_string())
+            .collect())
+        .unwrap_or_default();
+
+    // Extract dependencies
+    let dependencies: HashMap<String, String> = manifest.get("dependencies")
+        .and_then(|v| v.as_table())
+        .map(|table| table.iter()
+            .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
+            .collect())
+        .unwrap_or_default();
+
+    let dev_dependencies: HashMap<String, String> = manifest.get("dev-dependencies")
+        .and_then(|v| v.as_table())
+        .map(|table| table.iter()
+            .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
+            .collect())
+        .unwrap_or_default();
 
     println!("📦 Package: {} v{}", name, version);
-
-    // Read authentication token
-    let token_path = PathBuf::from(".raven/token");
-    if !token_path.exists() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "Authentication token not found. Run 'raven register' first."
-        ));
+    println!("   Authors: {}", authors.join(", "));
+    if let Some(ref desc) = description {
+        println!("   Description: {}", desc);
     }
-    let token = fs::read_to_string(&token_path)?.trim().to_string();
 
     // Build the project first
     println!("\n🔨 Building project...");
@@ -775,100 +861,86 @@ fn publish_package(registry_url: &str) -> std::io::Result<()> {
     println!("\n📦 Creating package archive...");
     let archive_path = format!("{}-{}.tar.gz", name, version);
 
-    // Use tar to create archive (simplified - just include src/ and dist/)
-    let tar_result = process::Command::new("tar")
-        .arg("-czf")
-        .arg(&archive_path)
-        .arg("src")
-        .arg("dist")
-        .arg("raven.toml")
-        .output()?;
+    let tar_gz = fs::File::create(&archive_path)?;
+    let enc = GzEncoder::new(tar_gz, Compression::default());
+    let mut tar = tar::Builder::new(enc);
 
-    if !tar_result.status.success() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Failed to create package archive"
-        ));
+    // Add files to tarball
+    if PathBuf::from("src").exists() {
+        tar.append_dir_all("src", "src")?;
     }
+    if PathBuf::from("dist").exists() {
+        tar.append_dir_all("dist", "dist")?;
+    }
+    tar.append_path("raven.toml")?;
+
+    tar.finish()?;
 
     println!("✅ Created {}", archive_path);
 
     // Upload to registry
     println!("\n📤 Publishing to registry...");
 
-    let output = process::Command::new("curl")
-        .arg("-s")
-        .arg("-X")
-        .arg("POST")
-        .arg(format!("{}/api/publish", registry_url))
-        .arg("-H")
-        .arg(format!("Authorization: {}", token))
-        .arg("-F")
-        .arg(format!("package=@{}", archive_path))
-        .arg("-F")
-        .arg(format!("name={}", name))
-        .arg("-F")
-        .arg(format!("version={}", version))
-        .arg("-F")
-        .arg(format!("description={}", description))
-        .arg("-F")
-        .arg(format!("author={}", author))
-        .output()?;
+    let client = RegistryClient::new(Some(registry_url));
+
+    let request = PublishRequest {
+        name: name.clone(),
+        version: version.clone(),
+        description,
+        authors,
+        license,
+        repository,
+        homepage,
+        keywords,
+        dependencies,
+        dev_dependencies,
+    };
+
+    let response = client.publish(request, &PathBuf::from(&archive_path))?;
 
     // Clean up archive
     let _ = fs::remove_file(&archive_path);
 
-    if output.status.success() {
-        let response = String::from_utf8_lossy(&output.stdout);
-        println!("\n✅ Package published successfully!");
-        println!("{}", response);
-    } else {
-        let error = String::from_utf8_lossy(&output.stderr);
-        eprintln!("❌ Publish failed: {}", error);
-    }
+    println!("\n✅ Package published successfully!");
+    println!("   Package ID: {}", response.package_id);
+    println!("   Download URL: {}", response.download_url);
+    println!("   Checksum: {}", response.checksum);
+    println!("   Published at: {}", response.published_at);
 
     Ok(())
 }
 
-fn search_packages(query: &str, registry_url: &str) -> std::io::Result<()> {
-    let output = process::Command::new("curl")
-        .arg("-s")
-        .arg(format!("{}/api/search?q={}", registry_url, query))
-        .output()?;
+fn search_packages(query: &str, registry_url: &str) -> Result<(), Box<dyn std::error::Error>> {
+    use ravensone_compiler::registry_client::RegistryClient;
 
-    if output.status.success() {
-        let response = String::from_utf8_lossy(&output.stdout);
+    let client = RegistryClient::new(Some(registry_url));
+    let response = client.search(query, 20, 0)?;
 
-        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&response) {
-            if let Some(results) = parsed["results"].as_array() {
-                if results.is_empty() {
-                    println!("No packages found matching '{}'", query);
-                } else {
-                    println!("\n📦 Found {} package(s):\n", results.len());
-                    for pkg in results {
-                        let name = pkg["name"].as_str().unwrap_or("unknown");
-                        let version = pkg["latestVersion"].as_str().unwrap_or("unknown");
-                        let desc = pkg["description"].as_str().unwrap_or("");
-                        println!("  {} v{}", name, version);
-                        if !desc.is_empty() {
-                            println!("    {}", desc);
-                        }
-                        println!();
-                    }
-                }
+    if response.results.is_empty() {
+        println!("No packages found matching '{}'", query);
+    } else {
+        println!("\n📦 Found {} package(s):\n", response.total);
+
+        for pkg in &response.results {
+            println!("  {} v{}", pkg.name, pkg.version);
+            if let Some(ref desc) = pkg.description {
+                println!("    {}", desc);
             }
-        } else {
-            println!("{}", response);
+            if !pkg.keywords.is_empty() {
+                println!("    Keywords: {}", pkg.keywords.join(", "));
+            }
+            println!("    Downloads: {} | Score: {:.2}", pkg.downloads, pkg.score);
+            println!();
         }
-    } else {
-        let error = String::from_utf8_lossy(&output.stderr);
-        eprintln!("❌ Search failed: {}", error);
     }
 
     Ok(())
 }
 
-fn install_package(package: &str, version: Option<&str>, registry_url: &str) -> std::io::Result<()> {
+fn install_package(package: &str, version: Option<&str>, registry_url: &str) -> Result<(), Box<dyn std::error::Error>> {
+    use ravensone_compiler::registry_client::RegistryClient;
+    use flate2::read::GzDecoder;
+
     let version_str = version.unwrap_or("latest");
 
     // First, get package info
@@ -886,10 +958,10 @@ fn install_package(package: &str, version: Option<&str>, registry_url: &str) -> 
         .output()?;
 
     if !output.status.success() {
-        return Err(std::io::Error::new(
+        return Err(Box::new(std::io::Error::new(
             std::io::ErrorKind::NotFound,
             "Package not found"
-        ));
+        )));
     }
 
     let response = String::from_utf8_lossy(&output.stdout);
@@ -916,10 +988,10 @@ fn install_package(package: &str, version: Option<&str>, registry_url: &str) -> 
         .output()?;
 
     if !dl_output.status.success() {
-        return Err(std::io::Error::new(
+        return Err(Box::new(std::io::Error::new(
             std::io::ErrorKind::Other,
             "Download failed"
-        ));
+        )));
     }
 
     // Create raven_modules directory
@@ -956,40 +1028,177 @@ fn install_package(package: &str, version: Option<&str>, registry_url: &str) -> 
     Ok(())
 }
 
-fn parse_toml_metadata(toml: &str) -> std::io::Result<(String, String, String, String)> {
-    let mut name = String::new();
-    let mut version = String::new();
-    let mut description = String::new();
-    let mut author = String::new();
+// New CLI commands
 
-    for line in toml.lines() {
-        let line = line.trim();
-        if line.starts_with("name") {
-            name = extract_toml_value(line);
-        } else if line.starts_with("version") {
-            version = extract_toml_value(line);
-        } else if line.starts_with("description") {
-            description = extract_toml_value(line);
-        } else if line.starts_with("author") {
-            author = extract_toml_value(line);
+fn init_project(path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    use ravensone_compiler::package_manager::PackageManager;
+
+    let pkg_mgr = PackageManager::new(path);
+    let project_name = path.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("my-package");
+
+    pkg_mgr.init(project_name, vec!["Developer <dev@example.com>".to_string()])?;
+
+    println!("✅ Initialized RavensOne project in {}", path.display());
+    println!("   Created raven.toml");
+    println!("\n💡 Next steps:");
+    println!("   1. Edit raven.toml to add package metadata");
+    println!("   2. Run 'raven build' to compile your project");
+    println!("   3. Run 'raven serve' to start a local development server");
+
+    Ok(())
+}
+
+fn serve_project(port: u16, open: bool) -> Result<(), Box<dyn std::error::Error>> {
+    println!("✅ Starting local development server...");
+    println!("   📂 Serving from: ./dist");
+    println!("   🌐 URL: http://localhost:{}", port);
+
+    // Check if dist directory exists
+    let dist_dir = PathBuf::from("dist");
+    if !dist_dir.exists() {
+        println!("\n⚠️  dist/ directory not found. Building project first...\n");
+        build_project(true)?;
+    }
+
+    if open {
+        // Open browser
+        let url = format!("http://localhost:{}", port);
+        #[cfg(target_os = "macos")]
+        let _ = process::Command::new("open").arg(&url).spawn();
+        #[cfg(target_os = "linux")]
+        let _ = process::Command::new("xdg-open").arg(&url).spawn();
+        #[cfg(target_os = "windows")]
+        let _ = process::Command::new("cmd").arg("/C").arg("start").arg(&url).spawn();
+    }
+
+    // Start simple HTTP server
+    println!("\n✨ Server running! Press Ctrl+C to stop.\n");
+
+    let result = process::Command::new("python3")
+        .arg("-m")
+        .arg("http.server")
+        .arg(port.to_string())
+        .arg("--directory")
+        .arg("dist")
+        .spawn();
+
+    if let Ok(mut child) = result {
+        let _ = child.wait();
+    } else {
+        return Err("Failed to start HTTP server. Make sure python3 is installed.".into());
+    }
+
+    Ok(())
+}
+
+fn run_doctor() {
+    println!("🏥 RavensOne Doctor - Checking your setup...\n");
+
+    let mut issues = 0;
+    let mut warnings = 0;
+
+    // Check Rust installation
+    print!("  Checking Rust... ");
+    if let Ok(output) = process::Command::new("rustc").arg("--version").output() {
+        if output.status.success() {
+            let version = String::from_utf8_lossy(&output.stdout);
+            println!("✅ {}", version.trim());
+        } else {
+            println!("❌ FAILED");
+            issues += 1;
+        }
+    } else {
+        println!("❌ NOT FOUND");
+        issues += 1;
+    }
+
+    // Check Cargo
+    print!("  Checking Cargo... ");
+    if let Ok(output) = process::Command::new("cargo").arg("--version").output() {
+        if output.status.success() {
+            let version = String::from_utf8_lossy(&output.stdout);
+            println!("✅ {}", version.trim());
+        } else {
+            println!("❌ FAILED");
+            issues += 1;
+        }
+    } else {
+        println!("❌ NOT FOUND");
+        issues += 1;
+    }
+
+    // Check Node.js (optional for HMR)
+    print!("  Checking Node.js... ");
+    if let Ok(output) = process::Command::new("node").arg("--version").output() {
+        if output.status.success() {
+            let version = String::from_utf8_lossy(&output.stdout);
+            println!("✅ {}", version.trim());
+        } else {
+            println!("⚠️  FAILED (optional)");
+            warnings += 1;
+        }
+    } else {
+        println!("⚠️  NOT FOUND (optional - needed for HMR)");
+        warnings += 1;
+    }
+
+    // Check Python (optional for dev server)
+    print!("  Checking Python... ");
+    if let Ok(output) = process::Command::new("python3").arg("--version").output() {
+        if output.status.success() {
+            let version = String::from_utf8_lossy(&output.stdout);
+            println!("✅ {}", version.trim());
+        } else {
+            println!("⚠️  FAILED (optional)");
+            warnings += 1;
+        }
+    } else {
+        println!("⚠️  NOT FOUND (optional - needed for 'raven serve')");
+        warnings += 1;
+    }
+
+    // Check project structure
+    print!("  Checking project structure... ");
+    if PathBuf::from("raven.toml").exists() {
+        println!("✅ raven.toml found");
+    } else {
+        println!("⚠️  No raven.toml (run 'raven init' to create one)");
+        warnings += 1;
+    }
+
+    print!("  Checking src/ directory... ");
+    if PathBuf::from("src").exists() {
+        println!("✅ src/ directory exists");
+    } else {
+        println!("⚠️  No src/ directory");
+        warnings += 1;
+    }
+
+    // Summary
+    println!("\n📊 Summary:");
+    if issues == 0 && warnings == 0 {
+        println!("   ✅ All checks passed! Your RavensOne setup looks good.");
+    } else {
+        if issues > 0 {
+            println!("   ❌ {} critical issue(s) found", issues);
+        }
+        if warnings > 0 {
+            println!("   ⚠️  {} warning(s)", warnings);
         }
     }
 
-    if name.is_empty() || version.is_empty() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "Missing required package metadata (name or version)"
-        ));
+    if issues > 0 {
+        println!("\n💡 Recommendations:");
+        println!("   - Install Rust from: https://rustup.rs/");
+        println!("   - Rust and Cargo are required for RavensOne to work");
     }
 
-    Ok((name, version, description, author))
-}
-
-fn extract_toml_value(line: &str) -> String {
-    line.split('=')
-        .nth(1)
-        .unwrap_or("")
-        .trim()
-        .trim_matches('"')
-        .to_string()
+    if warnings > 0 {
+        println!("\n💡 Optional improvements:");
+        println!("   - Install Node.js for HMR support: https://nodejs.org/");
+        println!("   - Install Python for 'raven serve' command");
+        println!("   - Run 'raven init' to create a new project");
+    }
 }
