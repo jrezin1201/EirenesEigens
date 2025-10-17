@@ -1,0 +1,171 @@
+/// DevTools middleware for time-travel debugging
+use crate::middleware::Middleware;
+
+pub struct DevtoolsOptions {
+    pub max_history: i32,
+    pub enable_jump: bool,
+    pub enable_export: bool
+}
+
+impl Default for DevtoolsOptions {
+    fn default() -> Self {
+        DevtoolsOptions {
+            max_history: 50,
+            enable_jump: true,
+            enable_export: true
+        }
+    }
+}
+
+pub struct DevtoolsState<T> {
+    history: Vec<HistoryEntry<T>>,
+    current_index: i32,
+    max_history: i32
+}
+
+struct HistoryEntry<T> {
+    action: String,
+    state: T,
+    timestamp: f64
+}
+
+impl<T: Clone> DevtoolsState<T> {
+    fn new(max_history: i32) -> Self {
+        DevtoolsState {
+            history: Vec::new(),
+            current_index: -1,
+            max_history
+        }
+    }
+
+    fn add_entry(&mut self, action: &str, state: T) {
+        // Remove future history if we're not at the end
+        if self.current_index < (self.history.len() as i32 - 1) {
+            self.history.truncate((self.current_index + 1) as usize);
+        }
+
+        // Add new entry
+        self.history.push(HistoryEntry {
+            action: action.to_string(),
+            state: state.clone(),
+            timestamp: Date::now()
+        });
+
+        // Limit history size
+        if self.history.len() as i32 > self.max_history {
+            self.history.remove(0);
+        } else {
+            self.current_index += 1;
+        }
+    }
+
+    fn can_undo(&self) -> bool {
+        self.current_index > 0
+    }
+
+    fn can_redo(&self) -> bool {
+        self.current_index < (self.history.len() as i32 - 1)
+    }
+
+    fn undo(&mut self) -> Option<T> {
+        if self.can_undo() {
+            self.current_index -= 1;
+            Some(self.history[self.current_index as usize].state.clone())
+        } else {
+            None
+        }
+    }
+
+    fn redo(&mut self) -> Option<T> {
+        if self.can_redo() {
+            self.current_index += 1;
+            Some(self.history[self.current_index as usize].state.clone())
+        } else {
+            None
+        }
+    }
+
+    fn jump_to(&mut self, index: i32) -> Option<T> {
+        if index >= 0 && index < self.history.len() as i32 {
+            self.current_index = index;
+            Some(self.history[index as usize].state.clone())
+        } else {
+            None
+        }
+    }
+
+    fn export_history(&self) -> String {
+        JSON::stringify(self.history.clone())
+    }
+}
+
+/// Create devtools middleware
+pub fn devtools<T: Clone + Debug>() -> Middleware<T> {
+    devtools_with_options(DevtoolsOptions::default())
+}
+
+/// Create devtools middleware with options
+pub fn devtools_with_options<T: Clone + Debug>(
+    options: DevtoolsOptions
+) -> Middleware<T> {
+    let mut devtools_state = DevtoolsState::new(options.max_history);
+
+    // Install global devtools API
+    install_devtools_api(&devtools_state, options);
+
+    Middleware::new(move |action, state| {
+        devtools_state.add_entry(action, state.clone());
+        print_devtools_info(&devtools_state);
+        state
+    })
+}
+
+/// Install devtools API on window object
+fn install_devtools_api<T: Clone>(
+    state: &DevtoolsState<T>,
+    options: DevtoolsOptions
+) {
+    window.__RAVEN_DEVTOOLS__ = {
+        undo: || {
+            state.undo()
+        },
+        redo: || {
+            state.redo()
+        },
+        jump: |index| {
+            if options.enable_jump {
+                state.jump_to(index)
+            } else {
+                None
+            }
+        },
+        export: || {
+            if options.enable_export {
+                state.export_history()
+            } else {
+                ""
+            }
+        },
+        get_history: || {
+            state.history.clone()
+        },
+        can_undo: || {
+            state.can_undo()
+        },
+        can_redo: || {
+            state.can_redo()
+        }
+    };
+
+    console.log("🛠️  DevTools enabled");
+    console.log("   Use window.__RAVEN_DEVTOOLS__ for debugging");
+}
+
+/// Print devtools info to console
+fn print_devtools_info<T>(state: &DevtoolsState<T>) {
+    console.log(
+        `📊 History: ${state.current_index + 1}/${state.history.len()}`,
+        `[Undo: ${state.can_undo()}]`,
+        `[Redo: ${state.can_redo()}]`
+    );
+}

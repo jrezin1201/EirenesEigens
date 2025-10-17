@@ -1,0 +1,45 @@
+/// Middleware system for store extensions
+
+pub struct Middleware<T> {
+    apply_fn: fn(&str, T) -> T
+}
+
+impl<T: Clone> Middleware<T> {
+    /// Create a new middleware
+    pub fn new(apply_fn: fn(&str, T) -> T) -> Self {
+        Middleware { apply_fn }
+    }
+
+    /// Apply middleware to action and state
+    pub fn apply(&self, action: &str, state: T) -> T {
+        (self.apply_fn)(action, state)
+    }
+}
+
+/// Compose multiple middleware into one
+pub fn compose<T: Clone>(middleware_list: Vec<Middleware<T>>) -> Middleware<T> {
+    Middleware::new(move |action, state| {
+        let mut current_state = state;
+
+        for middleware in &middleware_list {
+            current_state = middleware.apply(action, current_state);
+        }
+
+        current_state
+    })
+}
+
+/// Apply middleware chain
+pub fn apply_middleware<T: Clone>(
+    action: &str,
+    state: T,
+    middleware: Vec<Middleware<T>>
+) -> T {
+    let mut current_state = state;
+
+    for mw in middleware {
+        current_state = mw.apply(action, current_state);
+    }
+
+    current_state
+}

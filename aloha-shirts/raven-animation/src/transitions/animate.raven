@@ -1,0 +1,108 @@
+/// Core animation functions
+use crate::transitions::easing;
+
+pub struct AnimationOptions {
+    pub duration: f64,
+    pub easing: String,
+    pub delay: f64,
+    pub on_complete: Option<fn() -> ()>
+}
+
+impl Default for AnimationOptions {
+    fn default() -> Self {
+        AnimationOptions {
+            duration: 300.0,
+            easing: "easeOutQuad".to_string(),
+            delay: 0.0,
+            on_complete: None
+        }
+    }
+}
+
+pub fn animate(
+    from: f64,
+    to: f64,
+    options: Option<AnimationOptions>
+) -> Animation {
+    let opts = options.unwrap_or_default();
+    let easing_fn = easing::get_easing(&opts.easing);
+
+    Animation::new(from, to, opts.duration, easing_fn, opts.delay, opts.on_complete)
+}
+
+pub struct Animation {
+    from: f64,
+    to: f64,
+    duration: f64,
+    easing: fn(f64) -> f64,
+    delay: f64,
+    start_time: Option<f64>,
+    current_value: f64,
+    is_running: bool,
+    on_complete: Option<fn() -> ()>
+}
+
+impl Animation {
+    fn new(
+        from: f64,
+        to: f64,
+        duration: f64,
+        easing: fn(f64) -> f64,
+        delay: f64,
+        on_complete: Option<fn() -> ()>
+    ) -> Self {
+        Animation {
+            from,
+            to,
+            duration,
+            easing,
+            delay,
+            start_time: None,
+            current_value: from,
+            is_running: false,
+            on_complete
+        }
+    }
+
+    pub fn start(&mut self) {
+        if self.delay > 0.0 {
+            setTimeout(|| self.begin_animation(), self.delay as i32);
+        } else {
+            self.begin_animation();
+        }
+    }
+
+    fn begin_animation(&mut self) {
+        self.start_time = Some(performance.now());
+        self.is_running = true;
+        self.tick(performance.now());
+    }
+
+    fn tick(&mut self, now: f64) {
+        if !self.is_running {
+            return;
+        }
+
+        let start = self.start_time.unwrap();
+        let elapsed = now - start;
+        let progress = (elapsed / self.duration).min(1.0);
+
+        let eased_progress = (self.easing)(progress);
+        self.current_value = self.from + (self.to - self.from) * eased_progress;
+
+        if progress >= 1.0 {
+            self.current_value = self.to;
+            self.is_running = false;
+
+            if let Some(callback) = self.on_complete {
+                callback();
+            }
+        } else {
+            requestAnimationFrame(move |time| self.tick(time));
+        }
+    }
+
+    pub fn get(&self) -> f64 {
+        self.current_value
+    }
+}

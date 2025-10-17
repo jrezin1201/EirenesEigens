@@ -1,0 +1,94 @@
+/// Date and time formatting utilities
+
+pub enum DateStyle {
+    Short,   // 12/25/25
+    Medium,  // Dec 25, 2025
+    Long,    // December 25, 2025
+    Full     // Friday, December 25, 2025
+}
+
+pub enum TimeStyle {
+    Short,   // 3:45 PM
+    Medium,  // 3:45:30 PM
+    Long     // 3:45:30 PM GMT-5
+}
+
+/// Format date according to locale
+pub fn format_date(date: Date, locale: &str, style: DateStyle) -> String {
+    if let Some(intl) = window.Intl {
+        let style_str = match style {
+            DateStyle::Short => "short",
+            DateStyle::Medium => "medium",
+            DateStyle::Long => "long",
+            DateStyle::Full => "full"
+        };
+
+        let formatter = intl.DateTimeFormat(locale, {
+            dateStyle: style_str
+        });
+
+        return formatter.format(date);
+    }
+
+    // Fallback
+    date.toLocaleDateString(locale)
+}
+
+/// Format time according to locale
+pub fn format_time(date: Date, locale: &str, style: TimeStyle) -> String {
+    if let Some(intl) = window.Intl {
+        let style_str = match style {
+            TimeStyle::Short => "short",
+            TimeStyle::Medium => "medium",
+            TimeStyle::Long => "long"
+        };
+
+        let formatter = intl.DateTimeFormat(locale, {
+            timeStyle: style_str
+        });
+
+        return formatter.format(date);
+    }
+
+    // Fallback
+    date.toLocaleTimeString(locale)
+}
+
+/// Format relative time (e.g., "2 hours ago")
+pub fn format_relative(date: Date, locale: &str) -> String {
+    let now = Date::now();
+    let diff_ms = now - date.getTime();
+    let diff_seconds = diff_ms / 1000.0;
+
+    if let Some(intl) = window.Intl {
+        let formatter = intl.RelativeTimeFormat(locale, {
+            numeric: "auto",
+            style: "long"
+        });
+
+        if diff_seconds < 60.0 {
+            return formatter.format(-diff_seconds as i32, "second");
+        } else if diff_seconds < 3600.0 {
+            return formatter.format(-(diff_seconds / 60.0) as i32, "minute");
+        } else if diff_seconds < 86400.0 {
+            return formatter.format(-(diff_seconds / 3600.0) as i32, "hour");
+        } else if diff_seconds < 2592000.0 {
+            return formatter.format(-(diff_seconds / 86400.0) as i32, "day");
+        } else if diff_seconds < 31536000.0 {
+            return formatter.format(-(diff_seconds / 2592000.0) as i32, "month");
+        } else {
+            return formatter.format(-(diff_seconds / 31536000.0) as i32, "year");
+        }
+    }
+
+    // Fallback
+    if diff_seconds < 60.0 {
+        "just now".to_string()
+    } else if diff_seconds < 3600.0 {
+        format!("{} minutes ago", (diff_seconds / 60.0) as i32)
+    } else if diff_seconds < 86400.0 {
+        format!("{} hours ago", (diff_seconds / 3600.0) as i32)
+    } else {
+        format!("{} days ago", (diff_seconds / 86400.0) as i32)
+    }
+}

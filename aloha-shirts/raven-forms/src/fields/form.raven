@@ -1,0 +1,280 @@
+/// Form state management
+use crate::validation::{Validator, AsyncValidator};
+use raven_store::{Store, create_store};
+
+pub struct FieldConfig {
+    pub initial: String,
+    pub validators: Vec<Validator>,
+    pub async_validators: Vec<AsyncValidator>,
+    pub validate_on: ValidateOn
+}
+
+pub enum ValidateOn {
+    Change,
+    Blur,
+    Submit
+}
+
+pub struct FieldState {
+    pub value: String,
+    pub error: Option<String>,
+    pub touched: bool,
+    pub dirty: bool,
+    pub validating: bool
+}
+
+pub struct FormState {
+    pub fields: HashMap<String, FieldState>,
+    pub submitting: bool,
+    pub submitted: bool
+}
+
+pub struct Form {
+    store: Store<FormState>,
+    config: HashMap<String, FieldConfig>,
+    form_validators: Vec<FormValidator>
+}
+
+pub type FormValidator = fn(HashMap<String, String>) -> HashMap<String, String>;
+
+impl Form {
+    /// Create a new form
+    pub fn new(
+        config: HashMap<String, FieldConfig>,
+        form_validators: Vec<FormValidator>
+    ) -> Self {
+        let mut fields = HashMap::new();
+
+        for (name, field_config) in &config {
+            fields.insert(name.clone(), FieldState {
+                value: field_config.initial.clone(),
+                error: None,
+                touched: false,
+                dirty: false,
+                validating: false
+            });
+        }
+
+        let store = create_store(FormState {
+            fields,
+            submitting: false,
+            submitted: false
+        });
+
+        Form {
+            store,
+            config,
+            form_validators
+        }
+    }
+
+    /// Get field value
+    pub fn get(&self, field: &str) -> String {
+        let state = self.store.get();
+        state.fields.get(field)
+            .map(|f| f.value.clone())
+            .unwrap_or_default()
+    }
+
+    /// Set field value
+    pub fn set(&mut self, field: &str, value: String) {
+        self.store.update(|state| {
+            if let Some(field_state) = state.fields.get_mut(field) {
+                field_state.value = value.clone();
+                field_state.dirty = true;
+            }
+        });
+
+        // Validate if configured
+        if let Some(config) = self.config.get(field) {
+            if matches!(config.validate_on, ValidateOn::Change) {
+                self.validate_field(field);
+            }
+        }
+    }
+
+    /// Mark field as touched
+    pub fn touch(&mut self, field: &str) {
+        self.store.update(|state| {
+            if let Some(field_state) = state.fields.get_mut(field) {
+                field_state.touched = true;
+            }
+        });
+
+        // Validate if configured
+        if let Some(config) = self.config.get(field) {
+            if matches!(config.validate_on, ValidateOn::Blur) {
+                self.validate_field(field);
+            }
+        }
+    }
+
+    /// Validate a single field
+    pub fn validate_field(&mut self, field: &str) {
+        let value = self.get(field);
+
+        if let Some(config) = self.config.get(field) {
+            // Run sync validators
+            let mut error = None;
+            for validator in &config.validators {
+                if let Some(err) = validator(value.clone()) {
+                    error = Some(err);
+                    break;
+                }
+            }
+
+            self.store.update(|state| {
+                if let Some(field_state) = state.fields.get_mut(field) {
+                    field_state.error = error;
+                }
+            });
+
+            // Run async validators
+            if !config.async_validators.is_empty() {
+                self.validate_field_async(field);
+            }
+        }
+    }
+
+    /// Validate field asynchronously
+    async fn validate_field_async(&mut self, field: &str) {
+        let value = self.get(field);
+
+        self.store.update(|state| {
+            if let Some(field_state) = state.fields.get_mut(field) {
+                field_state.validating = true;
+            }
+        });
+
+        if let Some(config) = self.config.get(field) {
+            let mut error = None;
+
+            for validator in &config.async_validators {
+                if let Some(err) = await validator(value.clone()) {
+                    error = Some(err);
+                    break;
+                }
+            }
+
+            self.store.update(|state| {
+                if let Some(field_state) = state.fields.get_mut(field) {
+                    field_state.error = error;
+                    field_state.validating = false;
+                }
+            });
+        }
+    }
+
+    /// Validate all fields
+    pub fn validate_all(&mut self) {
+        for field in self.config.keys() {
+            self.validate_field(field);
+        }
+
+        // Run form-level validators
+        let values = self.values();
+        for form_validator in &self.form_validators {
+            let errors = form_validator(values.clone());
+            for (field, error) in errors {
+                self.store.update(|state| {
+                    if let Some(field_state) = state.fields.get_mut(&field) {
+                        field_state.error = Some(error);
+                    }
+                });
+            }
+        }
+    }
+
+    /// Check if form is valid
+    pub fn is_valid(&self) -> bool {
+        let state = self.store.get();
+        state.fields.values().all(|field| field.error.is_none())
+    }
+
+    /// Get field error
+    pub fn error(&self, field: &str) -> Option<String> {
+        let state = self.store.get();
+        state.fields.get(field)
+            .and_then(|f| f.error.clone())
+    }
+
+    /// Check if field is touched
+    pub fn is_touched(&self, field: &str) -> bool {
+        let state = self.store.get();
+        state.fields.get(field)
+            .map(|f| f.touched)
+            .unwrap_or(false)
+    }
+
+    /// Check if field is dirty
+    pub fn is_dirty(&self, field: &str) -> bool {
+        let state = self.store.get();
+        state.fields.get(field)
+            .map(|f| f.dirty)
+            .unwrap_or(false)
+    }
+
+    /// Get all form values
+    pub fn values(&self) -> HashMap<String, String> {
+        let state = self.store.get();
+        state.fields.iter()
+            .map(|(name, field)| (name.clone(), field.value.clone()))
+            .collect()
+    }
+
+    /// Get all errors
+    pub fn errors(&self) -> HashMap<String, String> {
+        let state = self.store.get();
+        state.fields.iter()
+            .filter_map(|(name, field)| {
+                field.error.clone().map(|err| (name.clone(), err))
+            })
+            .collect()
+    }
+
+    /// Reset form to initial state
+    pub fn reset(&mut self) {
+        for (name, config) in &self.config {
+            self.store.update(|state| {
+                if let Some(field_state) = state.fields.get_mut(name) {
+                    field_state.value = config.initial.clone();
+                    field_state.error = None;
+                    field_state.touched = false;
+                    field_state.dirty = false;
+                }
+            });
+        }
+
+        self.store.update(|state| {
+            state.submitted = false;
+            state.submitting = false;
+        });
+    }
+
+    /// Submit the form
+    pub async fn submit(&mut self, on_submit: fn(HashMap<String, String>) -> ()) {
+        self.validate_all();
+
+        if self.is_valid() {
+            self.store.update(|state| {
+                state.submitting = true;
+            });
+
+            let values = self.values();
+            on_submit(values);
+
+            self.store.update(|state| {
+                state.submitting = false;
+                state.submitted = true;
+            });
+        }
+    }
+}
+
+/// Create a form
+pub fn use_form(
+    config: HashMap<String, FieldConfig>,
+    form_validators: Vec<FormValidator>
+) -> Form {
+    Form::new(config, form_validators)
+}

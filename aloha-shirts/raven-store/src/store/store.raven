@@ -1,0 +1,153 @@
+/// Core reactive store implementation
+use crate::middleware::Middleware;
+
+/// Store holds reactive state with subscriber notifications
+pub struct Store<T> {
+    state: T,
+    subscribers: Vec<fn(T) -> ()>,
+    middleware: Vec<Middleware<T>>,
+    history: Vec<T>,
+    history_index: i32,
+    max_history: i32
+}
+
+impl<T: Clone> Store<T> {
+    /// Create a new store with initial state
+    pub fn new(initial_state: T) -> Self {
+        Store {
+            state: initial_state.clone(),
+            subscribers: Vec::new(),
+            middleware: Vec::new(),
+            history: vec![initial_state],
+            history_index: 0,
+            max_history: 50
+        }
+    }
+
+    /// Create store with middleware
+    pub fn with_middleware(initial_state: T, middleware: Vec<Middleware<T>>) -> Self {
+        let mut store = Store::new(initial_state);
+        store.middleware = middleware;
+        store
+    }
+
+    /// Get current state (immutable)
+    pub fn get(&self) -> T {
+        self.state.clone()
+    }
+
+    /// Set state to new value
+    pub fn set(&mut self, new_state: T) {
+        self.apply_middleware("set", new_state.clone());
+
+        self.state = new_state.clone();
+        self.add_to_history(new_state.clone());
+        self.notify_subscribers();
+    }
+
+    /// Update state with a function
+    pub fn update(&mut self, updater: fn(T) -> T) {
+        let new_state = updater(self.state.clone());
+        self.set(new_state);
+    }
+
+    /// Subscribe to state changes
+    /// Returns unsubscribe function
+    pub fn subscribe(&mut self, listener: fn(T) -> ()) -> fn() -> () {
+        self.subscribers.push(listener);
+
+        // Return unsubscribe function
+        let index = self.subscribers.len() - 1;
+        move || {
+            self.subscribers.remove(index);
+        }
+    }
+
+    /// Notify all subscribers of state change
+    fn notify_subscribers(&self) {
+        for subscriber in &self.subscribers {
+            subscriber(self.state.clone());
+        }
+    }
+
+    /// Apply middleware chain
+    fn apply_middleware(&mut self, action: &str, state: T) {
+        let mut current_state = state;
+
+        for middleware in &self.middleware {
+            current_state = middleware.apply(action, current_state);
+        }
+    }
+
+    /// Add state to history
+    fn add_to_history(&mut self, state: T) {
+        // Remove any future history if we're not at the end
+        if self.history_index < (self.history.len() as i32 - 1) {
+            self.history.truncate((self.history_index + 1) as usize);
+        }
+
+        self.history.push(state);
+
+        // Limit history size
+        if self.history.len() as i32 > self.max_history {
+            self.history.remove(0);
+        } else {
+            self.history_index += 1;
+        }
+    }
+
+    /// Go back one state in history
+    pub fn undo(&mut self) {
+        if self.history_index > 0 {
+            self.history_index -= 1;
+            self.state = self.history[self.history_index as usize].clone();
+            self.notify_subscribers();
+        }
+    }
+
+    /// Go forward one state in history
+    pub fn redo(&mut self) {
+        if self.history_index < (self.history.len() as i32 - 1) {
+            self.history_index += 1;
+            self.state = self.history[self.history_index as usize].clone();
+            self.notify_subscribers();
+        }
+    }
+
+    /// Jump to specific history index
+    pub fn jump_to(&mut self, index: i32) {
+        if index >= 0 && index < self.history.len() as i32 {
+            self.history_index = index;
+            self.state = self.history[index as usize].clone();
+            self.notify_subscribers();
+        }
+    }
+
+    /// Get current history
+    pub fn get_history(&self) -> Vec<T> {
+        self.history.clone()
+    }
+
+    /// Check if can undo
+    pub fn can_undo(&self) -> bool {
+        self.history_index > 0
+    }
+
+    /// Check if can redo
+    pub fn can_redo(&self) -> bool {
+        self.history_index < (self.history.len() as i32 - 1)
+    }
+}
+
+/// Create a new store
+pub fn create_store<T: Clone>(initial_state: T) -> Store<T> {
+    Store::new(initial_state)
+}
+
+/// Create store with middleware
+pub fn create_store_with_middleware<T: Clone>(
+    initial_state: T,
+    middleware: Vec<Middleware<T>>
+) -> Store<T> {
+    Store::with_middleware(initial_state, middleware)
+}

@@ -1,0 +1,234 @@
+/// Built-in validators for common use cases
+
+pub type Validator = fn(String) -> Option<String>;
+pub type AsyncValidator = fn(String) -> Promise<Option<String>>;
+
+/// Required field validator
+pub fn required() -> Validator {
+    required_with_message("This field is required")
+}
+
+pub fn required_with_message(message: &str) -> Validator {
+    let msg = message.to_string();
+    move |value| {
+        if value.trim().is_empty() {
+            Some(msg.clone())
+        } else {
+            None
+        }
+    }
+}
+
+/// Email validator
+pub fn email() -> Validator {
+    email_with_message("Please enter a valid email address")
+}
+
+pub fn email_with_message(message: &str) -> Validator {
+    let msg = message.to_string();
+    move |value| {
+        let email_pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if email_pattern.test(&value) {
+            None
+        } else {
+            Some(msg.clone())
+        }
+    }
+}
+
+/// URL validator
+pub fn url() -> Validator {
+    url_with_message("Please enter a valid URL")
+}
+
+pub fn url_with_message(message: &str) -> Validator {
+    let msg = message.to_string();
+    move |value| {
+        let url_pattern = /^https?:\/\/.+/;
+        if url_pattern.test(&value) {
+            None
+        } else {
+            Some(msg.clone())
+        }
+    }
+}
+
+/// Minimum value validator
+pub fn min(min_value: f64) -> Validator {
+    move |value| {
+        if let Ok(num) = value.parse::<f64>() {
+            if num >= min_value {
+                None
+            } else {
+                Some(format!("Value must be at least {}", min_value))
+            }
+        } else {
+            Some("Please enter a valid number".to_string())
+        }
+    }
+}
+
+/// Maximum value validator
+pub fn max(max_value: f64) -> Validator {
+    move |value| {
+        if let Ok(num) = value.parse::<f64>() {
+            if num <= max_value {
+                None
+            } else {
+                Some(format!("Value must be at most {}", max_value))
+            }
+        } else {
+            Some("Please enter a valid number".to_string())
+        }
+    }
+}
+
+/// Minimum length validator
+pub fn min_length(min_len: usize) -> Validator {
+    move |value| {
+        if value.len() >= min_len {
+            None
+        } else {
+            Some(format!("Must be at least {} characters", min_len))
+        }
+    }
+}
+
+/// Maximum length validator
+pub fn max_length(max_len: usize) -> Validator {
+    move |value| {
+        if value.len() <= max_len {
+            None
+        } else {
+            Some(format!("Must be at most {} characters", max_len))
+        }
+    }
+}
+
+/// Pattern matching validator
+pub fn pattern(regex: Regex) -> Validator {
+    pattern_with_message(regex, "Invalid format")
+}
+
+pub fn pattern_with_message(regex: Regex, message: &str) -> Validator {
+    let msg = message.to_string();
+    move |value| {
+        if regex.test(&value) {
+            None
+        } else {
+            Some(msg.clone())
+        }
+    }
+}
+
+/// Alphanumeric validator
+pub fn alphanumeric() -> Validator {
+    pattern_with_message(/^[a-zA-Z0-9]+$/, "Must contain only letters and numbers")
+}
+
+/// Numeric validator
+pub fn numeric() -> Validator {
+    pattern_with_message(/^[0-9]+$/, "Must contain only numbers")
+}
+
+/// Alpha validator
+pub fn alpha() -> Validator {
+    pattern_with_message(/^[a-zA-Z]+$/, "Must contain only letters")
+}
+
+/// Has uppercase letter
+pub fn has_uppercase() -> Validator {
+    move |value| {
+        if value.chars().any(|c| c.is_uppercase()) {
+            None
+        } else {
+            Some("Must contain at least one uppercase letter".to_string())
+        }
+    }
+}
+
+/// Has lowercase letter
+pub fn has_lowercase() -> Validator {
+    move |value| {
+        if value.chars().any(|c| c.is_lowercase()) {
+            None
+        } else {
+            Some("Must contain at least one lowercase letter".to_string())
+        }
+    }
+}
+
+/// Has digit
+pub fn has_digit() -> Validator {
+    move |value| {
+        if value.chars().any(|c| c.is_digit(10)) {
+            None
+        } else {
+            Some("Must contain at least one digit".to_string())
+        }
+    }
+}
+
+/// Has special character
+pub fn has_special_char() -> Validator {
+    move |value| {
+        if value.chars().any(|c| !c.is_alphanumeric()) {
+            None
+        } else {
+            Some("Must contain at least one special character".to_string())
+        }
+    }
+}
+
+/// Matches another field
+pub fn matches_field(field_name: &str) -> FormFieldValidator {
+    let name = field_name.to_string();
+    move |value, form| {
+        let other_value = form.get(&name);
+        if value == other_value {
+            None
+        } else {
+            Some(format!("Must match {}", name))
+        }
+    }
+}
+
+/// Custom validator
+pub fn custom(validator_fn: fn(String) -> bool, message: &str) -> Validator {
+    let msg = message.to_string();
+    move |value| {
+        if validator_fn(value.clone()) {
+            None
+        } else {
+            Some(msg.clone())
+        }
+    }
+}
+
+/// Async validator
+pub fn async_validator(
+    validator_fn: fn(String) -> Promise<bool>,
+    message: &str
+) -> AsyncValidator {
+    let msg = message.to_string();
+    move |value| async {
+        let is_valid = await validator_fn(value);
+        if is_valid {
+            None
+        } else {
+            Some(msg.clone())
+        }
+    }
+}
+
+/// Compose multiple validators
+pub fn compose(validators: Vec<Validator>) -> Validator {
+    move |value| {
+        for validator in &validators {
+            if let Some(error) = validator(value.clone()) {
+                return Some(error);
+            }
+        }
+        None
+    }
+}

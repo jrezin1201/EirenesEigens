@@ -1,0 +1,207 @@
+/// Reusable form components
+use crate::validation::Validator;
+use crate::fields::Form;
+
+/// Field component with built-in validation display
+component Field(
+    name: String,
+    label: Option<String>,
+    field_type: Option<String>,
+    placeholder: Option<String>,
+    validators: Vec<Validator>,
+    form: Form
+) {
+    let value = form.get(&name);
+    let error = form.error(&name);
+    let is_touched = form.is_touched(&name);
+    let show_error = is_touched && error.is_some();
+
+    <div class={`field ${if show_error { "field-error" } else { "" }}`}>
+        {label.map(|l| {
+            <label for={name.clone()}>{l}</label>
+        })}
+
+        <input
+            id={name.clone()}
+            type={field_type.unwrap_or("text".to_string())}
+            placeholder={placeholder.unwrap_or_default()}
+            value={value}
+            onInput={(e) => form.set(&name, e.target.value)}
+            onBlur={() => form.touch(&name)}
+            class={if show_error { "input-error" } else { "" }}
+        />
+
+        {show_error && error.map(|err| {
+            <span class="error-message">{err}</span>
+        })}
+    </div>
+}
+
+/// Textarea component
+component TextArea(
+    name: String,
+    label: Option<String>,
+    placeholder: Option<String>,
+    rows: Option<i32>,
+    validators: Vec<Validator>,
+    form: Form
+) {
+    let value = form.get(&name);
+    let error = form.error(&name);
+    let is_touched = form.is_touched(&name);
+    let show_error = is_touched && error.is_some();
+
+    <div class={`field ${if show_error { "field-error" } else { "" }}`}>
+        {label.map(|l| {
+            <label for={name.clone()}>{l}</label>
+        })}
+
+        <textarea
+            id={name.clone()}
+            placeholder={placeholder.unwrap_or_default()}
+            rows={rows.unwrap_or(4)}
+            value={value}
+            onInput={(e) => form.set(&name, e.target.value)}
+            onBlur={() => form.touch(&name)}
+            class={if show_error { "textarea-error" } else { "" }}
+        />
+
+        {show_error && error.map(|err| {
+            <span class="error-message">{err}</span>
+        })}
+    </div>
+}
+
+/// Select component
+component Select(
+    name: String,
+    label: Option<String>,
+    options: Vec<SelectOption>,
+    validators: Vec<Validator>,
+    form: Form
+) {
+    let value = form.get(&name);
+    let error = form.error(&name);
+    let is_touched = form.is_touched(&name);
+    let show_error = is_touched && error.is_some();
+
+    <div class={`field ${if show_error { "field-error" } else { "" }}`}>
+        {label.map(|l| {
+            <label for={name.clone()}>{l}</label>
+        })}
+
+        <select
+            id={name.clone()}
+            value={value}
+            onChange={(e) => form.set(&name, e.target.value)}
+            onBlur={() => form.touch(&name)}
+            class={if show_error { "select-error" } else { "" }}
+        >
+            {options.map(|opt| {
+                <option value={opt.value} key={opt.value}>
+                    {opt.label}
+                </option>
+            })}
+        </select>
+
+        {show_error && error.map(|err| {
+            <span class="error-message">{err}</span>
+        })}
+    </div>
+}
+
+pub struct SelectOption {
+    pub value: String,
+    pub label: String
+}
+
+/// Checkbox component
+component Checkbox(
+    name: String,
+    label: String,
+    form: Form
+) {
+    let checked = form.get(&name) == "true";
+
+    <div class="field-checkbox">
+        <label>
+            <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) => {
+                    let value = if e.target.checked { "true" } else { "false" };
+                    form.set(&name, value.to_string());
+                }}
+            />
+            <span>{label}</span>
+        </label>
+    </div>
+}
+
+/// Radio group component
+component RadioGroup(
+    name: String,
+    label: Option<String>,
+    options: Vec<SelectOption>,
+    form: Form
+) {
+    let value = form.get(&name);
+
+    <div class="field-radio-group">
+        {label.map(|l| {
+            <div class="radio-label">{l}</div>
+        })}
+
+        {options.map(|opt| {
+            <label key={opt.value} class="radio-option">
+                <input
+                    type="radio"
+                    name={name.clone()}
+                    value={opt.value.clone()}
+                    checked={value == opt.value}
+                    onChange={(e) => form.set(&name, e.target.value)}
+                />
+                <span>{opt.label}</span>
+            </label>
+        })}
+    </div>
+}
+
+/// Submit button component
+component SubmitButton(
+    form: Form,
+    children: Vec<VNode>,
+    disabled: Option<bool>
+) {
+    let is_submitting = form.store.get().submitting;
+    let is_valid = form.is_valid();
+    let is_disabled = disabled.unwrap_or(false) || !is_valid || is_submitting;
+
+    <button
+        type="submit"
+        disabled={is_disabled}
+        class={`submit-button ${if is_submitting { "submitting" } else { "" }}`}
+    >
+        {if is_submitting {
+            <span>Submitting...</span>
+        } else {
+            children
+        }}
+    </button>
+}
+
+/// Form wrapper component
+component FormWrapper(
+    form: Form,
+    onSubmit: fn(HashMap<String, String>) -> (),
+    children: Vec<VNode>
+) {
+    let handle_submit = (e) => {
+        e.preventDefault();
+        form.submit(onSubmit);
+    };
+
+    <form onSubmit={handle_submit} class="raven-form">
+        {children}
+    </form>
+}

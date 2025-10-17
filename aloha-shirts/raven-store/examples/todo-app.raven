@@ -1,0 +1,151 @@
+/// Complete todo app example with persistence
+use raven_store::{create_store, persist, logger};
+
+struct Todo {
+    id: i32,
+    text: String,
+    completed: bool
+}
+
+struct AppState {
+    todos: Vec<Todo>,
+    filter: String,
+    next_id: i32
+}
+
+// Create store with middleware
+let store = create_store_with_middleware(
+    AppState {
+        todos: Vec::new(),
+        filter: "all".to_string(),
+        next_id: 1
+    },
+    vec![
+        logger(),
+        persist("todo-app")
+    ]
+);
+
+// Actions
+let add_todo = (text: String) => {
+    store.update((state) => {
+        state.todos.push(Todo {
+            id: state.next_id,
+            text,
+            completed: false
+        });
+        state.next_id += 1;
+    });
+};
+
+let toggle_todo = (id: i32) => {
+    store.update((state) => {
+        for todo in &mut state.todos {
+            if todo.id == id {
+                todo.completed = !todo.completed;
+                break;
+            }
+        }
+    });
+};
+
+let remove_todo = (id: i32) => {
+    store.update((state) => {
+        state.todos.retain(|todo| todo.id != id);
+    });
+};
+
+let set_filter = (filter: String) => {
+    store.update((state) => {
+        state.filter = filter;
+    });
+};
+
+let clear_completed = () => {
+    store.update((state) => {
+        state.todos.retain(|todo| !todo.completed);
+    });
+};
+
+// Selectors
+use raven_store::create_selector;
+
+let filtered_todos = create_selector(store, |state| {
+    match state.filter.as_str() {
+        "active" => state.todos.filter(|t| !t.completed),
+        "completed" => state.todos.filter(|t| t.completed),
+        _ => state.todos.clone()
+    }
+});
+
+let remaining_count = create_selector(store, |state| {
+    state.todos.filter(|t| !t.completed).len()
+});
+
+let completed_count = create_selector(store, |state| {
+    state.todos.filter(|t| t.completed).len()
+});
+
+// Component
+component TodoApp() {
+    let state = store.get();
+    let todos = filtered_todos.get();
+
+    <div class="todo-app">
+        <h1>Todos ({remaining_count.get()})</h1>
+
+        <input
+            type="text"
+            placeholder="What needs to be done?"
+            onKeyPress={(e) => {
+                if e.key == "Enter" {
+                    add_todo(e.target.value);
+                    e.target.value = "";
+                }
+            }}
+        />
+
+        <div class="filters">
+            <button
+                class={if state.filter == "all" { "active" } else { "" }}
+                onClick={() => set_filter("all".to_string())}
+            >
+                All
+            </button>
+            <button
+                class={if state.filter == "active" { "active" } else { "" }}
+                onClick={() => set_filter("active".to_string())}
+            >
+                Active
+            </button>
+            <button
+                class={if state.filter == "completed" { "active" } else { "" }}
+                onClick={() => set_filter("completed".to_string())}
+            >
+                Completed
+            </button>
+        </div>
+
+        <ul class="todo-list">
+            {todos.map(|todo| {
+                <li key={todo.id}>
+                    <input
+                        type="checkbox"
+                        checked={todo.completed}
+                        onChange={() => toggle_todo(todo.id)}
+                    />
+                    <span class={if todo.completed { "completed" } else { "" }}>
+                        {todo.text}
+                    </span>
+                    <button onClick={() => remove_todo(todo.id)}>×</button>
+                </li>
+            })}
+        </ul>
+
+        {if completed_count.get() > 0 {
+            <button onClick={clear_completed}>
+                Clear completed ({completed_count.get()})
+            </button>
+        }}
+    </div>
+}

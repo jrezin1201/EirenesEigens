@@ -1,0 +1,155 @@
+/// Computed values that automatically update based on dependencies
+
+pub struct Computed<T> {
+    getter: fn() -> T,
+    cached_value: Option<T>,
+    dependencies: Vec<Signal<any>>,
+    is_dirty: bool
+}
+
+impl<T: Clone> Computed<T> {
+    /// Create a new computed value
+    pub fn new(getter: fn() -> T) -> Self {
+        Computed {
+            getter,
+            cached_value: None,
+            dependencies: Vec::new(),
+            is_dirty: true
+        }
+    }
+
+    /// Get the computed value (cached)
+    pub fn get(&mut self) -> T {
+        if self.is_dirty || self.cached_value.is_none() {
+            self.cached_value = Some((self.getter)());
+            self.is_dirty = false;
+        }
+
+        self.cached_value.clone().unwrap()
+    }
+
+    /// Mark as dirty (needs recomputation)
+    pub fn invalidate(&mut self) {
+        self.is_dirty = true;
+    }
+
+    /// Subscribe to dependencies
+    pub fn track_dependency(&mut self, signal: Signal<any>) {
+        self.dependencies.push(signal);
+
+        // Subscribe to dependency changes
+        signal.subscribe(|| {
+            self.invalidate();
+        });
+    }
+}
+
+/// Create a computed value
+pub fn computed<T: Clone>(getter: fn() -> T) -> Computed<T> {
+    Computed::new(getter)
+}
+
+/// Signal for fine-grained reactivity
+pub struct Signal<T> {
+    value: T,
+    subscribers: Vec<fn() -> ()>
+}
+
+impl<T: Clone> Signal<T> {
+    /// Create a new signal
+    pub fn new(initial_value: T) -> Self {
+        Signal {
+            value: initial_value,
+            subscribers: Vec::new()
+        }
+    }
+
+    /// Get current value
+    pub fn get(&self) -> T {
+        self.value.clone()
+    }
+
+    /// Set new value and notify subscribers
+    pub fn set(&mut self, new_value: T) {
+        self.value = new_value;
+        self.notify();
+    }
+
+    /// Update value with function
+    pub fn update(&mut self, updater: fn(T) -> T) {
+        self.value = updater(self.value.clone());
+        self.notify();
+    }
+
+    /// Subscribe to changes
+    pub fn subscribe(&mut self, listener: fn() -> ()) -> fn() -> () {
+        self.subscribers.push(listener);
+
+        let index = self.subscribers.len() - 1;
+        move || {
+            self.subscribers.remove(index);
+        }
+    }
+
+    /// Notify all subscribers
+    fn notify(&self) {
+        for subscriber in &self.subscribers {
+            subscriber();
+        }
+    }
+}
+
+/// Create a signal
+pub fn signal<T: Clone>(initial_value: T) -> Signal<T> {
+    Signal::new(initial_value)
+}
+
+/// Effect runs side effects when dependencies change
+pub struct Effect {
+    effect_fn: fn() -> (),
+    dependencies: Vec<Signal<any>>,
+    cleanup: Option<fn() -> ()>
+}
+
+impl Effect {
+    /// Create a new effect
+    pub fn new(effect_fn: fn() -> ()) -> Self {
+        Effect {
+            effect_fn,
+            dependencies: Vec::new(),
+            cleanup: None
+        }
+    }
+
+    /// Run the effect
+    pub fn run(&mut self) {
+        // Run cleanup if exists
+        if let Some(cleanup_fn) = self.cleanup {
+            cleanup_fn();
+        }
+
+        // Run effect
+        (self.effect_fn)();
+    }
+
+    /// Track a dependency
+    pub fn track(&mut self, signal: Signal<any>) {
+        self.dependencies.push(signal);
+
+        signal.subscribe(|| {
+            self.run();
+        });
+    }
+
+    /// Set cleanup function
+    pub fn on_cleanup(&mut self, cleanup_fn: fn() -> ()) {
+        self.cleanup = Some(cleanup_fn);
+    }
+}
+
+/// Create an effect
+pub fn effect(effect_fn: fn() -> ()) -> Effect {
+    let mut e = Effect::new(effect_fn);
+    e.run();
+    e
+}

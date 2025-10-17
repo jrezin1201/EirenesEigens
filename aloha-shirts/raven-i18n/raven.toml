@@ -1,0 +1,14 @@
+[package]
+name = "raven-i18n"
+version = "1.0.0"
+authors = ["aloha-shirts"]
+description = "Internationalization (i18n) library for RavensOne applications"
+license = "MIT"
+repository = "https://github.com/aloha-shirts/raven-i18n"
+keywords = ["i18n", "l10n", "internationalization", "localization", "translation"]
+
+[dependencies]
+raven-store = "1.0.0"
+
+[dev-dependencies]
+raven-test = "1.0.0"

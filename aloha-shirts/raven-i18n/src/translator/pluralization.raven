@@ -1,0 +1,139 @@
+/// Pluralization rules for different languages
+
+pub enum PluralForm {
+    Zero,
+    One,
+    Two,
+    Few,
+    Many,
+    Other
+}
+
+/// Get plural form for a locale and count
+pub fn get_plural_form(locale: &str, count: i32) -> PluralForm {
+    let lang = locale.split('-').next().unwrap_or(locale);
+
+    match lang {
+        "en" => english_plural(count),
+        "fr" | "pt-BR" => french_plural(count),
+        "ru" | "uk" => russian_plural(count),
+        "pl" => polish_plural(count),
+        "ar" => arabic_plural(count),
+        "cs" | "sk" => czech_plural(count),
+        "ja" | "ko" | "zh" | "vi" | "th" => asian_plural(count),
+        _ => english_plural(count) // Default to English rules
+    }
+}
+
+/// English pluralization (zero, one, other)
+fn english_plural(count: i32) -> PluralForm {
+    match count {
+        0 => PluralForm::Zero,
+        1 => PluralForm::One,
+        _ => PluralForm::Other
+    }
+}
+
+/// French pluralization (one, other)
+fn french_plural(count: i32) -> PluralForm {
+    if count == 0 || count == 1 {
+        PluralForm::One
+    } else {
+        PluralForm::Other
+    }
+}
+
+/// Russian pluralization (one, few, many, other)
+fn russian_plural(count: i32) -> PluralForm {
+    let n = count.abs();
+    let n10 = n % 10;
+    let n100 = n % 100;
+
+    if n10 == 1 && n100 != 11 {
+        PluralForm::One
+    } else if n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20) {
+        PluralForm::Few
+    } else {
+        PluralForm::Many
+    }
+}
+
+/// Polish pluralization (one, few, many, other)
+fn polish_plural(count: i32) -> PluralForm {
+    let n = count.abs();
+    let n10 = n % 10;
+    let n100 = n % 100;
+
+    if n == 1 {
+        PluralForm::One
+    } else if n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14) {
+        PluralForm::Few
+    } else {
+        PluralForm::Many
+    }
+}
+
+/// Arabic pluralization (zero, one, two, few, many, other)
+fn arabic_plural(count: i32) -> PluralForm {
+    let n = count.abs();
+    let n100 = n % 100;
+
+    match n {
+        0 => PluralForm::Zero,
+        1 => PluralForm::One,
+        2 => PluralForm::Two,
+        _ if n100 >= 3 && n100 <= 10 => PluralForm::Few,
+        _ if n100 >= 11 && n100 <= 99 => PluralForm::Many,
+        _ => PluralForm::Other
+    }
+}
+
+/// Czech/Slovak pluralization
+fn czech_plural(count: i32) -> PluralForm {
+    let n = count.abs();
+
+    match n {
+        1 => PluralForm::One,
+        2..=4 => PluralForm::Few,
+        _ => PluralForm::Other
+    }
+}
+
+/// Asian languages (no pluralization)
+fn asian_plural(_count: i32) -> PluralForm {
+    PluralForm::Other
+}
+
+/// Translate with pluralization
+pub fn translate_plural(
+    i18n: &I18n,
+    key: &str,
+    count: i32,
+    params: Option<HashMap<String, any>>
+) -> String {
+    let locale = i18n.get_locale();
+    let form = get_plural_form(&locale, count);
+
+    let plural_key = match form {
+        PluralForm::Zero => format!("{}.zero", key),
+        PluralForm::One => format!("{}.one", key),
+        PluralForm::Two => format!("{}.two", key),
+        PluralForm::Few => format!("{}.few", key),
+        PluralForm::Many => format!("{}.many", key),
+        PluralForm::Other => format!("{}.other", key)
+    };
+
+    let mut translation_params = params.unwrap_or_default();
+    translation_params.insert("count".to_string(), count);
+
+    // Try specific plural form first, fall back to "other"
+    let translation = i18n.t(&plural_key, Some(translation_params.clone()));
+
+    if translation == plural_key {
+        // Fall back to "other" form
+        let fallback_key = format!("{}.other", key);
+        i18n.t(&fallback_key, Some(translation_params))
+    } else {
+        translation
+    }
+}

@@ -1,0 +1,105 @@
+/// Fine-grained reactivity with signals
+use raven_store::{signal, computed, effect};
+
+// Basic signal
+let count = signal(0);
+
+console.log(count.get()); // 0
+
+count.set(5);
+console.log(count.get()); // 5
+
+count.update(|n| n + 1);
+console.log(count.get()); // 6
+
+// Computed values
+let doubled = computed(() => count.get() * 2);
+let quadrupled = computed(() => doubled.get() * 2);
+
+console.log(doubled.get()); // 12
+console.log(quadrupled.get()); // 24
+
+count.set(10);
+console.log(doubled.get()); // 20
+console.log(quadrupled.get()); // 40
+
+// Effects
+let first_name = signal("John");
+let last_name = signal("Doe");
+
+effect(() => {
+    console.log("Full name:", first_name.get(), last_name.get());
+});
+// Logs: "Full name: John Doe"
+
+first_name.set("Jane");
+// Logs: "Full name: Jane Doe"
+
+// Component with signals
+component Counter() {
+    let count = signal(0);
+    let doubled = computed(() => count.get() * 2);
+
+    <div>
+        <p>Count: {count.get()}</p>
+        <p>Doubled: {doubled.get()}</p>
+
+        <button onClick={() => count.update(|n| n + 1)}>
+            Increment
+        </button>
+        <button onClick={() => count.update(|n| n - 1)}>
+            Decrement
+        </button>
+        <button onClick={() => count.set(0)}>
+            Reset
+        </button>
+    </div>
+}
+
+// Complex reactive example
+component Form() {
+    let username = signal("");
+    let email = signal("");
+    let password = signal("");
+
+    let is_valid = computed(() => {
+        username.get().len() >= 3 &&
+        email.get().contains("@") &&
+        password.get().len() >= 8
+    });
+
+    let submit = () => {
+        if is_valid.get() {
+            console.log("Submitting form...");
+            console.log("Username:", username.get());
+            console.log("Email:", email.get());
+        }
+    };
+
+    <form onSubmit={submit}>
+        <input
+            type="text"
+            placeholder="Username"
+            value={username.get()}
+            onInput={(e) => username.set(e.target.value)}
+        />
+
+        <input
+            type="email"
+            placeholder="Email"
+            value={email.get()}
+            onInput={(e) => email.set(e.target.value)}
+        />
+
+        <input
+            type="password"
+            placeholder="Password"
+            value={password.get()}
+            onInput={(e) => password.set(e.target.value)}
+        />
+
+        <button type="submit" disabled={!is_valid.get()}>
+            Submit
+        </button>
+    </form>
+}

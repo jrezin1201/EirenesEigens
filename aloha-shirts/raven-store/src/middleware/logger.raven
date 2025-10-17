@@ -1,0 +1,82 @@
+/// Logger middleware for debugging state changes
+use crate::middleware::Middleware;
+
+pub struct LoggerOptions {
+    pub log_actions: bool,
+    pub log_state: bool,
+    pub log_diff: bool,
+    pub collapsed: bool
+}
+
+impl Default for LoggerOptions {
+    fn default() -> Self {
+        LoggerOptions {
+            log_actions: true,
+            log_state: true,
+            log_diff: false,
+            collapsed: false
+        }
+    }
+}
+
+/// Create logger middleware
+pub fn logger<T: Clone + Debug>() -> Middleware<T> {
+    logger_with_options(LoggerOptions::default())
+}
+
+/// Create logger middleware with custom options
+pub fn logger_with_options<T: Clone + Debug>(options: LoggerOptions) -> Middleware<T> {
+    Middleware::new(move |action, state| {
+        if options.collapsed {
+            console.group_collapsed("🔄 State Update");
+        } else {
+            console.group("🔄 State Update");
+        }
+
+        if options.log_actions {
+            console.log("Action:", action);
+        }
+
+        if options.log_state {
+            console.log("New State:", state.clone());
+        }
+
+        console.group_end();
+
+        state
+    })
+}
+
+/// Simple console logger
+pub fn console_logger<T: Clone + Debug>() -> Middleware<T> {
+    Middleware::new(|action, state| {
+        console.log("[Store]", action, "->", state.clone());
+        state
+    })
+}
+
+/// Time-stamped logger
+pub fn timestamp_logger<T: Clone + Debug>() -> Middleware<T> {
+    Middleware::new(|action, state| {
+        let timestamp = Date::now();
+        console.log(
+            `[${timestamp}]`,
+            action,
+            state.clone()
+        );
+        state
+    })
+}
+
+/// Conditional logger (only logs specific actions)
+pub fn conditional_logger<T: Clone + Debug>(
+    predicate: fn(&str) -> bool
+) -> Middleware<T> {
+    Middleware::new(move |action, state| {
+        if predicate(action) {
+            console.log("Action:", action);
+            console.log("State:", state.clone());
+        }
+        state
+    })
+}

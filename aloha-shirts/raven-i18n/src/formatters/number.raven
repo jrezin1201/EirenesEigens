@@ -1,0 +1,88 @@
+/// Number formatting utilities
+
+pub struct NumberFormatOptions {
+    pub min_fraction_digits: Option<i32>,
+    pub max_fraction_digits: Option<i32>,
+    pub use_grouping: bool
+}
+
+impl Default for NumberFormatOptions {
+    fn default() -> Self {
+        NumberFormatOptions {
+            min_fraction_digits: None,
+            max_fraction_digits: None,
+            use_grouping: true
+        }
+    }
+}
+
+/// Format number according to locale
+pub fn format_number(value: f64, locale: &str, options: Option<NumberFormatOptions>) -> String {
+    let opts = options.unwrap_or_default();
+
+    // Use browser's Intl.NumberFormat if available
+    if let Some(intl) = window.Intl {
+        let formatter = intl.NumberFormat(locale, {
+            minimumFractionDigits: opts.min_fraction_digits,
+            maximumFractionDigits: opts.max_fraction_digits,
+            useGrouping: opts.use_grouping
+        });
+
+        return formatter.format(value);
+    }
+
+    // Fallback formatting
+    format!("{:.2}", value)
+}
+
+/// Format currency
+pub fn format_currency(value: f64, currency: &str, locale: &str) -> String {
+    if let Some(intl) = window.Intl {
+        let formatter = intl.NumberFormat(locale, {
+            style: "currency",
+            currency: currency
+        });
+
+        return formatter.format(value);
+    }
+
+    // Fallback
+    format!("{} {:.2}", currency, value)
+}
+
+/// Format percentage
+pub fn format_percent(value: f64, locale: &str) -> String {
+    if let Some(intl) = window.Intl {
+        let formatter = intl.NumberFormat(locale, {
+            style: "percent",
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        });
+
+        return formatter.format(value);
+    }
+
+    // Fallback
+    format!("{:.2}%", value * 100.0)
+}
+
+/// Format compact number (1K, 1M, etc.)
+pub fn format_compact(value: f64, locale: &str) -> String {
+    if let Some(intl) = window.Intl {
+        let formatter = intl.NumberFormat(locale, {
+            notation: "compact",
+            compactDisplay: "short"
+        });
+
+        return formatter.format(value);
+    }
+
+    // Fallback
+    if value >= 1_000_000.0 {
+        format!("{:.1}M", value / 1_000_000.0)
+    } else if value >= 1_000.0 {
+        format!("{:.1}K", value / 1_000.0)
+    } else {
+        format!("{:.0}", value)
+    }
+}

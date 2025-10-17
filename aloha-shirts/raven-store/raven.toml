@@ -1,0 +1,14 @@
+[package]
+name = "raven-store"
+version = "1.0.0"
+authors = ["aloha-shirts"]
+description = "Advanced state management library for RavensOne applications"
+license = "MIT"
+repository = "https://github.com/aloha-shirts/raven-store"
+keywords = ["state", "reactive", "store", "signals"]
+
+[dependencies]
+# No external dependencies - pure RavensOne
+
+[dev-dependencies]
+raven-test = "1.0.0"

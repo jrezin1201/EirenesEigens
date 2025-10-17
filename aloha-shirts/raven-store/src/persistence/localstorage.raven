@@ -1,0 +1,117 @@
+/// LocalStorage persistence middleware
+use crate::middleware::Middleware;
+
+pub struct PersistOptions {
+    pub key: String,
+    pub debounce_ms: i32,
+    pub serialize: fn(any) -> String,
+    pub deserialize: fn(String) -> any
+}
+
+impl Default for PersistOptions {
+    fn default() -> Self {
+        PersistOptions {
+            key: "raven-store".to_string(),
+            debounce_ms: 300,
+            serialize: |state| JSON::stringify(state),
+            deserialize: |json| JSON::parse(json)
+        }
+    }
+}
+
+/// Create persistence middleware
+pub fn persist<T: Clone + Serialize + Deserialize>(key: &str) -> Middleware<T> {
+    let options = PersistOptions {
+        key: key.to_string(),
+        ..Default::default()
+    };
+
+    persist_with_options(options)
+}
+
+/// Create persistence middleware with custom options
+pub fn persist_with_options<T: Clone + Serialize + Deserialize>(
+    options: PersistOptions
+) -> Middleware<T> {
+    let mut save_timeout: Option<TimeoutId> = None;
+
+    Middleware::new(move |action, state| {
+        // Clear existing timeout
+        if let Some(timeout_id) = save_timeout {
+            clearTimeout(timeout_id);
+        }
+
+        // Debounced save
+        save_timeout = Some(setTimeout(|| {
+            save_to_storage(&options.key, state.clone(), options.serialize);
+        }, options.debounce_ms));
+
+        state
+    })
+}
+
+/// Save state to localStorage
+fn save_to_storage<T: Clone>(
+    key: &str,
+    state: T,
+    serializer: fn(T) -> String
+) {
+    let serialized = serializer(state);
+
+    localStorage.setItem(key, serialized);
+
+    if window.raven && window.raven.isVerbose() {
+        console.log("💾 Saved to localStorage:", key);
+    }
+}
+
+/// Load state from localStorage
+pub fn load_from_storage<T: Deserialize>(
+    key: &str,
+    deserializer: fn(String) -> T
+) -> Option<T> {
+    let stored = localStorage.getItem(key);
+
+    if let Some(json) = stored {
+        let state = deserializer(json);
+
+        if window.raven && window.raven.isVerbose() {
+            console.log("📂 Loaded from localStorage:", key);
+        }
+
+        Some(state)
+    } else {
+        None
+    }
+}
+
+/// Clear persisted state
+pub fn clear_storage(key: &str) {
+    localStorage.removeItem(key);
+    console.log("🗑️  Cleared localStorage:", key);
+}
+
+/// Check if state exists in storage
+pub fn has_stored_state(key: &str) -> bool {
+    localStorage.getItem(key).is_some()
+}
+
+/// Session storage persistence (cleared on tab close)
+pub fn persist_session<T: Clone + Serialize + Deserialize>(key: &str) -> Middleware<T> {
+    Middleware::new(move |action, state| {
+        let serialized = JSON::stringify(state.clone());
+        sessionStorage.setItem(key, serialized);
+        state
+    })
+}
+
+/// Load from session storage
+pub fn load_from_session<T: Deserialize>(key: &str) -> Option<T> {
+    let stored = sessionStorage.getItem(key);
+
+    if let Some(json) = stored {
+        Some(JSON::parse(json))
+    } else {
+        None
+    }
+}

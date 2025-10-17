@@ -1,0 +1,96 @@
+/// Spring physics engine
+use raven_store::Signal;
+
+pub struct SpringConfig {
+    pub stiffness: f64,
+    pub damping: f64,
+    pub mass: f64,
+    pub precision: f64
+}
+
+impl Default for SpringConfig {
+    fn default() -> Self {
+        SpringConfig {
+            stiffness: 170.0,
+            damping: 26.0,
+            mass: 1.0,
+            precision: 0.01
+        }
+    }
+}
+
+pub struct Spring {
+    current: f64,
+    target: f64,
+    velocity: f64,
+    config: SpringConfig,
+    is_animating: bool
+}
+
+impl Spring {
+    pub fn new(initial: f64, config: SpringConfig) -> Self {
+        Spring {
+            current: initial,
+            target: initial,
+            velocity: 0.0,
+            config,
+            is_animating: false
+        }
+    }
+
+    pub fn set(&mut self, target: f64) {
+        self.target = target;
+        if !self.is_animating {
+            self.start_animation();
+        }
+    }
+
+    pub fn get(&self) -> f64 {
+        self.current
+    }
+
+    fn start_animation(&mut self) {
+        self.is_animating = true;
+        self.tick();
+    }
+
+    fn tick(&mut self) {
+        if !self.is_animating {
+            return;
+        }
+
+        let delta_time = 16.0 / 1000.0; // 16ms = 60fps
+
+        // Spring physics calculation
+        let force = -self.config.stiffness * (self.current - self.target);
+        let damping_force = -self.config.damping * self.velocity;
+        let acceleration = (force + damping_force) / self.config.mass;
+
+        self.velocity += acceleration * delta_time;
+        self.current += self.velocity * delta_time;
+
+        // Check if spring has settled
+        let at_rest = (self.current - self.target).abs() < self.config.precision
+            && self.velocity.abs() < self.config.precision;
+
+        if at_rest {
+            self.current = self.target;
+            self.velocity = 0.0;
+            self.is_animating = false;
+        } else {
+            requestAnimationFrame(|| self.tick());
+        }
+    }
+}
+
+pub fn use_spring(initial: f64, config: Option<SpringConfig>) -> Signal<f64> {
+    let spring = Spring::new(initial, config.unwrap_or_default());
+    let signal = Signal::new(initial);
+
+    // Wire spring to signal
+    spring.on_update(move |value| {
+        signal.set(value);
+    });
+
+    signal
+}

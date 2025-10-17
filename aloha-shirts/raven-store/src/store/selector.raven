@@ -1,0 +1,121 @@
+/// Memoized selectors for derived state
+use crate::store::Store;
+
+pub struct Selector<T, R> {
+    store: Store<T>,
+    selector_fn: fn(T) -> R,
+    cached_value: Option<R>,
+    last_state: Option<T>,
+    is_dirty: bool
+}
+
+impl<T: Clone + PartialEq, R: Clone> Selector<T, R> {
+    /// Create a new selector
+    pub fn new(store: Store<T>, selector_fn: fn(T) -> R) -> Self {
+        Selector {
+            store,
+            selector_fn,
+            cached_value: None,
+            last_state: None,
+            is_dirty: true
+        }
+    }
+
+    /// Get selected value (memoized)
+    pub fn get(&mut self) -> R {
+        let current_state = self.store.get();
+
+        // Check if state changed
+        let needs_recompute = match &self.last_state {
+            None => true,
+            Some(last) => last != &current_state
+        };
+
+        if needs_recompute || self.is_dirty {
+            self.cached_value = Some((self.selector_fn)(current_state.clone()));
+            self.last_state = Some(current_state);
+            self.is_dirty = false;
+        }
+
+        self.cached_value.clone().unwrap()
+    }
+
+    /// Force recomputation
+    pub fn invalidate(&mut self) {
+        self.is_dirty = true;
+    }
+
+    /// Subscribe to store changes
+    pub fn subscribe(&mut self, listener: fn(R) -> ()) {
+        self.store.subscribe(move |state| {
+            let value = self.get();
+            listener(value);
+        });
+    }
+}
+
+/// Create a memoized selector
+pub fn create_selector<T: Clone + PartialEq, R: Clone>(
+    store: Store<T>,
+    selector_fn: fn(T) -> R
+) -> Selector<T, R> {
+    Selector::new(store, selector_fn)
+}
+
+/// Compose multiple selectors
+pub struct ComposedSelector<T, R> {
+    selectors: Vec<Selector<T, any>>,
+    combiner: fn(Vec<any>) -> R,
+    cached_value: Option<R>
+}
+
+impl<T: Clone + PartialEq, R: Clone> ComposedSelector<T, R> {
+    /// Create composed selector
+    pub fn new(
+        selectors: Vec<Selector<T, any>>,
+        combiner: fn(Vec<any>) -> R
+    ) -> Self {
+        ComposedSelector {
+            selectors,
+            combiner,
+            cached_value: None
+        }
+    }
+
+    /// Get combined value
+    pub fn get(&mut self) -> R {
+        let values = self.selectors
+            .iter_mut()
+            .map(|s| s.get())
+            .collect();
+
+        let result = (self.combiner)(values);
+        self.cached_value = Some(result.clone());
+        result
+    }
+}
+
+/// Create composed selector
+pub fn compose_selectors<T: Clone + PartialEq, R: Clone>(
+    selectors: Vec<Selector<T, any>>,
+    combiner: fn(Vec<any>) -> R
+) -> ComposedSelector<T, R> {
+    ComposedSelector::new(selectors, combiner)
+}
+
+/// Create a derived store from another store
+pub fn derived<T: Clone + PartialEq, R: Clone>(
+    source: Store<T>,
+    deriver: fn(T) -> R
+) -> Store<R> {
+    let initial_value = deriver(source.get());
+    let mut derived_store = Store::new(initial_value);
+
+    // Subscribe to source changes
+    source.subscribe(move |state| {
+        let new_value = deriver(state);
+        derived_store.set(new_value);
+    });
+
+    derived_store
+}

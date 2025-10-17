@@ -1,0 +1,51 @@
+/// RTL (Right-to-Left) language support
+
+pub const RTL_LOCALES: &[&str] = &[
+    "ar",    // Arabic
+    "arc",   // Aramaic
+    "dv",    // Dhivehi
+    "fa",    // Persian
+    "ha",    // Hausa
+    "he",    // Hebrew
+    "khw",   // Khowar
+    "ks",    // Kashmiri
+    "ku",    // Kurdish
+    "ps",    // Pashto
+    "ur",    // Urdu
+    "yi"     // Yiddish
+];
+
+/// Check if locale is RTL
+pub fn is_rtl(locale: &str) -> bool {
+    let lang = locale.split('-').next().unwrap_or(locale);
+    RTL_LOCALES.contains(&lang)
+}
+
+/// Get text direction for locale
+pub fn get_text_direction(locale: &str) -> &'static str {
+    if is_rtl(locale) {
+        "rtl"
+    } else {
+        "ltr"
+    }
+}
+
+/// Set document direction based on locale
+pub fn set_document_direction(locale: &str) {
+    let direction = get_text_direction(locale);
+    document.documentElement.setAttribute("dir", direction);
+}
+
+/// Apply RTL styles to element
+pub fn apply_rtl_styles(locale: &str) {
+    let is_rtl_lang = is_rtl(locale);
+    let html = document.documentElement;
+
+    if is_rtl_lang {
+        html.classList.add("rtl");
+        html.setAttribute("dir", "rtl");
+    } else {
+        html.classList.remove("rtl");
+        html.setAttribute("dir", "ltr");
+    }
+}

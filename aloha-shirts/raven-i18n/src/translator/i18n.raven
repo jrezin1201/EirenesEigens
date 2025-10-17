@@ -1,0 +1,186 @@
+/// Core i18n functionality
+use raven_store::{Store, create_store};
+
+pub struct I18nConfig {
+    pub default_locale: String,
+    pub fallback_locale: String,
+    pub translations: HashMap<String, HashMap<String, any>>,
+    pub namespaces: Vec<String>,
+    pub lazy: bool
+}
+
+pub struct I18nState {
+    pub current_locale: String,
+    pub loaded_locales: Vec<String>
+}
+
+pub struct I18n {
+    config: I18nConfig,
+    store: Store<I18nState>,
+    translations: HashMap<String, HashMap<String, any>>
+}
+
+impl I18n {
+    /// Create a new i18n instance
+    pub fn new(config: I18nConfig) -> Self {
+        let store = create_store(I18nState {
+            current_locale: config.default_locale.clone(),
+            loaded_locales: vec![config.default_locale.clone()]
+        });
+
+        I18n {
+            config,
+            store,
+            translations: HashMap::new()
+        }
+    }
+
+    /// Translate a key with optional parameters
+    pub fn t(&self, key: &str, params: Option<HashMap<String, any>>) -> String {
+        let (namespace, actual_key) = self.parse_key(key);
+
+        let state = self.store.get();
+        let locale = &state.current_locale;
+
+        // Try current locale
+        if let Some(translation) = self.get_translation(locale, namespace, actual_key) {
+            return self.interpolate(translation, params);
+        }
+
+        // Try fallback locale
+        if locale != &self.config.fallback_locale {
+            if let Some(translation) = self.get_translation(
+                &self.config.fallback_locale,
+                namespace,
+                actual_key
+            ) {
+                return self.interpolate(translation, params);
+            }
+        }
+
+        // Return key if no translation found
+        key.to_string()
+    }
+
+    /// Parse key into namespace and actual key
+    fn parse_key(&self, key: &str) -> (Option<String>, String) {
+        if key.contains(':') {
+            let parts: Vec<&str> = key.split(':').collect();
+            (Some(parts[0].to_string()), parts[1].to_string())
+        } else {
+            (None, key.to_string())
+        }
+    }
+
+    /// Get translation from store
+    fn get_translation(
+        &self,
+        locale: &str,
+        namespace: Option<String>,
+        key: &str
+    ) -> Option<String> {
+        let locale_translations = self.config.translations.get(locale)?;
+
+        let translations = if let Some(ns) = namespace {
+            locale_translations.get(&ns)?
+        } else {
+            locale_translations
+        };
+
+        // Support nested keys (e.g., "user.profile.name")
+        let parts: Vec<&str> = key.split('.').collect();
+        let mut current: &any = translations;
+
+        for part in parts {
+            if let Some(obj) = current.as_object() {
+                current = obj.get(part)?;
+            } else {
+                return None;
+            }
+        }
+
+        current.as_string().map(|s| s.to_string())
+    }
+
+    /// Interpolate variables in translation
+    fn interpolate(&self, template: String, params: Option<HashMap<String, any>>) -> String {
+        if let Some(vars) = params {
+            let mut result = template;
+
+            for (key, value) in vars {
+                let placeholder = format!("{{{}}}", key);
+                let replacement = format!("{}", value);
+                result = result.replace(&placeholder, &replacement);
+            }
+
+            result
+        } else {
+            template
+        }
+    }
+
+    /// Set current locale
+    pub fn set_locale(&mut self, locale: &str) {
+        self.store.update(|state| {
+            state.current_locale = locale.to_string();
+
+            if !state.loaded_locales.contains(&locale.to_string()) {
+                state.loaded_locales.push(locale.to_string());
+            }
+        });
+    }
+
+    /// Get current locale
+    pub fn get_locale(&self) -> String {
+        self.store.get().current_locale
+    }
+
+    /// Add translations dynamically
+    pub fn add_translations(&mut self, locale: &str, translations: HashMap<String, any>) {
+        self.config.translations
+            .entry(locale.to_string())
+            .or_insert(HashMap::new())
+            .extend(translations);
+    }
+
+    /// Check if locale is loaded
+    pub fn is_locale_loaded(&self, locale: &str) -> bool {
+        let state = self.store.get();
+        state.loaded_locales.contains(&locale.to_string())
+    }
+
+    /// Subscribe to locale changes
+    pub fn on_locale_change(&mut self, listener: fn(String) -> ()) {
+        self.store.subscribe(move |state| {
+            listener(state.current_locale);
+        });
+    }
+}
+
+/// Create i18n instance
+pub fn create_i18n(config: I18nConfig) -> I18n {
+    I18n::new(config)
+}
+
+/// Global i18n instance
+static mut GLOBAL_I18N: Option<I18n> = None;
+
+/// Initialize global i18n
+pub fn init_i18n(config: I18nConfig) {
+    unsafe {
+        GLOBAL_I18N = Some(I18n::new(config));
+    }
+}
+
+/// Get global i18n instance
+pub fn use_i18n() -> &'static mut I18n {
+    unsafe {
+        GLOBAL_I18N.as_mut().expect("i18n not initialized. Call init_i18n() first.")
+    }
+}
+
+/// Translation hook for components
+pub fn use_translation() -> fn(&str, Option<HashMap<String, any>>) -> String {
+    let i18n = use_i18n();
+    move |key, params| i18n.t(key, params)
+}
