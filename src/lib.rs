@@ -27,6 +27,8 @@ pub mod lsp; // Language Server Protocol
 pub mod hmr; // Hot Module Replacement
 pub mod package_manager; // Package Manager
 pub mod registry_client; // Registry client for package publishing
+pub mod sourcemap; // Source map generation for debugging
+pub mod profiler; // Performance profiling
 
 use borrow_checker::BorrowChecker;
 use codegen::CodeGenerator;

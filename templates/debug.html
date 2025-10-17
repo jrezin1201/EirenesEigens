@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RavensOne Debug Mode</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            display: flex;
+            height: 100vh;
+        }
+
+        #app {
+            flex: 1;
+            overflow: auto;
+        }
+
+        #debug-panel {
+            width: 400px;
+            background: #252526;
+            border-left: 1px solid #3c3c3c;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #debug-header {
+            background: #2d2d30;
+            padding: 12px 16px;
+            border-bottom: 1px solid #3c3c3c;
+            font-weight: 600;
+        }
+
+        #debug-tabs {
+            display: flex;
+            background: #2d2d30;
+            border-bottom: 1px solid #3c3c3c;
+        }
+
+        .debug-tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: #969696;
+            font-size: 13px;
+        }
+
+        .debug-tab.active {
+            color: #fff;
+            border-bottom: 2px solid #007acc;
+        }
+
+        #debug-content {
+            flex: 1;
+            overflow: auto;
+            padding: 16px;
+        }
+
+        .error-item {
+            background: #3c1f1e;
+            border-left: 3px solid #f48771;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+
+        .error-message {
+            color: #f48771;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .stack-frame {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            color: #9cdcfe;
+            padding: 4px 0;
+        }
+
+        .perf-metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: #2d2d30;
+            margin-bottom: 4px;
+            border-radius: 4px;
+        }
+
+        .perf-name {
+            color: #d4d4d4;
+        }
+
+        .perf-value {
+            color: #4ec9b0;
+            font-weight: 500;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        button {
+            padding: 6px 12px;
+            background: #0e639c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        button:hover {
+            background: #1177bb;
+        }
+
+        button.danger {
+            background: #a1260d;
+        }
+
+        button.danger:hover {
+            background: #c72e0d;
+        }
+
+        .console-log {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            padding: 4px 8px;
+            margin-bottom: 2px;
+            border-radius: 2px;
+        }
+
+        .console-log.info {
+            color: #d4d4d4;
+        }
+
+        .console-log.warn {
+            color: #dcdcaa;
+            background: #3a3a1a;
+        }
+
+        .console-log.error {
+            color: #f48771;
+            background: #3c1f1e;
+        }
+
+        #app-container {
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="app-container">
+            <!-- Your RavensOne app will be mounted here -->
+        </div>
+    </div>
+
+    <div id="debug-panel">
+        <div id="debug-header">
+            🔧 RavensOne Debugger
+        </div>
+
+        <div id="debug-tabs">
+            <button class="debug-tab active" data-tab="errors">Errors</button>
+            <button class="debug-tab" data-tab="performance">Performance</button>
+            <button class="debug-tab" data-tab="console">Console</button>
+        </div>
+
+        <div id="debug-content">
+            <div class="control-buttons">
+                <button onclick="clearErrors()">Clear Errors</button>
+                <button onclick="exportErrors()">Export</button>
+                <button class="danger" onclick="reload()">Reload</button>
+            </div>
+
+            <div id="tab-errors" class="tab-content">
+                <div id="errors-list">
+                    <p style="color: #6a9955;">No errors recorded.</p>
+                </div>
+            </div>
+
+            <div id="tab-performance" class="tab-content" style="display: none;">
+                <div id="performance-list"></div>
+            </div>
+
+            <div id="tab-console" class="tab-content" style="display: none;">
+                <div id="console-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Debug Helper -->
+    <script src="/scripts/debug-helper.js"></script>
+
+    <!-- Your compiled WASM -->
+    <script type="module">
+        // Initialize debug panel
+        const tabs = document.querySelectorAll('.debug-tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                tabContents.forEach(tc => tc.style.display = 'none');
+                document.getElementById(`tab-${tabName}`).style.display = 'block';
+            });
+        });
+
+        // Update errors display
+        function updateErrorsDisplay() {
+            const errors = window.RavensOneDebugger.getErrors();
+            const errorsList = document.getElementById('errors-list');
+
+            if (errors.length === 0) {
+                errorsList.innerHTML = '<p style="color: #6a9955;">No errors recorded.</p>';
+                return;
+            }
+
+            errorsList.innerHTML = errors.map((err, i) => `
+                <div class="error-item">
+                    <div class="error-message">${err.error.message}</div>
+                    ${err.mapped.map(frame => `
+                        <div class="stack-frame">
+                            at ${frame.source}:${frame.line}:${frame.column}
+                            ${frame.name ? `in ${frame.name}()` : ''}
+                        </div>
+                    `).join('')}
+                    <div style="color: #6a9955; font-size: 11px; margin-top: 8px;">
+                        ${err.timestamp.toLocaleTimeString()}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update performance display
+        function updatePerformanceDisplay() {
+            if (!performance || !performance.getEntriesByType) return;
+
+            const entries = performance.getEntriesByType('measure');
+            const perfList = document.getElementById('performance-list');
+
+            if (entries.length === 0) {
+                perfList.innerHTML = '<p style="color: #6a9955;">No performance metrics recorded.</p>';
+                return;
+            }
+
+            perfList.innerHTML = entries.map(entry => `
+                <div class="perf-metric">
+                    <span class="perf-name">${entry.name}</span>
+                    <span class="perf-value">${entry.duration.toFixed(2)}ms</span>
+                </div>
+            `).join('');
+        }
+
+        // Intercept console methods
+        const originalConsole = { ...console };
+        const consoleMessages = [];
+
+        ['log', 'warn', 'error'].forEach(method => {
+            console[method] = function(...args) {
+                originalConsole[method].apply(console, args);
+
+                consoleMessages.push({
+                    type: method,
+                    message: args.map(arg =>
+                        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+                    ).join(' '),
+                    timestamp: new Date()
+                });
+
+                updateConsoleDisplay();
+            };
+        });
+
+        function updateConsoleDisplay() {
+            const consoleList = document.getElementById('console-list');
+
+            if (consoleMessages.length === 0) {
+                consoleList.innerHTML = '<p style="color: #6a9955;">No console messages.</p>';
+                return;
+            }
+
+            consoleList.innerHTML = consoleMessages.slice(-100).map(msg => `
+                <div class="console-log ${msg.type}">
+                    ${msg.message}
+                </div>
+            `).join('');
+
+            consoleList.scrollTop = consoleList.scrollHeight;
+        }
+
+        // Global functions
+        window.clearErrors = () => {
+            window.RavensOneDebugger.clearErrors();
+            updateErrorsDisplay();
+        };
+
+        window.exportErrors = () => {
+            const data = window.RavensOneDebugger.exportErrors();
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `raven-errors-${Date.now()}.json`;
+            a.click();
+        };
+
+        window.reload = () => {
+            location.reload();
+        };
+
+        // Refresh displays periodically
+        setInterval(() => {
+            updateErrorsDisplay();
+            updatePerformanceDisplay();
+        }, 1000);
+
+        // Initial update
+        updateErrorsDisplay();
+        updatePerformanceDisplay();
+        updateConsoleDisplay();
+
+        // Enable verbose logging by default in debug mode
+        window.raven.enableVerboseLogging();
+
+        console.log('🔧 Debug mode active');
+    </script>
+</body>
+</html>
