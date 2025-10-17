@@ -84,6 +84,36 @@ enum Commands {
         #[arg(long, default_value = "http://localhost:4000")]
         registry: String,
     },
+    /// Package manager commands
+    Pkg {
+        #[command(subcommand)]
+        command: PkgCommands,
+    },
+}
+
+#[derive(clap::Subcommand)]
+enum PkgCommands {
+    /// Initialize a new package manifest (raven.toml)
+    Init {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+    },
+    /// Install all dependencies
+    Install,
+    /// Add a dependency
+    Add {
+        name: String,
+        #[arg(short, long)]
+        version: Option<String>,
+        #[arg(long)]
+        dev: bool,
+    },
+    /// Remove a dependency
+    Remove {
+        name: String,
+    },
+    /// Update dependencies to latest compatible versions
+    Update,
 }
 
 fn main() {
@@ -219,6 +249,52 @@ fn main() {
             if let Err(e) = install_package(&package, version.as_deref(), &registry) {
                 eprintln!("❌ Installation failed: {}", e);
                 process::exit(1);
+            }
+        }
+        Commands::Pkg { command } => {
+            use ravensone_compiler::package_manager::PackageManager;
+
+            match command {
+                PkgCommands::Init { path } => {
+                    let pkg_mgr = PackageManager::new(&path);
+                    let project_name = path.file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("my-package");
+
+                    if let Err(e) = pkg_mgr.init(project_name, vec!["Developer <dev@example.com>".to_string()]) {
+                        eprintln!("❌ Init failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::Install => {
+                    let pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    if let Err(e) = pkg_mgr.install() {
+                        eprintln!("❌ Install failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::Add { name, version, dev } => {
+                    let pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    let version_req = version.as_deref().unwrap_or("^1.0.0");
+                    if let Err(e) = pkg_mgr.add_dependency(&name, version_req, dev) {
+                        eprintln!("❌ Add failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::Remove { name } => {
+                    let pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    if let Err(e) = pkg_mgr.remove_dependency(&name) {
+                        eprintln!("❌ Remove failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::Update => {
+                    let pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    if let Err(e) = pkg_mgr.update() {
+                        eprintln!("❌ Update failed: {}", e);
+                        process::exit(1);
+                    }
+                }
             }
         }
     }

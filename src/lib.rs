@@ -18,6 +18,14 @@ pub mod type_checker; // Type checking and inference
 pub mod ssr; // Server-side rendering
 pub mod hydration; // Client-side hydration
 pub mod reactive; // Reactive state management
+pub mod router; // Client-side routing
+pub mod forms; // Forms and validation
+pub mod animation; // Animation system
+pub mod diagnostics; // Enhanced error reporting
+pub mod wasm_runtime; // WebAssembly runtime support
+pub mod lsp; // Language Server Protocol
+pub mod hmr; // Hot Module Replacement
+pub mod package_manager; // Package Manager
 
 use borrow_checker::BorrowChecker;
 use codegen::CodeGenerator;

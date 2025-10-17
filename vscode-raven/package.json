@@ -1,0 +1,148 @@
+{
+  "name": "raven-lang",
+  "displayName": "RavensOne Language Support",
+  "description": "Language support for RavensOne - the AI-first full-stack web framework",
+  "version": "0.1.0",
+  "publisher": "ravensone",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jrezin1201/RavensOne"
+  },
+  "bugs": {
+    "url": "https://github.com/jrezin1201/RavensOne/issues"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Formatters",
+    "Snippets"
+  ],
+  "keywords": [
+    "ravensone",
+    "raven",
+    "webassembly",
+    "wasm",
+    "reactive",
+    "full-stack",
+    "ssr"
+  ],
+  "activationEvents": [
+    "onLanguage:raven"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "raven",
+        "aliases": [
+          "RavensOne",
+          "raven"
+        ],
+        "extensions": [
+          ".raven"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./images/file-icon.svg",
+          "dark": "./images/file-icon.svg"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "raven",
+        "scopeName": "source.raven",
+        "path": "./syntaxes/raven.tmLanguage.json"
+      }
+    ],
+    "themes": [
+      {
+        "label": "RavensOne Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/ravensone-dark.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "raven.compile",
+        "title": "RavensOne: Compile File"
+      },
+      {
+        "command": "raven.check",
+        "title": "RavensOne: Type Check"
+      },
+      {
+        "command": "raven.format",
+        "title": "RavensOne: Format Document"
+      },
+      {
+        "command": "raven.newComponent",
+        "title": "RavensOne: New Component"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "RavensOne",
+      "properties": {
+        "raven.compilerPath": {
+          "type": "string",
+          "default": "raven",
+          "description": "Path to the RavensOne compiler executable"
+        },
+        "raven.enableLinting": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time linting"
+        },
+        "raven.formatOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically format on save"
+        },
+        "raven.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the language server"
+        }
+      }
+    },
+    "snippets": [
+      {
+        "language": "raven",
+        "path": "./snippets/raven.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^18.x",
+    "@typescript-eslint/eslint-plugin": "^6.x",
+    "@typescript-eslint/parser": "^6.x",
+    "eslint": "^8.x",
+    "typescript": "^5.2.2",
+    "@vscode/test-electron": "^2.3.4",
+    "vsce": "^2.15.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.1.0"
+  }
+}

@@ -1,0 +1,239 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "RavensOne",
+  "scopeName": "source.raven",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#functions"
+    },
+    {
+      "include": "#components"
+    },
+    {
+      "include": "#jsx"
+    },
+    {
+      "include": "#reactive"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.raven",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.raven",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.raven",
+          "match": "\\b(if|else|for|while|loop|break|continue|return|match)\\b"
+        },
+        {
+          "name": "keyword.declaration.raven",
+          "match": "\\b(let|const|fn|component|use|server|client)\\b"
+        },
+        {
+          "name": "keyword.other.raven",
+          "match": "\\b(await|async|pub|mod)\\b"
+        },
+        {
+          "name": "storage.modifier.raven",
+          "match": "\\b(mut|ref)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.raven",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.raven",
+              "match": "\\\\."
+            },
+            {
+              "include": "#string-interpolation"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.raven",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.raven",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "string-interpolation": {
+      "patterns": [
+        {
+          "name": "meta.embedded.expression.raven",
+          "begin": "\\{",
+          "end": "\\}",
+          "patterns": [
+            {
+              "include": "$self"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.raven",
+          "match": "\\b\\d+\\.\\d+([eE][+-]?\\d+)?\\b"
+        },
+        {
+          "name": "constant.numeric.integer.raven",
+          "match": "\\b\\d+\\b"
+        },
+        {
+          "name": "constant.numeric.hex.raven",
+          "match": "\\b0x[0-9a-fA-F]+\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.raven",
+          "match": "\\b(Int|Float|String|Bool|Array|Map|Set|Option|Result|Any)\\b"
+        },
+        {
+          "name": "entity.name.type.raven",
+          "match": "\\b[A-Z][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "entity.name.function.raven",
+          "match": "\\b([a-z_][a-zA-Z0-9_]*)\\s*(?=\\()"
+        },
+        {
+          "name": "support.function.builtin.raven",
+          "match": "\\b(print|println|console\\.log|console\\.error|console\\.warn)\\b"
+        }
+      ]
+    },
+    "components": {
+      "patterns": [
+        {
+          "name": "meta.component.raven",
+          "begin": "\\b(component)\\s+([A-Z][a-zA-Z0-9_]*)",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.declaration.raven"
+            },
+            "2": {
+              "name": "entity.name.type.component.raven"
+            }
+          },
+          "end": "(?<=\\})",
+          "patterns": [
+            {
+              "include": "$self"
+            }
+          ]
+        }
+      ]
+    },
+    "jsx": {
+      "patterns": [
+        {
+          "name": "meta.jsx.element.raven",
+          "begin": "<([a-z][a-zA-Z0-9_-]*|[A-Z][a-zA-Z0-9_]*)",
+          "beginCaptures": {
+            "1": {
+              "name": "entity.name.tag.jsx.raven"
+            }
+          },
+          "end": "(/?>)",
+          "patterns": [
+            {
+              "include": "#jsx-attributes"
+            }
+          ]
+        },
+        {
+          "name": "meta.jsx.closing-tag.raven",
+          "begin": "</([a-z][a-zA-Z0-9_-]*|[A-Z][a-zA-Z0-9_]*)",
+          "beginCaptures": {
+            "1": {
+              "name": "entity.name.tag.jsx.raven"
+            }
+          },
+          "end": ">"
+        },
+        {
+          "name": "meta.jsx.expression.raven",
+          "begin": "\\{",
+          "end": "\\}",
+          "patterns": [
+            {
+              "include": "$self"
+            }
+          ]
+        }
+      ]
+    },
+    "jsx-attributes": {
+      "patterns": [
+        {
+          "name": "entity.other.attribute-name.jsx.raven",
+          "match": "([a-zA-Z_][a-zA-Z0-9_-]*)(?==)"
+        },
+        {
+          "include": "#strings"
+        },
+        {
+          "include": "#jsx"
+        }
+      ]
+    },
+    "reactive": {
+      "patterns": [
+        {
+          "name": "support.class.reactive.raven",
+          "match": "\\b(Signal|Computed|Effect|Resource|Store)\\b"
+        },
+        {
+          "name": "support.function.reactive.raven",
+          "match": "\\b(get|set|update|subscribe|unsubscribe)\\b"
+        }
+      ]
+    }
+  }
+}

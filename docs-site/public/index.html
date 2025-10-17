@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RavensOne - AI-First Full-Stack Web Framework</title>
+    <meta name="description" content="RavensOne is a modern full-stack web framework that compiles to WebAssembly. Build reactive, type-safe applications with ease.">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 2rem;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+
+        .feature {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .feature h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .code-example {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 2rem 0;
+        }
+
+        .code-example pre {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        footer {
+            background: #2d2d2d;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 4rem;
+        }
+
+        nav {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+        }
+
+        nav a {
+            color: #333;
+            text-decoration: none;
+            margin: 0 1rem;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: #667eea;
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 1.5rem;
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <div class="logo">RavensOne</div>
+            <div>
+                <a href="#features">Features</a>
+                <a href="/getting-started.html">Get Started</a>
+                <a href="https://github.com/jrezin1201/RavensOne">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <h1>RavensOne</h1>
+        <p>AI-First Full-Stack Web Framework</p>
+        <p style="font-size: 1.2rem; opacity: 0.8;">Build reactive, type-safe applications that compile to WebAssembly</p>
+
+        <div class="cta-buttons">
+            <a href="/getting-started.html" class="btn btn-primary">Get Started</a>
+            <a href="https://github.com/jrezin1201/RavensOne" class="btn btn-secondary">View on GitHub</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="code-example">
+            <pre><code>component Counter() {
+    let count = Signal::new(0);
+
+    let increment = || {
+        count.set(count.get() + 1);
+    };
+
+    &lt;div&gt;
+        &lt;h1&gt;"Hello, RavensOne!"&lt;/h1&gt;
+        &lt;p&gt;"Count: " {count.get()}&lt;/p&gt;
+        &lt;button onclick={increment}&gt;"Click me!"&lt;/button&gt;
+    &lt;/div&gt;
+}</code></pre>
+        </div>
+
+        <h2 id="features" style="text-align: center; margin: 3rem 0 2rem;">Features</h2>
+
+        <div class="features">
+            <div class="feature">
+                <h3>⚡ Blazing Fast</h3>
+                <p>Compiles to WebAssembly for near-native performance. 65,000+ compilations per second.</p>
+            </div>
+
+            <div class="feature">
+                <h3>🎨 Reactive State</h3>
+                <p>Fine-grained reactivity with Signals, Computed values, and Effects. No virtual DOM overhead.</p>
+            </div>
+
+            <div class="feature">
+                <h3>🔒 Type Safe</h3>
+                <p>Hindley-Milner type inference catches errors at compile time without verbose annotations.</p>
+            </div>
+
+            <div class="feature">
+                <h3>🚀 Server-Side Rendering</h3>
+                <p>Built-in SSR with progressive hydration for fast initial page loads and better SEO.</p>
+            </div>
+
+            <div class="feature">
+                <h3>📦 Single-File Components</h3>
+                <p>Write components with JSX-like syntax. No build configuration needed.</p>
+            </div>
+
+            <div class="feature">
+                <h3>🤖 AI-Assisted</h3>
+                <p>Designed for AI code generation with clear, concise syntax that LLMs understand.</p>
+            </div>
+
+            <div class="feature">
+                <h3>🔥 Hot Module Replacement</h3>
+                <p>Real-time code updates without full page reload. State preserved during development.</p>
+            </div>
+
+            <div class="feature">
+                <h3>📚 Package Manager</h3>
+                <p>Built-in package management with semantic versioning and dependency resolution.</p>
+            </div>
+
+            <div class="feature">
+                <h3>🛠️ Developer Tools</h3>
+                <p>VSCode extension with syntax highlighting, autocomplete, and error checking.</p>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 4rem 0;">
+            <h2>Quick Start</h2>
+            <p style="margin: 1rem 0 2rem;">Get up and running in under 5 minutes</p>
+
+            <div class="code-example" style="text-align: left;">
+                <pre><code># Install RavensOne
+curl -sSf https://install.ravensone.dev | sh
+
+# Create a new project
+raven new my-app
+cd my-app
+
+# Start development server
+raven dev
+
+# Build for production
+raven build --release</code></pre>
+            </div>
+
+            <a href="/getting-started.html" class="btn btn-primary" style="margin-top: 2rem;">Full Getting Started Guide →</a>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 RavensOne. MIT License.</p>
+        <p style="margin-top: 0.5rem;">
+            <a href="https://github.com/jrezin1201/RavensOne" style="color: #667eea;">GitHub</a> •
+            <a href="/getting-started.html" style="color: #667eea;">Documentation</a>
+        </p>
+    </footer>
+</body>
+</html>

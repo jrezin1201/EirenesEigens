@@ -1,0 +1,141 @@
+{
+  "Component": {
+    "prefix": "comp",
+    "body": [
+      "component ${1:ComponentName}() {",
+      "    $0",
+      "}"
+    ],
+    "description": "Create a new component"
+  },
+  "Component with Props": {
+    "prefix": "compp",
+    "body": [
+      "component ${1:ComponentName}(props: { ${2:prop}: ${3:String} }) {",
+      "    $0",
+      "}"
+    ],
+    "description": "Create a component with props"
+  },
+  "Signal": {
+    "prefix": "sig",
+    "body": [
+      "let ${1:name} = Signal::new(${2:initialValue});"
+    ],
+    "description": "Create a new Signal"
+  },
+  "Computed": {
+    "prefix": "comp",
+    "body": [
+      "let ${1:name} = Computed::new(|| {",
+      "    $0",
+      "});"
+    ],
+    "description": "Create a new Computed value"
+  },
+  "Effect": {
+    "prefix": "eff",
+    "body": [
+      "Effect::new(|| {",
+      "    $0",
+      "});"
+    ],
+    "description": "Create a new Effect"
+  },
+  "Server Function": {
+    "prefix": "serverfn",
+    "body": [
+      "server fn ${1:functionName}(${2:params}) -> Result<${3:ReturnType}, Error> {",
+      "    $0",
+      "}"
+    ],
+    "description": "Create a server function"
+  },
+  "JSX Element": {
+    "prefix": "jsx",
+    "body": [
+      "<${1:div}>",
+      "    $0",
+      "</${1:div}>"
+    ],
+    "description": "Create a JSX element"
+  },
+  "JSX Element with Props": {
+    "prefix": "jsxp",
+    "body": [
+      "<${1:div} ${2:prop}={${3:value}}>",
+      "    $0",
+      "</${1:div}>"
+    ],
+    "description": "Create a JSX element with props"
+  },
+  "Event Handler": {
+    "prefix": "on",
+    "body": [
+      "on${1:Click}={|${2:e}| {",
+      "    $0",
+      "}}"
+    ],
+    "description": "Create an event handler"
+  },
+  "For Loop": {
+    "prefix": "for",
+    "body": [
+      "for ${1:item} in ${2:items} {",
+      "    $0",
+      "}"
+    ],
+    "description": "Create a for loop"
+  },
+  "Match Expression": {
+    "prefix": "match",
+    "body": [
+      "match ${1:value} {",
+      "    ${2:pattern} => ${3:result},",
+      "    _ => $0",
+      "}"
+    ],
+    "description": "Create a match expression"
+  },
+  "Function": {
+    "prefix": "fn",
+    "body": [
+      "fn ${1:functionName}(${2:params}) -> ${3:ReturnType} {",
+      "    $0",
+      "}"
+    ],
+    "description": "Create a function"
+  },
+  "Async Function": {
+    "prefix": "async",
+    "body": [
+      "async fn ${1:functionName}(${2:params}) -> Result<${3:ReturnType}, Error> {",
+      "    $0",
+      "}"
+    ],
+    "description": "Create an async function"
+  },
+  "Use Statement": {
+    "prefix": "use",
+    "body": [
+      "use ${1:module};"
+    ],
+    "description": "Import a module"
+  },
+  "Resource": {
+    "prefix": "res",
+    "body": [
+      "let ${1:name} = Resource::new(async {",
+      "    $0",
+      "});"
+    ],
+    "description": "Create a new Resource"
+  },
+  "Todo Comment": {
+    "prefix": "todo",
+    "body": [
+      "// TODO: $0"
+    ],
+    "description": "Add a TODO comment"
+  }
+}

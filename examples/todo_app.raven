@@ -1,0 +1,634 @@
+// Todo App with Backend Integration
+// Demonstrates full-stack RavensOne with CRUD operations
+
+extern server fn fetch_todos(user_id: String) -> Vec<Todo> {
+    // Server-side function to fetch todos from database
+    println!("[Server] Fetching todos for user: {}", user_id);
+
+    // In a real app, this would query a database
+    // For now, return mock data
+    vec![
+        Todo {
+            id: "1".to_string(),
+            title: "Build RavensOne compiler".to_string(),
+            description: "Complete the type system and code generation".to_string(),
+            completed: true,
+            priority: Priority::High,
+            due_date: Some("2025-10-15".to_string()),
+            tags: vec!["compiler".to_string(), "rust".to_string()],
+            created_at: "2025-10-01".to_string(),
+        },
+        Todo {
+            id: "2".to_string(),
+            title: "Implement reactive state management".to_string(),
+            description: "Signals, Computed, Effects with automatic dependency tracking".to_string(),
+            completed: true,
+            priority: Priority::High,
+            due_date: Some("2025-10-16".to_string()),
+            tags: vec!["reactive".to_string(), "state".to_string()],
+            created_at: "2025-10-05".to_string(),
+        },
+        Todo {
+            id: "3".to_string(),
+            title: "Deploy production example".to_string(),
+            description: "Deploy analytics dashboard to Vercel".to_string(),
+            completed: false,
+            priority: Priority::Medium,
+            due_date: Some("2025-10-17".to_string()),
+            tags: vec!["deployment".to_string(), "vercel".to_string()],
+            created_at: "2025-10-10".to_string(),
+        },
+        Todo {
+            id: "4".to_string(),
+            title: "Write documentation".to_string(),
+            description: "Complete API reference and tutorials".to_string(),
+            completed: false,
+            priority: Priority::Low,
+            due_date: None,
+            tags: vec!["docs".to_string()],
+            created_at: "2025-10-12".to_string(),
+        },
+    ]
+}
+
+extern server fn create_todo(user_id: String, todo: CreateTodoRequest) -> Result<Todo, String> {
+    println!("[Server] Creating todo for user: {}", user_id);
+
+    // Validate input
+    if todo.title.trim().is_empty() {
+        return Err("Title cannot be empty".to_string());
+    }
+
+    // In a real app, insert into database
+    let new_todo = Todo {
+        id: format!("todo_{}", chrono::Utc::now().timestamp()),
+        title: todo.title,
+        description: todo.description,
+        completed: false,
+        priority: todo.priority,
+        due_date: todo.due_date,
+        tags: todo.tags,
+        created_at: chrono::Utc::now().to_rfc3339(),
+    };
+
+    Ok(new_todo)
+}
+
+extern server fn update_todo(user_id: String, todo_id: String, updates: UpdateTodoRequest) -> Result<Todo, String> {
+    println!("[Server] Updating todo {} for user: {}", todo_id, user_id);
+
+    // In a real app, update database record
+    // For now, return updated mock data
+    Ok(Todo {
+        id: todo_id,
+        title: updates.title.unwrap_or_default(),
+        description: updates.description.unwrap_or_default(),
+        completed: updates.completed.unwrap_or(false),
+        priority: updates.priority.unwrap_or(Priority::Medium),
+        due_date: updates.due_date,
+        tags: updates.tags.unwrap_or_default(),
+        created_at: chrono::Utc::now().to_rfc3339(),
+    })
+}
+
+extern server fn delete_todo(user_id: String, todo_id: String) -> Result<(), String> {
+    println!("[Server] Deleting todo {} for user: {}", todo_id, user_id);
+
+    // In a real app, delete from database
+    Ok(())
+}
+
+extern server fn toggle_todo(user_id: String, todo_id: String) -> Result<bool, String> {
+    println!("[Server] Toggling todo {} for user: {}", todo_id, user_id);
+
+    // In a real app, toggle completion status in database
+    Ok(true)
+}
+
+// Types
+struct Todo {
+    id: String,
+    title: String,
+    description: String,
+    completed: bool,
+    priority: Priority,
+    due_date: Option<String>,
+    tags: Vec<String>,
+    created_at: String,
+}
+
+enum Priority {
+    Low,
+    Medium,
+    High,
+    Urgent,
+}
+
+struct CreateTodoRequest {
+    title: String,
+    description: String,
+    priority: Priority,
+    due_date: Option<String>,
+    tags: Vec<String>,
+}
+
+struct UpdateTodoRequest {
+    title: Option<String>,
+    description: Option<String>,
+    completed: Option<bool>,
+    priority: Option<Priority>,
+    due_date: Option<String>,
+    tags: Option<Vec<String>>,
+}
+
+struct User {
+    id: String,
+    name: String,
+    email: String,
+}
+
+enum Filter {
+    All,
+    Active,
+    Completed,
+    Priority(Priority),
+}
+
+// Root Component
+component TodoApp(user: User) {
+    // State
+    let todos = ReactiveVec::new();
+    let loading = Signal::new(true);
+    let error = Signal::new(None);
+    let filter = Signal::new(Filter::All);
+    let search_query = Signal::new(String::new());
+    let show_add_modal = Signal::new(false);
+
+    // Statistics
+    let total_count = Computed::new(|| todos.len());
+    let completed_count = Computed::new(|| {
+        todos.iter().filter(|t| t.completed).count()
+    });
+    let active_count = Computed::new(|| {
+        todos.iter().filter(|t| !t.completed).count()
+    });
+
+    // Load todos on mount
+    create_effect(|| {
+        loading.set(true);
+        error.set(None);
+
+        match fetch_todos(user.id.clone()) {
+            Ok(fetched_todos) => {
+                todos.clear();
+                for todo in fetched_todos {
+                    todos.push(todo);
+                }
+                loading.set(false);
+            }
+            Err(err) => {
+                error.set(Some(err));
+                loading.set(false);
+            }
+        }
+    });
+
+    // Filtered todos
+    let filtered_todos = Computed::new(|| {
+        let query = search_query.get().to_lowercase();
+
+        todos.iter()
+            .filter(|todo| {
+                // Apply filter
+                let matches_filter = match filter.get() {
+                    Filter::All => true,
+                    Filter::Active => !todo.completed,
+                    Filter::Completed => todo.completed,
+                    Filter::Priority(p) => todo.priority == p,
+                };
+
+                // Apply search
+                let matches_search = query.is_empty() ||
+                    todo.title.to_lowercase().contains(&query) ||
+                    todo.description.to_lowercase().contains(&query);
+
+                matches_filter && matches_search
+            })
+            .collect()
+    });
+
+    // Event handlers
+    let handle_add_todo = |request: CreateTodoRequest| {
+        match create_todo(user.id.clone(), request) {
+            Ok(new_todo) => {
+                todos.push(new_todo);
+                show_add_modal.set(false);
+            }
+            Err(err) => {
+                error.set(Some(err));
+            }
+        }
+    };
+
+    let handle_toggle = |todo_id: String| {
+        match toggle_todo(user.id.clone(), todo_id.clone()) {
+            Ok(new_status) => {
+                if let Some(todo) = todos.iter_mut().find(|t| t.id == todo_id) {
+                    todo.completed = new_status;
+                }
+            }
+            Err(err) => {
+                error.set(Some(err));
+            }
+        }
+    };
+
+    let handle_delete = |todo_id: String| {
+        match delete_todo(user.id.clone(), todo_id.clone()) {
+            Ok(_) => {
+                todos.retain(|t| t.id != todo_id);
+            }
+            Err(err) => {
+                error.set(Some(err));
+            }
+        }
+    };
+
+    return <div class="todo-app">
+        {/* Header */}
+        <header class="app-header">
+            <div class="container">
+                <h1>RavensOne Todo</h1>
+                <div class="user-info">
+                    <span>{user.name}</span>
+                    <span class="email">{user.email}</span>
+                </div>
+            </div>
+        </header>
+
+        {/* Stats Bar */}
+        <div class="stats-bar">
+            <div class="container">
+                <div class="stat">
+                    <span class="label">Total</span>
+                    <span class="value">{total_count.get()}</span>
+                </div>
+                <div class="stat">
+                    <span class="label">Active</span>
+                    <span class="value">{active_count.get()}</span>
+                </div>
+                <div class="stat">
+                    <span class="label">Completed</span>
+                    <span class="value">{completed_count.get()}</span>
+                </div>
+            </div>
+        </div>
+
+        {/* Controls */}
+        <div class="controls">
+            <div class="container">
+                <SearchBar query={search_query} />
+                <FilterButtons active_filter={filter} />
+                <button class="btn-primary" onclick={() => show_add_modal.set(true)}>
+                    + Add Todo
+                </button>
+            </div>
+        </div>
+
+        {/* Error Message */}
+        {error.get().is_some() && (
+            <div class="error-banner">
+                <span>{error.get().unwrap()}</span>
+                <button onclick={() => error.set(None)}>✕</button>
+            </div>
+        )}
+
+        {/* Loading State */}
+        {loading.get() ? (
+            <div class="loading-container">
+                <div class="spinner"></div>
+                <p>Loading todos...</p>
+            </div>
+        ) : (
+            <div class="todo-list-container">
+                <div class="container">
+                    {filtered_todos.get().is_empty() ? (
+                        <EmptyState filter={filter.get()} />
+                    ) : (
+                        <TransitionGroup enter={fade_in()} exit={fade_out()}>
+                            {filtered_todos.get().iter().map(|todo| (
+                                <TodoItem
+                                    key={todo.id}
+                                    todo={todo}
+                                    on_toggle={handle_toggle}
+                                    on_delete={handle_delete}
+                                />
+                            ))}
+                        </TransitionGroup>
+                    )}
+                </div>
+            </div>
+        )}
+
+        {/* Add Todo Modal */}
+        {show_add_modal.get() && (
+            <Modal on_close={() => show_add_modal.set(false)}>
+                <AddTodoForm
+                    on_submit={handle_add_todo}
+                    on_cancel={() => show_add_modal.set(false)}
+                />
+            </Modal>
+        )}
+    </div>
+}
+
+// Todo Item Component
+component TodoItem(
+    todo: Todo,
+    on_toggle: fn(String),
+    on_delete: fn(String),
+) {
+    let is_editing = Signal::new(false);
+    let show_details = Signal::new(false);
+
+    return <div class={`todo-item ${todo.completed ? "completed" : ""}`}>
+        <div class="todo-main">
+            <input
+                type="checkbox"
+                checked={todo.completed}
+                onchange={() => on_toggle(todo.id.clone())}
+            />
+
+            <div class="todo-content" onclick={() => show_details.set(!show_details.get())}>
+                <h3 class="todo-title">{todo.title}</h3>
+                <p class="todo-description">{todo.description}</p>
+            </div>
+
+            <PriorityBadge priority={todo.priority} />
+
+            <div class="todo-actions">
+                <button class="btn-icon" title="Edit">
+                    ✏️
+                </button>
+                <button
+                    class="btn-icon btn-danger"
+                    onclick={() => on_delete(todo.id.clone())}
+                    title="Delete"
+                >
+                    🗑️
+                </button>
+            </div>
+        </div>
+
+        {/* Expandable Details */}
+        {show_details.get() && (
+            <div class="todo-details">
+                {todo.due_date.is_some() && (
+                    <div class="detail-row">
+                        <span class="label">Due:</span>
+                        <span class="value">{todo.due_date.unwrap()}</span>
+                    </div>
+                )}
+
+                {!todo.tags.is_empty() && (
+                    <div class="detail-row">
+                        <span class="label">Tags:</span>
+                        <div class="tags">
+                            {todo.tags.iter().map(|tag| (
+                                <span class="tag">{tag}</span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                <div class="detail-row">
+                    <span class="label">Created:</span>
+                    <span class="value">{todo.created_at}</span>
+                </div>
+            </div>
+        )}
+    </div>
+}
+
+// Search Bar Component
+component SearchBar(query: Signal<String>) {
+    return <div class="search-bar">
+        <input
+            type="text"
+            placeholder="Search todos..."
+            value={query.get()}
+            oninput={(e) => query.set(e.target.value)}
+        />
+        <span class="search-icon">🔍</span>
+    </div>
+}
+
+// Filter Buttons Component
+component FilterButtons(active_filter: Signal<Filter>) {
+    let filters = vec![
+        ("All", Filter::All),
+        ("Active", Filter::Active),
+        ("Completed", Filter::Completed),
+    ];
+
+    return <div class="filter-buttons">
+        {filters.iter().map(|(label, filter)| (
+            <button
+                class={`filter-btn ${active_filter.get() == *filter ? "active" : ""}`}
+                onclick={() => active_filter.set(filter.clone())}
+            >
+                {label}
+            </button>
+        ))}
+    </div>
+}
+
+// Priority Badge Component
+component PriorityBadge(priority: Priority) {
+    let (color, text) = match priority {
+        Priority::Low => ("green", "Low"),
+        Priority::Medium => ("blue", "Medium"),
+        Priority::High => ("orange", "High"),
+        Priority::Urgent => ("red", "Urgent"),
+    };
+
+    return <span class={`priority-badge priority-${color}`}>
+        {text}
+    </span>
+}
+
+// Empty State Component
+component EmptyState(filter: Filter) {
+    let message = match filter {
+        Filter::All => "No todos yet. Create one to get started!",
+        Filter::Active => "No active todos. Great job! 🎉",
+        Filter::Completed => "No completed todos yet.",
+        Filter::Priority(_) => "No todos with this priority.",
+    };
+
+    return <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <p>{message}</p>
+    </div>
+}
+
+// Add Todo Form Component
+component AddTodoForm(
+    on_submit: fn(CreateTodoRequest),
+    on_cancel: fn(),
+) {
+    let title = Signal::new(String::new());
+    let description = Signal::new(String::new());
+    let priority = Signal::new(Priority::Medium);
+    let due_date = Signal::new(None);
+    let tags = Signal::new(Vec::new());
+    let tag_input = Signal::new(String::new());
+
+    let is_valid = Computed::new(|| !title.get().trim().is_empty());
+
+    let handle_submit = || {
+        if !is_valid.get() {
+            return;
+        }
+
+        let request = CreateTodoRequest {
+            title: title.get(),
+            description: description.get(),
+            priority: priority.get(),
+            due_date: due_date.get(),
+            tags: tags.get(),
+        };
+
+        on_submit(request);
+    };
+
+    let handle_add_tag = || {
+        let tag = tag_input.get().trim();
+        if !tag.is_empty() && !tags.get().contains(&tag.to_string()) {
+            let mut current_tags = tags.get();
+            current_tags.push(tag.to_string());
+            tags.set(current_tags);
+            tag_input.set(String::new());
+        }
+    };
+
+    return <div class="add-todo-form">
+        <h2>Create New Todo</h2>
+
+        <div class="form-group">
+            <label>Title *</label>
+            <input
+                type="text"
+                value={title.get()}
+                oninput={(e) => title.set(e.target.value)}
+                placeholder="Enter todo title..."
+                autofocus
+            />
+        </div>
+
+        <div class="form-group">
+            <label>Description</label>
+            <textarea
+                value={description.get()}
+                oninput={(e) => description.set(e.target.value)}
+                placeholder="Enter description..."
+                rows="3"
+            />
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Priority</label>
+                <select
+                    value={priority.get()}
+                    onchange={(e) => priority.set(e.target.value.into())}
+                >
+                    <option value="Low">Low</option>
+                    <option value="Medium" selected>Medium</option>
+                    <option value="High">High</option>
+                    <option value="Urgent">Urgent</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Due Date</label>
+                <input
+                    type="date"
+                    value={due_date.get().unwrap_or_default()}
+                    onchange={(e) => due_date.set(Some(e.target.value))}
+                />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Tags</label>
+            <div class="tag-input">
+                <input
+                    type="text"
+                    value={tag_input.get()}
+                    oninput={(e) => tag_input.set(e.target.value)}
+                    placeholder="Add tags..."
+                    onkeypress={(e) => {
+                        if e.key == "Enter" {
+                            e.preventDefault();
+                            handle_add_tag();
+                        }
+                    }}
+                />
+                <button onclick={handle_add_tag}>Add</button>
+            </div>
+
+            {!tags.get().is_empty() && (
+                <div class="tags-list">
+                    {tags.get().iter().map(|tag| (
+                        <span class="tag">
+                            {tag}
+                            <button
+                                class="tag-remove"
+                                onclick={() => {
+                                    let mut current_tags = tags.get();
+                                    current_tags.retain(|t| t != tag);
+                                    tags.set(current_tags);
+                                }}
+                            >
+                                ✕
+                            </button>
+                        </span>
+                    ))}
+                </div>
+            )}
+        </div>
+
+        <div class="form-actions">
+            <button class="btn-secondary" onclick={on_cancel}>
+                Cancel
+            </button>
+            <button
+                class="btn-primary"
+                onclick={handle_submit}
+                disabled={!is_valid.get()}
+            >
+                Create Todo
+            </button>
+        </div>
+    </div>
+}
+
+// Modal Component
+component Modal(children, on_close: fn()) {
+    return <div class="modal-overlay" onclick={on_close}>
+        <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+            <button class="modal-close" onclick={on_close}>✕</button>
+            {children}
+        </div>
+    </div>
+}
+
+// Animation helpers
+fn fade_in() -> Animation {
+    Animation::new("opacity", 0.0, 1.0, 300).easing(Easing::EaseOut)
+}
+
+fn fade_out() -> Animation {
+    Animation::new("opacity", 1.0, 0.0, 200).easing(Easing::EaseIn)
+}

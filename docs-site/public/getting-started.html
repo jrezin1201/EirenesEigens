@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Getting Started - RavensOne Documentation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        nav {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        nav .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+        }
+        nav a {
+            color: #333;
+            text-decoration: none;
+            margin: 0 1rem;
+            transition: color 0.2s;
+        }
+        nav a:hover { color: #667eea; }
+        .logo {
+            font-weight: bold;
+            font-size: 1.5rem;
+            color: #667eea;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #667eea; margin: 2rem 0 1rem; font-size: 2.5rem; }
+        h2 { color: #667eea; margin: 2rem 0 1rem; border-bottom: 2px solid #667eea; padding-bottom: 0.5rem; }
+        h3 { color: #764ba2; margin: 1.5rem 0 0.5rem; }
+        code {
+            background: #f4f4f4;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+        a { color: #667eea; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        ul, ol { margin-left: 2rem; margin-bottom: 1rem; }
+        li { margin: 0.5rem 0; }
+        footer {
+            background: #2d2d2d;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 4rem;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container" style="max-width: none;">
+            <div class="logo">RavensOne</div>
+            <div>
+                <a href="/">Home</a>
+                <a href="/getting-started.html">Get Started</a>
+                <a href="https://github.com/jrezin1201/RavensOne">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Getting Started with RavensOne</h1></p><p>Welcome to RavensOne! This guide will help you build your first RavensOne application in under 10 minutes.</p><p>---</p><p><h2>What is RavensOne?</h2></p><p>RavensOne is a modern full-stack web framework that compiles to WebAssembly. It's designed for AI-assisted development and offers:</p><p><ul><li>✅ <strong>Type-safe</strong> with automatic type inference</li><li>⚡ <strong>Blazing fast</strong> (65,000+ compilations/second)</li><li>🎨 <strong>Reactive</strong> state management with Signals</li><li>🚀 <strong>Server-side rendering</strong> (SSR) out of the box</li><li>📦 <strong>Single-file components</strong> with JSX-like syntax</li><li>🔒 <strong>Memory safe</strong> with borrow checking</li></p><p>---</p><p><h2>Installation</h2></p><p><h3>Prerequisites</h3></p><p><li>macOS, Linux, or Windows</li><li>Terminal/Command Prompt access</li></ul></p><p><h3>Install RavensOne</h3></p><p><strong>macOS/Linux:</strong>
+<pre><code>curl -sSf https://install.ravensone.dev | sh
+</code></pre></p><p><strong>Windows:</strong>
+<pre><code>iwr https://install.ravensone.dev/windows | iex
+</code></pre></p><p><strong>From Source:</strong>
+<pre><code>git clone https://github.com/jrezin1201/RavensOne
+cd RavensOne
+cargo build --release
+cargo install --path .
+</code></pre></p><p><h3>Verify Installation</h3></p><p><pre><code>raven --version
+<h1>Should output: raven 0.1.0</h1>
+</code></pre></p><p>---</p><p><h2>Your First Application</h2></p><p><h3>1. Create a New Project</h3></p><p><pre><code>raven new my-first-app
+cd my-first-app
+</code></pre></p><p>This creates a project with the following structure:</p><p><pre><code>my-first-app/
+├── raven.toml          # Package manifest
+├── src/
+│   └── main.raven      # Entry point
+└── README.md
+</code></pre></p><p><h3>2. Edit <code>src/main.raven</code></h3></p><p>Open <code>src/main.raven</code> and replace its contents with:</p><p><pre><code>component App() {
+    let count = Signal::new(0);</p><p>    let increment = || {
+        count.set(count.get() + 1);
+    };</p><p>    <div>
+        <h1>Hello, RavensOne!</h1>
+        <p>Count: {count.get()}</p>
+        <button onclick={increment}>Click me!</button>
+    </div>
+}
+</code></pre></p><p><h3>3. Run the Development Server</h3></p><p><pre><code>raven dev
+</code></pre></p><p>Open your browser to <code>http://localhost:3000</code> and you'll see your app running!</p><p>Try clicking the button - the count updates instantly thanks to reactive state!</p><p>---</p><p><h2>Understanding the Code</h2></p><p>Let's break down what's happening:</p><p><h3>Component Declaration</h3></p><p><pre><code>component App() {
+    // Component body
+}
+</code></pre></p><p>Components are the building blocks of RavensOne applications. They're declared with the <code>component</code> keyword.</p><p><h3>Reactive State with Signals</h3></p><p><pre><code>let count = Signal::new(0);
+</code></pre></p><p><code>Signal</code> creates a reactive value. When it changes, any component using it automatically re-renders.</p><p><h3>Reading and Writing Signals</h3></p><p><pre><code>count.get()      // Read the current value
+count.set(5)     // Set a new value
+count.update(|v| v + 1)  // Update based on current value
+</code></pre></p><p><h3>Event Handlers</h3></p><p><pre><code>let increment = || {
+    count.set(count.get() + 1);
+};</p><p><button onclick={increment}>Click me!</button>
+</code></pre></p><p>Event handlers are just functions! The <code>||</code> syntax creates a lambda (anonymous function).</p><p><h3>JSX-like Syntax</h3></p><p><pre><code><div>
+    <h1>Hello!</h1>
+    <p>{count.get()}</p>
+</div>
+</code></pre></p><p>Curly braces <code>{}</code> embed RavensOne expressions in JSX.</p><p>---</p><p><h2>Adding More Features</h2></p><p><h3>Computed Values</h3></p><p>Derived values that automatically update:</p><p><pre><code>let count = Signal::new(0);
+let doubled = Computed::new(|| count.get() * 2);</p><p><p>Count: {count.get()}</p>
+<p>Doubled: {doubled.get()}</p>
+</code></pre></p><p><h3>Effects (Side Effects)</h3></p><p>Run code when dependencies change:</p><p><pre><code>Effect::new(|| {
+    console.log("Count changed:", count.get());
+});
+</code></pre></p><p><h3>Server Functions</h3></p><p>Call server-side code from the client:</p><p><pre><code>server fn get_user_data(user_id: Int) -> Result<User, Error> {
+    // This runs on the server only
+    let user = db::fetch_user(user_id).await?;
+    Ok(user)
+}</p><p>// Call from client component
+let load_user = async || {
+    let user = get_user_data(123).await?;
+    user_signal.set(user);
+};
+</code></pre></p><p>---</p><p><h2>Building for Production</h2></p><p><h3>Compile Your App</h3></p><p><pre><code>raven build --release
+</code></pre></p><p>This creates optimized WASM bundles in the <code>dist/</code> directory:</p><p><pre><code>dist/
+├── index.html
+├── app.wasm        # Your compiled code
+├── app.js          # Runtime wrapper
+└── styles.css
+</code></pre></p><p><h3>Deploy to Vercel</h3></p><p><pre><code>cd dist
+vercel --prod
+</code></pre></p><p>Your app is now live! 🎉</p><p>---</p><p><h2>Next Steps</h2></p><p><h3>Learn Core Concepts</h3></p><p><ul><li><a href="./concepts/components.md">Components</a> - Building blocks of your app</li><li><a href="./concepts/reactivity.md">Reactive State</a> - Signals, Computed, Effects</li><li><a href="./concepts/routing.md">Routing</a> - Client-side navigation</li><li><a href="./concepts/server-functions.md">Server Functions</a> - Full-stack RPC</li><li><a href="./concepts/forms.md">Forms</a> - Form handling and validation</li></p><p><h3>Build Real Apps</h3></p><p><li><a href="./tutorials/todo-app.md">Todo App Tutorial</a> - Full CRUD application</li><li><a href="./tutorials/blog.md">Blog with SSR</a> - Server-side rendering</li><li><a href="./tutorials/ecommerce.md">E-commerce Store</a> - Complex state management</li><li><a href="./tutorials/chat.md">Real-time Chat</a> - WebSockets and live updates</li></p><p><h3>API Reference</h3></p><p><li><a href="./api/stdlib.md">Standard Library</a> - Built-in functions and types</li><li><a href="./api/reactive.md">Reactive Primitives</a> - Signal, Computed, Effect, Resource</li><li><a href="./api/dom.md">DOM APIs</a> - Working with the DOM</li><li><a href="./api/http.md">HTTP Client</a> - Making requests</li></ul></p><p>---</p><p><h2>Common Patterns</h2></p><p><h3>Conditional Rendering</h3></p><p><pre><code>let show_message = Signal::new(true);</p><p><div>
+    {if show_message.get() {
+        <p>Hello!</p>
+    }}
+</div>
+</code></pre></p><p><h3>List Rendering</h3></p><p><pre><code>let items = Signal::new([1, 2, 3, 4, 5]);</p><p><ul>
+    {items.get().map(|item| {
+        <ul><li>Item {item}</li>
+</ul>    })}
+</ul>
+</code></pre></p><p><h3>Form Handling</h3></p><p><pre><code>let name = Signal::new("");</p><p>let handle_submit = |e| {
+    e.preventDefault();
+    console.log("Submitted:", name.get());
+};</p><p><form onsubmit={handle_submit}>
+    <input
+        type="text"
+        value={name.get()}
+        oninput={|e| name.set(e.target.value)}
+    />
+    <button type="submit">Submit</button>
+</form>
+</code></pre></p><p>---</p><p><h2>Troubleshooting</h2></p><p><h3>Common Issues</h3></p><p><strong>Issue</strong>: <code>raven: command not found</code>
+<ul><li><strong>Solution</strong>: Make sure RavensOne is in your PATH. Try <code>source ~/.bashrc</code> or restart your terminal.</li></ul></p><p><strong>Issue</strong>: Type errors during compilation
+<ul><li><strong>Solution</strong>: Check the error message for line numbers. RavensOne's type inference is smart but may need hints for complex types.</li></ul></p><p><strong>Issue</strong>: Hot reload not working
+<ul><li><strong>Solution</strong>: Ensure you're running <code>raven dev</code> and your browser has WebSocket support.</li></p><p><h3>Getting Help</h3></p><p><li><strong>GitHub Issues</strong>: <a href="https://github.com/jrezin1201/RavensOne/issues">github.com/jrezin1201/RavensOne/issues</a></li><li><strong>Discussions</strong>: <a href="https://github.com/jrezin1201/RavensOne/discussions">github.com/jrezin1201/RavensOne/discussions</a></li><li><strong>Discord</strong>: Coming soon!</li></p><p>---</p><p><h2>Examples</h2></p><p>Check out these complete example applications:</p><p><li><a href="../examples/counter.raven">Counter App</a> - Simple reactive counter</li><li><a href="../examples/todo_app.raven">Todo List</a> - Full CRUD with server functions</li><li><a href="../examples/analytics_dashboard.raven">Analytics Dashboard</a> - Complex state, charts, responsive design</li></ul></p><p>---</p><p><h2>Cheat Sheet</h2></p><p><h3>Basic Syntax</h3></p><p><pre><code>// Variables
+let x = 10;
+let name = "Alice";</p><p>// Functions
+fn add(a: Int, b: Int) -> Int {
+    return a + b;
+}</p><p>// Components
+component Button(props: { text: String }) {
+    <button>{props.text}</button>
+}</p><p>// Signals
+let count = Signal::new(0);
+count.get()        // Read
+count.set(5)       // Write
+count.update(|v| v + 1)  // Update</p><p>// Computed
+let doubled = Computed::new(|| count.get() * 2);</p><p>// Effects
+Effect::new(|| {
+    console.log(count.get());
+});</p><p>// Server Functions
+server fn get_data() -> Result<Data, Error> {
+    // Server-only code
+}
+</code></pre></p><p>---</p><p><h2>What Makes RavensOne Special?</h2></p><p><h3>1. AI-First Development</h3></p><p>RavensOne is designed to work seamlessly with AI assistants. The syntax is clear, concise, and easy for LLMs to generate.</p><p><h3>2. No Virtual DOM</h3></p><p>Fine-grained reactivity means updates are surgical - only the exact DOM nodes that need to change are updated.</p><p><h3>3. Type Safety Without Annotations</h3></p><p>Hindley-Milner type inference means you get type safety without writing type annotations everywhere.</p><p><h3>4. True Full-Stack</h3></p><p>Server functions let you call server-side code as if it were a local function. No REST APIs, no GraphQL schemas - just functions.</p><p><h3>5. WebAssembly Native</h3></p><p>Compiles to WASM for near-native performance. Your app runs at 60 FPS even with complex UIs.</p><p>---</p><p><h2>Ready to Build?</h2></p><p>You now know the basics! Here are some next steps:</p><p>1. <strong>Build the Todo app</strong> - <a href="./tutorials/todo-app.md">Tutorial</a>
+2. <strong>Explore the examples</strong> - <a href="../examples/">Examples folder</a>
+3. <strong>Read the API docs</strong> - <a href="./api/">API Reference</a>
+4. <strong>Join the community</strong> - <a href="https://github.com/jrezin1201/RavensOne/discussions">GitHub Discussions</a></p><p><strong>Happy coding with RavensOne!</strong> 🚀</p><p>---</p><p>*Last Updated: October 17, 2025*
+*RavensOne Version: 0.1.0*
+
+    </div>
+
+    <footer>
+        <p>&copy; 2025 RavensOne. MIT License.</p>
+        <p style="margin-top: 0.5rem;">
+            <a href="https://github.com/jrezin1201/RavensOne" style="color: #667eea;">GitHub</a> •
+            <a href="/getting-started.html" style="color: #667eea;">Documentation</a>
+        </p>
+    </footer>
+</body>
+</html>
