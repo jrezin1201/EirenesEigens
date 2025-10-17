@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RavensOne Package Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .keyword { color: #569cd6; }
+        .string { color: #ce9178; }
+        .function { color: #dcdcaa; }
+        .comment { color: #6a9955; }
+        .command { color: #4ec9b0; }
+
+        .package-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .package-card h4 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .package-card p {
+            color: #666;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .package-card code {
+            background: #1e1e1e;
+            color: #4ec9b0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #2196F3;
+        }
+
+        .info-box h4 {
+            margin-bottom: 10px;
+            color: #1976D2;
+        }
+
+        .info-box p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .success-box {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #28a745;
+            color: #155724;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .feature-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feature-icon {
+            font-size: 24px;
+        }
+
+        .feature-text {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .terminal {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .terminal-line {
+            margin: 5px 0;
+        }
+
+        .terminal-prompt {
+            color: #4ec9b0;
+        }
+
+        .terminal-output {
+            color: #ce9178;
+            margin-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📦 RavensOne Package Manager</h1>
+        <p>Lightweight, Fast, and Simple</p>
+    </div>
+
+    <div class="container">
+        <!-- Overview -->
+        <div class="card">
+            <h2>🎯 What is RPM?</h2>
+            <p style="color: #666; margin-bottom: 15px;">
+                RavensOne Package Manager (RPM) is a lightweight package manager designed specifically for
+                RavensOne modules. It's inspired by npm, cargo, and pip but optimized for simplicity and speed.
+            </p>
+
+            <div class="success-box">
+                <strong>✅ RPM is Ready!</strong><br>
+                Full package management functionality with local registry support.
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">⚡</div>
+                    <div class="feature-text">Lightning Fast</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">📦</div>
+                    <div class="feature-text">Simple API</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🔒</div>
+                    <div class="feature-text">Lock Files</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🌳</div>
+                    <div class="feature-text">Dependency Trees</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Getting Started -->
+        <div class="card">
+            <h2>🚀 Getting Started</h2>
+
+            <h3 style="margin: 20px 0 10px; color: #333;">1. Initialize a Project</h3>
+            <div class="terminal">
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span> node scripts/rpm.js init
+                </div>
+                <div class="terminal-output">🎯 Initializing RavensOne project...</div>
+                <div class="terminal-output">✅ Project initialized!</div>
+            </div>
+
+            <h3 style="margin: 20px 0 10px; color: #333;">2. Install Packages</h3>
+            <div class="terminal">
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span> node scripts/rpm.js install @ravens/http-client
+                </div>
+                <div class="terminal-output">📦 Installing @ravens/http-client...</div>
+                <div class="terminal-output">  ✅ Installed @ravens/http-client@1.0.0</div>
+            </div>
+
+            <h3 style="margin: 20px 0 10px; color: #333;">3. List Packages</h3>
+            <div class="terminal">
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span> node scripts/rpm.js list
+                </div>
+                <div class="terminal-output">📦 Installed packages:</div>
+                <div class="terminal-output">   ✓ @ravens/http-client@1.0.0</div>
+            </div>
+        </div>
+
+        <!-- CLI Commands -->
+        <div class="card">
+            <h2>🔧 CLI Commands</h2>
+
+            <div class="code-block">
+<pre><span class="comment"># Initialize new project</span>
+<span class="command">raven init</span>
+
+<span class="comment"># Install package</span>
+<span class="command">raven install</span> <span class="string">@ravens/http-client</span>
+
+<span class="comment"># Install as dev dependency</span>
+<span class="command">raven install --dev</span> <span class="string">@ravens/test-utils</span>
+
+<span class="comment"># Uninstall package</span>
+<span class="command">raven uninstall</span> <span class="string">@ravens/http-client</span>
+
+<span class="comment"># List installed packages</span>
+<span class="command">raven list</span>
+
+<span class="comment"># Search for packages</span>
+<span class="command">raven search</span> <span class="string">http</span>
+
+<span class="comment"># Show package info</span>
+<span class="command">raven info</span> <span class="string">@ravens/ui-components</span>
+
+<span class="comment"># Publish package</span>
+<span class="command">raven publish</span></pre>
+            </div>
+        </div>
+
+        <!-- Available Packages -->
+        <div class="card">
+            <h2>📚 Available Packages</h2>
+
+            <div class="package-card">
+                <h4>📡 @ravens/http-client</h4>
+                <p>Full-featured HTTP client with builder pattern</p>
+                <code>raven install @ravens/http-client</code>
+            </div>
+
+            <div class="package-card">
+                <h4>🎨 @ravens/ui-components</h4>
+                <p>Reusable UI components (Button, Card, Modal, etc)</p>
+                <code>raven install @ravens/ui-components</code>
+            </div>
+
+            <div class="package-card">
+                <h4>⚡ @ravens/wasm-utils</h4>
+                <p>WebAssembly utilities and helpers</p>
+                <code>raven install @ravens/wasm-utils</code>
+            </div>
+
+            <div class="package-card">
+                <h4>💾 @ravens/database</h4>
+                <p>Database ORM with query builder</p>
+                <code>raven install @ravens/database</code>
+            </div>
+
+            <div class="package-card">
+                <h4>🔐 @ravens/auth</h4>
+                <p>Authentication and authorization utilities</p>
+                <code>raven install @ravens/auth</code>
+            </div>
+
+            <div class="package-card">
+                <h4>🛣️ @ravens/router</h4>
+                <p>Client-side routing for SPAs</p>
+                <code>raven install @ravens/router</code>
+            </div>
+        </div>
+
+        <!-- Package Manifest -->
+        <div class="card">
+            <h2>📋 Package Manifest (raven.json)</h2>
+
+            <div class="code-block">
+<pre>{
+  <span class="string">"name"</span>: <span class="string">"my-project"</span>,
+  <span class="string">"version"</span>: <span class="string">"0.1.0"</span>,
+  <span class="string">"description"</span>: <span class="string">"My awesome RavensOne project"</span>,
+  <span class="string">"author"</span>: <span class="string">"Your Name"</span>,
+  <span class="string">"license"</span>: <span class="string">"MIT"</span>,
+  <span class="string">"main"</span>: <span class="string">"src/main.raven"</span>,
+  <span class="string">"dependencies"</span>: {
+    <span class="string">"@ravens/http-client"</span>: <span class="string">"1.0.0"</span>,
+    <span class="string">"@ravens/ui-components"</span>: <span class="string">"1.0.0"</span>
+  },
+  <span class="string">"devDependencies"</span>: {},
+  <span class="string">"scripts"</span>: {
+    <span class="string">"dev"</span>: <span class="string">"raven dev"</span>,
+    <span class="string">"build"</span>: <span class="string">"raven build"</span>,
+    <span class="string">"test"</span>: <span class="string">"raven test"</span>
+  },
+  <span class="string">"ravens"</span>: {
+    <span class="string">"version"</span>: <span class="string">">=0.1.0"</span>
+  }
+}</pre>
+            </div>
+        </div>
+
+        <!-- Using Packages -->
+        <div class="card">
+            <h2>💻 Using Packages in Your Code</h2>
+
+            <div class="info-box">
+                <h4>Import Syntax:</h4>
+                <p>
+                    Use standard ES6-style imports to use packages in your RavensOne code.
+                </p>
+            </div>
+
+            <div class="code-block">
+<pre><span class="comment">// Import from installed package</span>
+<span class="keyword">import</span> { <span class="function">HttpClient</span> } <span class="keyword">from</span> <span class="string">'@ravens/http-client'</span>;
+
+<span class="comment">// Use the imported module</span>
+<span class="keyword">const</span> client = <span class="keyword">new</span> <span class="function">HttpClient</span>(<span class="string">'https://api.example.com'</span>);
+
+<span class="keyword">async</span> <span class="keyword">fn</span> <span class="function">main</span>() {
+    <span class="keyword">const</span> response = <span class="keyword">await</span> client.<span class="function">get</span>(<span class="string">'/users'</span>);
+    console.<span class="function">log</span>(response);
+}
+
+<span class="function">main</span>();</pre>
+            </div>
+
+            <div class="code-block">
+<pre><span class="comment">// Import UI components</span>
+<span class="keyword">import</span> { <span class="function">Button</span>, <span class="function">Card</span>, <span class="function">Modal</span> } <span class="keyword">from</span> <span class="string">'@ravens/ui-components'</span>;
+
+<span class="comment">// Create a button</span>
+<span class="keyword">const</span> btn = <span class="keyword">new</span> <span class="function">Button</span>({
+    label: <span class="string">'Click Me'</span>,
+    onClick: () => console.<span class="function">log</span>(<span class="string">'Clicked!'</span>)
+});
+
+btn.<span class="function">mount</span>(document.<span class="function">querySelector</span>(<span class="string">'#app'</span>));</pre>
+            </div>
+        </div>
+
+        <!-- Project Structure -->
+        <div class="card">
+            <h2>📂 Project Structure</h2>
+
+            <div class="code-block">
+<pre>my-project/
+├── src/
+│   └── main.raven       <span class="comment"># Main entry point</span>
+├── tests/               <span class="comment"># Test files</span>
+├── examples/            <span class="comment"># Example files</span>
+├── .ravens/             <span class="comment"># Package manager data</span>
+│   ├── packages/        <span class="comment"># Installed packages</span>
+│   │   └── @ravens/
+│   │       ├── http-client/
+│   │       └── ui-components/
+│   └── cache/           <span class="comment"># Package cache</span>
+├── raven.json           <span class="comment"># Package manifest</span>
+├── raven.lock           <span class="comment"># Lock file</span>
+└── .gitignore           <span class="comment"># Git ignore</span></pre>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="card">
+            <h2>✨ Features</h2>
+
+            <div class="info-box">
+                <h4>✅ Implemented:</h4>
+                <p>
+                    • Project initialization<br>
+                    • Package installation and uninstallation<br>
+                    • Dependency tracking<br>
+                    • Package search<br>
+                    • Built-in package registry<br>
+                    • Lock files for reproducible installs<br>
+                    • Scoped packages (@ravens/*)<br>
+                    • Dev dependencies
+                </p>
+            </div>
+
+            <div class="info-box">
+                <h4>🚀 Coming Soon:</h4>
+                <p>
+                    • Remote package registry<br>
+                    • Version resolution<br>
+                    • Semantic versioning<br>
+                    • Package publishing to remote registry<br>
+                    • Dependency conflict resolution<br>
+                    • Package scripts execution<br>
+                    • Global package installation
+                </p>
+            </div>
+        </div>
+
+        <!-- Try It Out -->
+        <div class="card">
+            <h2>🎮 Try It Out!</h2>
+
+            <div class="success-box">
+                <strong>Ready to try RPM?</strong>
+            </div>
+
+            <div class="terminal">
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span> mkdir my-ravens-project
+                </div>
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span> cd my-ravens-project
+                </div>
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span> node ../scripts/rpm.js init
+                </div>
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span> node ../scripts/rpm.js install @ravens/http-client
+                </div>
+                <div class="terminal-line">
+                    <span class="terminal-prompt">$</span> node ../scripts/rpm.js list
+                </div>
+            </div>
+
+            <p style="margin-top: 20px; color: #666;">
+                Check out the <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">test-project/</code>
+                directory for a working example!
+            </p>
+        </div>
+    </div>
+</body>
+</html>

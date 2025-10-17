@@ -1,0 +1,19 @@
+use crate::types::Product;
+
+component ProductCard(product: Product, on_add_to_cart: fn(Product, string)) {
+    let mut selected_size = State::new(product.sizes[0]);
+
+    return (
+        <div class="product-card">
+            <img src={product.image_url} alt={product.name} />
+            <h3>{product.name}</h3>
+            <p>${product.price_in_cents / 100}.00</p>
+            <select onChange={|e| selected_size.set(e.value)}>
+                { product.sizes.map(|s| <option value={s}>{s}</option>) }
+            </select>
+            <button onClick={|_| on_add_to_cart(product, *selected_size)}>
+                Add to Cart
+            </button>
+        </div>
+    );
+}

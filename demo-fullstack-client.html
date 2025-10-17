@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RavensOne Full-Stack Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .add-todo {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .add-todo input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .add-todo input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .todos-list {
+            list-style: none;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+
+        .todo-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .todo-item.completed {
+            opacity: 0.6;
+        }
+
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        .todo-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .todo-text {
+            flex: 1;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .todo-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .info-box h4 {
+            margin-bottom: 8px;
+            color: #1976D2;
+        }
+
+        .info-box p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .code {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 RavensOne Full-Stack</h1>
+        <p>Server/Client Code Splitting • RPC Communication • One Language</p>
+    </div>
+
+    <div class="container">
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="total-count">0</div>
+                <div class="stat-label">Total Todos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="completed-count">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="pending-count">0</div>
+                <div class="stat-label">Pending</div>
+            </div>
+        </div>
+
+        <!-- How it Works -->
+        <div class="card">
+            <h2>💡 How It Works</h2>
+            <div class="info-box">
+                <h4>🖥️ Server Code (Node.js)</h4>
+                <p>The server handles data persistence, validation, and business logic. All todo operations run on the server with proper error handling.</p>
+                <div class="code">@server fn createTodo(text: String) -> Todo { ... }</div>
+            </div>
+            <div class="info-box">
+                <h4>🌐 Client Code (Browser)</h4>
+                <p>The client handles UI rendering and user interactions. It calls server functions via RPC automatically.</p>
+                <div class="code">@client fn addTodo() { rpc::call("createTodo", [text]) }</div>
+            </div>
+            <div class="info-box">
+                <h4>🔗 RPC Bridge</h4>
+                <p>The client and server communicate via JSON-RPC 2.0. Type-safe calls with automatic serialization.</p>
+            </div>
+        </div>
+
+        <!-- Todo App -->
+        <div class="card">
+            <h2>✅ Todo List</h2>
+
+            <div class="add-todo">
+                <input
+                    type="text"
+                    id="new-todo"
+                    placeholder="What needs to be done?"
+                    onkeypress="if(event.key==='Enter') addTodo()"
+                >
+                <button class="btn" onclick="addTodo()">
+                    Add Todo
+                </button>
+            </div>
+
+            <div id="todos-container">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading todos...</p>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-secondary btn-sm" onclick="refreshTodos()">
+                    🔄 Refresh
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="clearCompleted()">
+                    🗑️ Clear Completed
+                </button>
+            </div>
+        </div>
+
+        <!-- Server Info -->
+        <div class="card">
+            <h2>📡 Server Connection</h2>
+            <div class="info-box">
+                <h4>RPC Endpoint</h4>
+                <p><strong>http://localhost:3000/_rpc</strong></p>
+            </div>
+            <div class="info-box">
+                <h4>Available Methods</h4>
+                <p>getTodos, getTodo, createTodo, updateTodo, deleteTodo, getStats, clearCompleted</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Client Runtime -->
+    <script src="dist/client-runtime.js"></script>
+
+    <script>
+        /**
+         * CLIENT CODE
+         * This runs in the browser and calls server functions via RPC
+         */
+
+        const client = window.RavensClient;
+
+        // Initialize client
+        async function init() {
+            await client.init({
+                serverUrl: 'http://localhost:3000',
+            });
+
+            console.log('✅ Client initialized');
+
+            // Load initial data
+            await refreshTodos();
+        }
+
+        /**
+         * Load todos from server
+         * @client - This runs on client, calls server via RPC
+         */
+        async function refreshTodos() {
+            try {
+                console.log('[Client] Loading todos...');
+
+                // Call server RPC method
+                const todos = await client.call('getTodos');
+
+                console.log('[Client] Loaded todos:', todos);
+
+                // Update UI
+                renderTodos(todos);
+
+                // Update stats
+                await updateStats();
+            } catch (error) {
+                console.error('[Client] Failed to load todos:', error);
+                client.notify('Failed to load todos', 'error');
+            }
+        }
+
+        /**
+         * Add new todo
+         * @client
+         */
+        async function addTodo() {
+            const input = document.getElementById('new-todo');
+            const text = input.value.trim();
+
+            if (!text) {
+                client.notify('Please enter a todo', 'error');
+                return;
+            }
+
+            try {
+                console.log('[Client] Creating todo...');
+
+                // Call server RPC method
+                const todo = await client.call('createTodo', [text]);
+
+                console.log('[Client] Created todo:', todo);
+
+                // Clear input
+                input.value = '';
+
+                // Refresh list
+                await refreshTodos();
+
+                client.notify('Todo added!', 'success');
+            } catch (error) {
+                console.error('[Client] Failed to create todo:', error);
+                client.notify(error.message || 'Failed to create todo', 'error');
+            }
+        }
+
+        /**
+         * Toggle todo completion
+         * @client
+         */
+        async function toggleTodo(id, completed) {
+            try {
+                console.log(`[Client] Toggling todo ${id}...`);
+
+                // Call server RPC method
+                await client.call('updateTodo', [id, { completed: !completed }]);
+
+                console.log('[Client] Toggled todo:', id);
+
+                // Refresh list
+                await refreshTodos();
+            } catch (error) {
+                console.error('[Client] Failed to toggle todo:', error);
+                client.notify('Failed to update todo', 'error');
+            }
+        }
+
+        /**
+         * Delete todo
+         * @client
+         */
+        async function deleteTodo(id) {
+            if (!confirm('Are you sure you want to delete this todo?')) {
+                return;
+            }
+
+            try {
+                console.log(`[Client] Deleting todo ${id}...`);
+
+                // Call server RPC method
+                await client.call('deleteTodo', [id]);
+
+                console.log('[Client] Deleted todo:', id);
+
+                // Refresh list
+                await refreshTodos();
+
+                client.notify('Todo deleted!', 'success');
+            } catch (error) {
+                console.error('[Client] Failed to delete todo:', error);
+                client.notify('Failed to delete todo', 'error');
+            }
+        }
+
+        /**
+         * Clear completed todos
+         * @client
+         */
+        async function clearCompleted() {
+            if (!confirm('Delete all completed todos?')) {
+                return;
+            }
+
+            try {
+                console.log('[Client] Clearing completed...');
+
+                // Call server RPC method
+                const result = await client.call('clearCompleted');
+
+                console.log('[Client] Cleared:', result);
+
+                // Refresh list
+                await refreshTodos();
+
+                client.notify(`Deleted ${result.deleted} todos`, 'success');
+            } catch (error) {
+                console.error('[Client] Failed to clear completed:', error);
+                client.notify('Failed to clear completed', 'error');
+            }
+        }
+
+        /**
+         * Update stats display
+         * @client
+         */
+        async function updateStats() {
+            try {
+                // Call server RPC method
+                const stats = await client.call('getStats');
+
+                document.getElementById('total-count').textContent = stats.total;
+                document.getElementById('completed-count').textContent = stats.completed;
+                document.getElementById('pending-count').textContent = stats.pending;
+            } catch (error) {
+                console.error('[Client] Failed to load stats:', error);
+            }
+        }
+
+        /**
+         * Render todos in UI
+         * @client
+         */
+        function renderTodos(todos) {
+            const container = document.getElementById('todos-container');
+
+            if (todos.length === 0) {
+                container.innerHTML = '<div class="empty-state">No todos yet. Add one above!</div>';
+                return;
+            }
+
+            const html = `
+                <ul class="todos-list">
+                    ${todos.map(todo => `
+                        <li class="todo-item ${todo.completed ? 'completed' : ''}">
+                            <input
+                                type="checkbox"
+                                class="todo-checkbox"
+                                ${todo.completed ? 'checked' : ''}
+                                onchange="toggleTodo(${todo.id}, ${todo.completed})"
+                            >
+                            <span class="todo-text">${escapeHtml(todo.text)}</span>
+                            <div class="todo-actions">
+                                <button class="btn btn-danger btn-sm" onclick="deleteTodo(${todo.id})">
+                                    Delete
+                                </button>
+                            </div>
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        /**
+         * Escape HTML for XSS protection
+         */
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize on load
+        client.ready().then(init);
+    </script>
+</body>
+</html>

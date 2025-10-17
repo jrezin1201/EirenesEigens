@@ -1,0 +1,10 @@
+// Reactive counter component - simplified
+let count = 0;
+
+component Counter() {
+    return <div class="container">
+        <p>"Count: "</p>
+        <p>{count}</p>
+        <button>"Increment"</button>
+    </div>;
+}

@@ -1,0 +1,7 @@
+// App Component - Main application entry point
+component App() {
+    return <div>
+    <h1>{"RavensOne Application"}</h1>
+    <p>{"Built with WebAssembly"}</p>
+    </div>;
+}

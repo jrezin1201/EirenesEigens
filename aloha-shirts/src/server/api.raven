@@ -1,0 +1,43 @@
+use crate::types::{Product, CartItem, ApiError};
+
+// This is a server function to fetch our product catalog.
+// In a real app, this would query a database.
+server async fn get_products() -> Result<Vec<Product>, ApiError> {
+    Ok(vec![
+        Product {
+            id: "p1",
+            name: "Volcano Sunset",
+            description: "A fiery design inspired by Kīlauea's glow.",
+            image_url: "/images/volcano-sunset.jpg",
+            price_in_cents: 6500,
+            sizes: vec!["S", "M", "L", "XL"],
+        },
+        Product {
+            id: "p2",
+            name: "Maui Wave Rider",
+            description: "Cool blue tones that capture the spirit of the ocean.",
+            image_url: "/images/maui-wave.jpg",
+            price_in_cents: 7000,
+            sizes: vec!["M", "L"],
+        },
+    ])
+}
+
+// This is the secure server function for creating a Stripe payment.
+server async fn create_stripe_payment(cart: Vec<CartItem>) -> Result<string, ApiError> {
+    let secret_key = env::get("STRIPE_SECRET_KEY");
+    let total = calculate_total(cart)?;
+
+    // Placeholder for the real Stripe SDK call
+    let intent = stripe::create_intent(secret_key, total).await;
+    Ok(intent.client_secret)
+}
+
+// Helper to calculate the total server-side to prevent tampering.
+fn calculate_total(cart: Vec<CartItem>) -> Result<i32, ApiError> {
+    let mut total = 0;
+    for item in cart {
+        total = total + item.product.price_in_cents;
+    }
+    Ok(total)
+}

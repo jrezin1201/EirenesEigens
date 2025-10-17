@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "generated": "2025-10-17T18:52:41.170Z",
+  "packages": {
+    "@ravens/wasm-utils": {
+      "version": "1.0.0",
+      "resolved": "builtin",
+      "integrity": "sha256-builtin"
+    }
+  }
+}

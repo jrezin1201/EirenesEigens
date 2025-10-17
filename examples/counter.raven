@@ -1,0 +1,22 @@
+// Working reactive counter with manual Signal calls
+// This version explicitly uses Signal operations
+
+let count = 0;
+
+fn increment() {
+    count = count + 1;
+    return count;
+}
+
+fn decrement() {
+    count = count - 1;
+    return count;
+}
+
+fn get_count() {
+    return count;
+}
+
+fn main() {
+    return 0;
+}

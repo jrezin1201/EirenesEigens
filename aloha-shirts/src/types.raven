@@ -1,0 +1,21 @@
+// The core Product data structure.
+struct Product {
+    id: string,
+    name: string,
+    description: string,
+    image_url: string,
+    price_in_cents: i32,
+    sizes: Vec<string>,
+}
+
+// Represents an item in the shopping cart.
+struct CartItem {
+    product: Product,
+    selected_size: string,
+}
+
+// A shared error type for our server API calls.
+enum ApiError {
+    PaymentFailed(string),
+    NetworkError,
+}/ Define your shared data structures here.

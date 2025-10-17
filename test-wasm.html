@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WASM Test</title>
+</head>
+<body>
+    <h1>Testing WASM Loading</h1>
+    <div id="output"></div>
+
+    <script>
+        async function loadWasm() {
+            try {
+                const response = await fetch('test-if.wasm');
+                const wasmBytes = await response.arrayBuffer();
+
+                const importObject = {
+                    env: {
+                        // Empty for now
+                    }
+                };
+
+                const wasmModule = await WebAssembly.instantiate(wasmBytes, importObject);
+
+                console.log('WASM loaded successfully!');
+                console.log('Exports:', Object.keys(wasmModule.instance.exports));
+
+                document.getElementById('output').innerHTML = `
+                    <p style="color: green;">✅ WASM loaded successfully!</p>
+                    <p>Exports: ${Object.keys(wasmModule.instance.exports).join(', ')}</p>
+                `;
+            } catch (error) {
+                console.error('Failed to load WASM:', error);
+                document.getElementById('output').innerHTML = `
+                    <p style="color: red;">❌ Failed to load WASM</p>
+                    <p>Error: ${error.message}</p>
+                `;
+            }
+        }
+
+        loadWasm();
+    </script>
+</body>
+</html>

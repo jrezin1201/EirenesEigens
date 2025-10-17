@@ -1,0 +1,8 @@
+// Simple counter component for testing
+component Counter() {
+    return 42;
+}
+
+fn main() {
+    return 0;
+}

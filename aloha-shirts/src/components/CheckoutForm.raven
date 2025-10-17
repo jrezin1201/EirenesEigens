@@ -1,0 +1,42 @@
+use crate::types::CartItem;
+use crate::server::api::create_stripe_payment;
+
+extern "js" {
+    fn setup_stripe_elements(id: string);
+    async fn confirm_stripe_payment(secret: string) -> bool;
+}
+
+component CheckoutForm(cart: Vec<CartItem>) {
+    let mut status = State::new("Ready");
+
+    on_mount(|| {
+        setup_stripe_elements("stripe-card-element");
+    });
+
+    let handle_payment = async || {
+        status.set("Processing...");
+        match create_stripe_payment(cart).await {
+            Ok(client_secret) => {
+                if confirm_stripe_payment(client_secret).await {
+                    status.set("Success");
+                } else {
+                    status.set("Failed");
+                }
+            },
+            Err(_) => status.set("Failed"),
+        }
+    };
+
+    if *status == "Success" {
+        return <h3>"Payment Successful! Mahalo!"</h3>;
+    }
+
+    return (
+        <div>
+            <div id="stripe-card-element"></div>
+            <button onClick={handle_payment} disabled={*status == "Processing"}>
+                Pay Now
+            </button>
+        </div>
+    );
+}

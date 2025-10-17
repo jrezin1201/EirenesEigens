@@ -1,0 +1,22 @@
+{
+  "name": "test-project",
+  "version": "0.1.0",
+  "description": "",
+  "author": "",
+  "license": "MIT",
+  "main": "src/main.raven",
+  "dependencies": {
+    "@ravens/http-client": "1.0.0",
+    "@ravens/ui-components": "1.0.0",
+    "@ravens/wasm-utils": "1.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "dev": "raven dev",
+    "build": "raven build",
+    "test": "raven test"
+  },
+  "ravens": {
+    "version": ">=0.1.0"
+  }
+}

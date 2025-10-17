@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RavensOne HMR Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .status-indicator.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-indicator.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #28a745;
+        }
+
+        .status-dot.disconnected {
+            background: #dc3545;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #2196F3;
+        }
+
+        .info-box h4 {
+            margin-bottom: 10px;
+            color: #1976D2;
+        }
+
+        .info-box p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn.secondary:hover {
+            background: #5a6268;
+        }
+
+        .interactive-area {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 40px;
+            color: white;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .counter-display {
+            font-size: 72px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .form-section {
+            margin: 20px 0;
+        }
+
+        .form-section label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-section input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+        }
+
+        .log-entry.info {
+            color: #4CAF50;
+        }
+
+        .log-entry.update {
+            color: #2196F3;
+        }
+
+        .log-entry.error {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔥 Hot Module Reloading</h1>
+        <p>Live Updates Without Losing State</p>
+    </div>
+
+    <div class="container">
+        <!-- Status Card -->
+        <div class="card">
+            <h2>🔌 HMR Status</h2>
+
+            <div id="status-indicator" class="status-indicator disconnected">
+                <div class="status-dot disconnected"></div>
+                <span>Disconnected</span>
+            </div>
+
+            <div class="info-box">
+                <h4>How to Test:</h4>
+                <p>
+                    1. Start the HMR server: <code style="background: white; padding: 2px 6px; border-radius: 3px;">node scripts/hmr-server.js</code><br>
+                    2. Edit any file in <code style="background: white; padding: 2px 6px; border-radius: 3px;">dist/</code> or <code style="background: white; padding: 2px 6px; border-radius: 3px;">examples/</code><br>
+                    3. Watch this page update live!<br>
+                    4. Your component state is preserved across updates
+                </p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="update-count">0</div>
+                    <div class="stat-label">Updates</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="reload-count">0</div>
+                    <div class="stat-label">Full Reloads</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="uptime">0s</div>
+                    <div class="stat-label">Uptime</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Demo -->
+        <div class="card">
+            <h2>🎮 Interactive Demo</h2>
+            <p style="color: #666; margin-bottom: 20px;">
+                Try editing files while interacting with this counter. Your state will be preserved!
+            </p>
+
+            <div class="interactive-area">
+                <h3>Counter</h3>
+                <div class="counter-display" id="counter">0</div>
+                <div>
+                    <button class="btn" onclick="incrementCounter()">➕ Increment</button>
+                    <button class="btn" onclick="decrementCounter()">➖ Decrement</button>
+                    <button class="btn secondary" onclick="resetCounter()">🔄 Reset</button>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <label>Test Form Input (Will be preserved):</label>
+                <input type="text" id="test-input" name="test-input" placeholder="Type something...">
+
+                <label>Select Box (Will be preserved):</label>
+                <select id="test-select" name="test-select" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                    <option value="option1">Option 1</option>
+                    <option value="option2">Option 2</option>
+                    <option value="option3">Option 3</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- What is HMR -->
+        <div class="card">
+            <h2>🤔 What is Hot Module Reloading?</h2>
+
+            <p style="color: #666; margin-bottom: 20px;">
+                HMR allows you to update your application code without refreshing the page,
+                while preserving your application state.
+            </p>
+
+            <div class="info-box">
+                <h4>Benefits:</h4>
+                <p>
+                    ✅ No more losing form inputs<br>
+                    ✅ Keep your scroll position<br>
+                    ✅ Maintain component state<br>
+                    ✅ Instant feedback on changes<br>
+                    ✅ Faster development cycle
+                </p>
+            </div>
+
+            <div class="code-block">
+<pre><span style="color: #6a9955;">// Example: Edit this file while the counter is at 42
+// When you save, the counter will STILL be at 42!</span>
+
+<span style="color: #569cd6;">function</span> <span style="color: #dcdcaa;">incrementCounter</span>() {
+    <span style="color: #569cd6;">const</span> counter = <span style="color: #4ec9b0;">document</span>.<span style="color: #dcdcaa;">getElementById</span>(<span style="color: #ce9178;">'counter'</span>);
+    <span style="color: #569cd6;">const</span> current = <span style="color: #4ec9b0;">parseInt</span>(counter.textContent);
+    counter.textContent = current + <span style="color: #b5cea8;">1</span>;
+}</pre>
+            </div>
+        </div>
+
+        <!-- HMR Log -->
+        <div class="card">
+            <h2>📋 HMR Event Log</h2>
+            <div class="log-container" id="hmr-log">
+                <div class="log-entry info">[HMR] Waiting for connection...</div>
+            </div>
+        </div>
+
+        <!-- Technical Details -->
+        <div class="card">
+            <h2>⚙️ Technical Details</h2>
+
+            <div class="info-box">
+                <h4>How It Works:</h4>
+                <p>
+                    1. <strong>File Watcher</strong> - Node.js watches your files for changes<br>
+                    2. <strong>WebSocket</strong> - Server notifies browser of changes<br>
+                    3. <strong>State Preservation</strong> - App state saved to sessionStorage<br>
+                    4. <strong>Hot Swap</strong> - CSS updated without reload<br>
+                    5. <strong>Smart Reload</strong> - JS/WASM triggers full reload with state restore
+                </p>
+            </div>
+
+            <div class="code-block">
+<pre><span style="color: #6a9955;">// HMR Client connects to server</span>
+<span style="color: #569cd6;">const</span> hmr = <span style="color: #569cd6;">new</span> <span style="color: #4ec9b0;">HMRClient</span>();
+hmr.<span style="color: #dcdcaa;">connect</span>(<span style="color: #b5cea8;">3002</span>);
+
+<span style="color: #6a9955;">// Automatically preserves state before reload</span>
+hmr.<span style="color: #dcdcaa;">preserveState</span>();
+
+<span style="color: #6a9955;">// Restores state after reload</span>
+hmr.<span style="color: #dcdcaa;">restoreState</span>();</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load HMR Client -->
+    <script src="dist/hmr-client.js"></script>
+
+    <script>
+        // Counter state (will be preserved)
+        let counterValue = 0;
+
+        // Stats
+        let updateCount = 0;
+        let reloadCount = 0;
+        let startTime = Date.now();
+
+        // Initialize counter from preserved state if available
+        if (window.__HMR_STATE__ && window.__HMR_STATE__.counter !== undefined) {
+            counterValue = window.__HMR_STATE__.counter;
+            document.getElementById('counter').textContent = counterValue;
+            addLog('Restored counter state: ' + counterValue, 'info');
+        }
+
+        function incrementCounter() {
+            counterValue++;
+            document.getElementById('counter').textContent = counterValue;
+
+            // Store in a way HMR can find it
+            if (!window.__APP_STATE__) window.__APP_STATE__ = {};
+            window.__APP_STATE__.counter = counterValue;
+        }
+
+        function decrementCounter() {
+            counterValue--;
+            document.getElementById('counter').textContent = counterValue;
+
+            if (!window.__APP_STATE__) window.__APP_STATE__ = {};
+            window.__APP_STATE__.counter = counterValue;
+        }
+
+        function resetCounter() {
+            counterValue = 0;
+            document.getElementById('counter').textContent = counterValue;
+
+            if (!window.__APP_STATE__) window.__APP_STATE__ = {};
+            window.__APP_STATE__.counter = counterValue;
+        }
+
+        // Enhanced state preservation for this demo
+        const originalPreserveState = window.HMR.preserveState.bind(window.HMR);
+        window.HMR.preserveState = function() {
+            // Call original
+            originalPreserveState();
+
+            // Add our counter state
+            sessionStorage.setItem('demo_counter', counterValue);
+            sessionStorage.setItem('demo_update_count', updateCount);
+            sessionStorage.setItem('demo_reload_count', reloadCount);
+
+            addLog('Preserving state: counter=' + counterValue, 'info');
+        };
+
+        // Enhanced state restoration
+        const originalRestoreState = window.HMR.restoreState.bind(window.HMR);
+        window.HMR.restoreState = function() {
+            // Call original
+            originalRestoreState();
+
+            // Restore our counter state
+            const savedCounter = sessionStorage.getItem('demo_counter');
+            if (savedCounter !== null) {
+                counterValue = parseInt(savedCounter);
+                document.getElementById('counter').textContent = counterValue;
+                sessionStorage.removeItem('demo_counter');
+                addLog('Restored counter: ' + counterValue, 'info');
+            }
+
+            const savedUpdateCount = sessionStorage.getItem('demo_update_count');
+            if (savedUpdateCount !== null) {
+                updateCount = parseInt(savedUpdateCount);
+                document.getElementById('update-count').textContent = updateCount;
+                sessionStorage.removeItem('demo_update_count');
+            }
+
+            const savedReloadCount = sessionStorage.getItem('demo_reload_count');
+            if (savedReloadCount !== null) {
+                reloadCount = parseInt(savedReloadCount) + 1;
+                document.getElementById('reload-count').textContent = reloadCount;
+                sessionStorage.removeItem('demo_reload_count');
+            }
+        };
+
+        // Monitor HMR connection status
+        const originalConnect = window.HMR.connect.bind(window.HMR);
+        window.HMR.connect = function(port) {
+            originalConnect(port);
+
+            const ws = window.HMR.ws;
+
+            ws.addEventListener('open', () => {
+                updateStatus(true);
+                addLog('Connected to HMR server', 'info');
+            });
+
+            ws.addEventListener('close', () => {
+                updateStatus(false);
+                addLog('Disconnected from HMR server', 'error');
+            });
+        };
+
+        // Monitor HMR updates
+        const originalHandleUpdate = window.HMR.handleUpdate.bind(window.HMR);
+        window.HMR.handleUpdate = async function(data) {
+            updateCount++;
+            document.getElementById('update-count').textContent = updateCount;
+            addLog(`Update received: ${data.file} (${data.type})`, 'update');
+
+            return originalHandleUpdate(data);
+        };
+
+        function updateStatus(connected) {
+            const indicator = document.getElementById('status-indicator');
+            const dot = indicator.querySelector('.status-dot');
+            const text = indicator.querySelector('span');
+
+            if (connected) {
+                indicator.className = 'status-indicator connected';
+                dot.className = 'status-dot connected';
+                text.textContent = 'Connected';
+            } else {
+                indicator.className = 'status-indicator disconnected';
+                dot.className = 'status-dot disconnected';
+                text.textContent = 'Disconnected';
+            }
+        }
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('hmr-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Update uptime
+        setInterval(() => {
+            const uptime = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('uptime').textContent = uptime + 's';
+        }, 1000);
+
+        // Initialize
+        addLog('Page loaded, connecting to HMR...', 'info');
+    </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+use crate::types::{Product, CartItem};
+use crate::server::api::get_products;
+use crate::components::{ProductCard, CheckoutForm};
+
+component App() {
+    let mut products = State::new(vec![]);
+    let mut cart = State::new(vec![]);
+    let mut view = State::new("products"); // "products" or "checkout"
+
+    on_mount(async || {
+        if let Ok(data) = get_products().await {
+            products.set(data);
+        }
+    });
+
+    let add_to_cart = |product: Product, size: string| {
+        let new_item = CartItem { product, selected_size: size };
+        cart.set(vec![...(*cart), new_item]); // Add to cart
+    };
+
+    return (
+        <div class="app">
+            <header>
+                <h1>Aloha Shirts Co.</h1>
+                <button onClick={|_| view.set("checkout")}>
+                    Cart ({cart.len()})
+                </button>
+            </header>
+            <main>
+                {
+                    if *view == "products" {
+                        <div class="product-grid">
+                            {
+                                products.map(|p| {
+                                    <ProductCard product={p} on_add_to_cart={add_to_cart} />
+                                })
+                            }
+                        </div>
+                    } else {
+                        <CheckoutForm cart={*cart} />
+                    }
+                }
+            </main>
+        </div>
+    );
+}

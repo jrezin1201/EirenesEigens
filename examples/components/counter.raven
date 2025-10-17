@@ -1,0 +1,11 @@
+// Complex Counter Component with Nested Elements
+component Counter() {
+    return <div>
+    <h1>{"Counter App"}</h1>
+    <div>
+    <button>{"Increment"}</button>
+    <button>{"Decrement"}</button>
+    <button>{"Reset"}</button>
+    </div>
+    </div>;
+}

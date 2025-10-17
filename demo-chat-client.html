@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RavensOne Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-main {
+            flex: 1;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #999;
+            font-size: 14px;
+        }
+
+        .room-list {
+            flex: 1;
+            overflow-y: auto;
+            margin: 15px 0;
+        }
+
+        .room-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .room-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .room-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .room-item h3 {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .room-item p {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+
+        .message-author {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 14px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #999;
+        }
+
+        .message-text {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            color: #333;
+            line-height: 1.5;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .message.own .message-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-left: auto;
+            max-width: 70%;
+        }
+
+        .message.own .message-header {
+            justify-content: flex-end;
+        }
+
+        .input-area {
+            padding: 20px;
+            border-top: 2px solid #f0f0f0;
+            background: white;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        input, textarea {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .typing-indicator {
+            padding: 10px 20px;
+            color: #999;
+            font-size: 13px;
+            font-style: italic;
+            min-height: 40px;
+        }
+
+        .online-users {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .online-users h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .user-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: white;
+            border-radius: 20px;
+            font-size: 12px;
+            margin: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .status-badge {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #28a745;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .login-card h1 {
+            margin-bottom: 30px;
+            text-align: center;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .system-message {
+            text-align: center;
+            padding: 8px;
+            background: #e7f3ff;
+            border-radius: 20px;
+            color: #1976D2;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-screen" id="login-screen">
+        <div class="login-card">
+            <h1>💬 RavensOne Chat</h1>
+            <div class="form-group">
+                <label>Your Name</label>
+                <input type="text" id="username-input" placeholder="Enter your name..." autofocus>
+            </div>
+            <button class="btn" onclick="handleLogin()" style="width: 100%;">
+                Join Chat
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Chat UI -->
+    <div class="container hidden" id="main-app">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="header">
+                <h1>💬 Chat</h1>
+                <p id="user-info">Loading...</p>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="room-count">3</div>
+                    <div class="stat-label">Rooms</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="user-count">0</div>
+                    <div class="stat-label">Online</div>
+                </div>
+            </div>
+
+            <h3 style="margin-bottom: 10px; color: #666; font-size: 14px;">ROOMS</h3>
+            <div class="room-list" id="room-list">
+                <div class="room-item active" onclick="changeRoom('general')">
+                    <h3>General</h3>
+                    <p>0 users</p>
+                </div>
+            </div>
+
+            <div class="online-users">
+                <h3>ONLINE USERS</h3>
+                <div id="online-users-list">
+                    <span class="user-badge">
+                        <span class="status-badge"></span>
+                        Loading...
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-main">
+            <div class="header">
+                <h1 id="room-name">General</h1>
+                <p id="room-description">Welcome to the chat!</p>
+            </div>
+
+            <div class="messages" id="messages">
+                <div class="system-message">
+                    Welcome to RavensOne Chat! Say hello 👋
+                </div>
+            </div>
+
+            <div class="typing-indicator" id="typing-indicator"></div>
+
+            <div class="input-area">
+                <div class="input-container">
+                    <input
+                        type="text"
+                        id="message-input"
+                        placeholder="Type a message..."
+                        onkeypress="handleKeyPress(event)"
+                        oninput="handleTyping()"
+                    >
+                    <button class="btn" onclick="sendMessage()">
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Client Runtime -->
+    <script src="dist/client-runtime.js"></script>
+
+    <script>
+        const client = window.RavensClient;
+        let ws = null;
+        let currentUser = null;
+        let currentRoom = 'general';
+        let typingTimeout = null;
+        let isTyping = false;
+
+        // Initialize
+        async function init() {
+            await client.init({
+                serverUrl: 'http://localhost:3001',
+            });
+
+            console.log('✅ Client initialized');
+        }
+
+        // Handle login
+        async function handleLogin() {
+            const username = document.getElementById('username-input').value.trim();
+
+            if (!username) {
+                alert('Please enter your name');
+                return;
+            }
+
+            currentUser = {
+                id: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                name: username,
+            };
+
+            // Hide login, show chat
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+
+            // Update UI
+            document.getElementById('user-info').textContent = `Logged in as ${username}`;
+
+            // Connect WebSocket
+            connectWebSocket();
+
+            // Load rooms
+            await loadRooms();
+        }
+
+        // Connect WebSocket
+        function connectWebSocket() {
+            ws = new WebSocket('ws://localhost:3001/ws');
+
+            ws.onopen = () => {
+                console.log('✅ WebSocket connected');
+
+                // Send join message
+                ws.send(JSON.stringify({
+                    type: 'join',
+                    payload: {
+                        userId: currentUser.id,
+                        userName: currentUser.name,
+                    },
+                }));
+            };
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                handleWebSocketMessage(message);
+            };
+
+            ws.onclose = () => {
+                console.log('❌ WebSocket disconnected');
+                client.notify('Disconnected from server', 'error');
+            };
+
+            ws.onerror = (error) => {
+                console.error('❌ WebSocket error:', error);
+            };
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(message) {
+            const { type, ...data } = message;
+
+            switch (type) {
+                case 'welcome':
+                    handleWelcome(data);
+                    break;
+
+                case 'message':
+                    handleMessageReceived(data.message);
+                    break;
+
+                case 'userJoined':
+                    handleUserJoined(data.user);
+                    break;
+
+                case 'userLeft':
+                    handleUserLeft(data.user);
+                    break;
+
+                case 'typing':
+                    handleTypingIndicator(data);
+                    break;
+
+                case 'roomChanged':
+                    handleRoomChanged(data.room);
+                    break;
+
+                case 'error':
+                    client.notify(data.error, 'error');
+                    break;
+            }
+        }
+
+        // Handle welcome
+        function handleWelcome(data) {
+            console.log('👋 Welcome:', data);
+            loadMessages(data.room.messages);
+        }
+
+        // Load rooms
+        async function loadRooms() {
+            try {
+                const rooms = await client.call('getRooms');
+                renderRooms(rooms);
+            } catch (error) {
+                console.error('Failed to load rooms:', error);
+            }
+        }
+
+        // Render rooms
+        function renderRooms(rooms) {
+            const container = document.getElementById('room-list');
+            container.innerHTML = rooms.map(room => `
+                <div class="room-item ${room.id === currentRoom ? 'active' : ''}" onclick="changeRoom('${room.id}')">
+                    <h3>${room.name}</h3>
+                    <p>${room.userCount} users • ${room.messageCount} messages</p>
+                </div>
+            `).join('');
+
+            document.getElementById('room-count').textContent = rooms.length;
+        }
+
+        // Change room
+        function changeRoom(roomId) {
+            if (roomId === currentRoom) {
+                return;
+            }
+
+            currentRoom = roomId;
+
+            // Send to server
+            ws.send(JSON.stringify({
+                type: 'changeRoom',
+                payload: { roomId },
+            }));
+
+            // Update UI
+            document.querySelectorAll('.room-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            event.target.closest('.room-item').classList.add('active');
+        }
+
+        // Handle room changed
+        function handleRoomChanged(room) {
+            console.log('📍 Room changed:', room);
+            document.getElementById('room-name').textContent = room.name;
+            loadMessages(room.messages);
+        }
+
+        // Load messages
+        function loadMessages(messages) {
+            const container = document.getElementById('messages');
+            container.innerHTML = messages.map(msg => renderMessage(msg)).join('');
+            scrollToBottom();
+        }
+
+        // Render message
+        function renderMessage(msg) {
+            const isOwn = msg.userId === currentUser.id;
+            const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            return `
+                <div class="message ${isOwn ? 'own' : ''}">
+                    <div class="message-header">
+                        <span class="message-author">${msg.userName}</span>
+                        <span class="message-time">${time}</span>
+                    </div>
+                    <div class="message-text">${escapeHtml(msg.text)}</div>
+                </div>
+            `;
+        }
+
+        // Handle message received
+        function handleMessageReceived(message) {
+            const container = document.getElementById('messages');
+            container.innerHTML += renderMessage(message);
+            scrollToBottom();
+        }
+
+        // Send message
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+
+            if (!text) {
+                return;
+            }
+
+            // Send to server
+            ws.send(JSON.stringify({
+                type: 'message',
+                payload: { text },
+            }));
+
+            // Clear input
+            input.value = '';
+
+            // Clear typing
+            if (isTyping) {
+                isTyping = false;
+                ws.send(JSON.stringify({
+                    type: 'typing',
+                    payload: { isTyping: false },
+                }));
+            }
+        }
+
+        // Handle typing
+        function handleTyping() {
+            if (!isTyping) {
+                isTyping = true;
+                ws.send(JSON.stringify({
+                    type: 'typing',
+                    payload: { isTyping: true },
+                }));
+            }
+
+            // Clear existing timeout
+            clearTimeout(typingTimeout);
+
+            // Set new timeout
+            typingTimeout = setTimeout(() => {
+                isTyping = false;
+                ws.send(JSON.stringify({
+                    type: 'typing',
+                    payload: { isTyping: false },
+                }));
+            }, 2000);
+        }
+
+        // Handle typing indicator
+        function handleTypingIndicator(data) {
+            const indicator = document.getElementById('typing-indicator');
+            if (data.isTyping) {
+                indicator.textContent = `${data.userName} is typing...`;
+            } else {
+                indicator.textContent = '';
+            }
+        }
+
+        // Handle user joined
+        function handleUserJoined(user) {
+            const container = document.getElementById('messages');
+            container.innerHTML += `
+                <div class="system-message">
+                    ${user.name} joined the room
+                </div>
+            `;
+            scrollToBottom();
+        }
+
+        // Handle user left
+        function handleUserLeft(user) {
+            const container = document.getElementById('messages');
+            container.innerHTML += `
+                <div class="system-message">
+                    ${user.name} left the room
+                </div>
+            `;
+            scrollToBottom();
+        }
+
+        // Handle key press
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Scroll to bottom
+        function scrollToBottom() {
+            const container = document.getElementById('messages');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>

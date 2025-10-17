@@ -1,0 +1,3 @@
+component Test() {
+    return <h1 />;
+}

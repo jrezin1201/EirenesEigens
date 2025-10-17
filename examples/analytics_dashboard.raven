@@ -1,0 +1,272 @@
+// RavensOne Production Application: Multi-Tenant Analytics Dashboard
+// Showcases: SSR, Reactive State, Type System, Hydration, Full-Stack Type Safety
+
+use std::collections::HashMap;
+use std::reactive::{Signal, Computed, Resource, ReactiveVec};
+
+// ==================== TYPE DEFINITIONS ====================
+
+struct User {
+    id: String,
+    name: String,
+    email: String,
+    role: String,
+}
+
+struct Metric {
+    id: String,
+    name: String,
+    value: Float,
+    timestamp: String,
+    change_percent: Float,
+}
+
+struct ChartData {
+    labels: Vec<String>,
+    values: Vec<Float>,
+}
+
+struct DashboardState {
+    metrics: Vec<Metric>,
+    user: User,
+    date_range: String,
+    loading: Bool,
+}
+
+// ==================== DATA FETCHING ====================
+
+extern server fn fetch_metrics(user_id: String, date_range: String) -> Vec<Metric> {
+    // Server-side function that fetches from database
+    console.log("Fetching metrics for user:", user_id);
+
+    // Simulate database query
+    let metrics = vec![
+        Metric {
+            id: "m1",
+            name: "Total Revenue",
+            value: 125430.50,
+            timestamp: "2025-10-17",
+            change_percent: 12.5,
+        },
+        Metric {
+            id: "m2",
+            name: "Active Users",
+            value: 3420.0,
+            timestamp: "2025-10-17",
+            change_percent: -5.2,
+        },
+        Metric {
+            id: "m3",
+            name: "Conversion Rate",
+            value: 3.8,
+            timestamp: "2025-10-17",
+            change_percent: 8.1,
+        },
+        Metric {
+            id: "m4",
+            name: "Avg Session Duration",
+            value: 245.0,
+            timestamp: "2025-10-17",
+            change_percent: 15.3,
+        },
+    ];
+
+    return metrics;
+}
+
+extern server fn fetch_chart_data(metric_id: String, days: Int) -> ChartData {
+    console.log("Fetching chart data for metric:", metric_id);
+
+    // Generate mock time series data
+    let mut labels = Vec::new();
+    let mut values = Vec::new();
+
+    let base_value = 100.0;
+    for i in 0..days {
+        labels.push(format!("Day {}", i + 1));
+        values.push(base_value + (Math.random() * 50.0 - 25.0));
+    }
+
+    return ChartData { labels, values };
+}
+
+// ==================== COMPONENTS ====================
+
+component MetricCard(metric: Metric) {
+    let is_positive = metric.change_percent > 0.0;
+    let change_class = if is_positive { "positive" } else { "negative" };
+    let change_icon = if is_positive { "↑" } else { "↓" };
+
+    return <div class="metric-card">
+        <h3>{metric.name}</h3>
+        <div class="metric-value">
+            {format!("{:.2}", metric.value)}
+        </div>
+        <div class={format!("metric-change {}", change_class)}>
+            <span>{change_icon}</span>
+            <span>{format!("{:.1}%", Math.abs(metric.change_percent))}</span>
+        </div>
+    </div>
+}
+
+component ChartWidget(metric: Metric) {
+    // Reactive resource for async data loading
+    let chart_data = Resource::new();
+
+    // Fetch chart data when metric changes
+    create_effect(|| {
+        chart_data.set_loading();
+        let data = fetch_chart_data(metric.id.clone(), 30);
+        chart_data.set_ready(data);
+    });
+
+    return <div class="chart-widget">
+        <h4>Trend: {metric.name}</h4>
+        {match chart_data.state() {
+            ResourceState::Loading => <div class="loading">Loading chart...</div>,
+            ResourceState::Ready(data) => <LineChart data={data} />,
+            ResourceState::Error(msg) => <div class="error">{msg}</div>,
+        }}
+    </div>
+}
+
+component LineChart(data: ChartData) {
+    let canvas_ref = use_ref();
+
+    create_effect(|| {
+        // Render chart using canvas API
+        let canvas = canvas_ref.current;
+        let ctx = canvas.getContext("2d");
+
+        // Draw chart (simplified - would use proper charting library)
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = "#3b82f6";
+        ctx.lineWidth = 2;
+
+        let step_x = canvas.width / data.values.len();
+        let max_value = Math.max(...data.values);
+
+        ctx.beginPath();
+        for i in 0..data.values.len() {
+            let x = i * step_x;
+            let y = canvas.height - (data.values[i] / max_value * canvas.height);
+            if i == 0 {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.stroke();
+    });
+
+    return <canvas ref={canvas_ref} width={600} height={300} />
+}
+
+component DateRangePicker(selected: Signal<String>) {
+    let options = ["Last 7 Days", "Last 30 Days", "Last 90 Days", "Year to Date"];
+
+    return <div class="date-range-picker">
+        <label>Date Range:</label>
+        <select value={selected.get()} onChange={|e| selected.set(e.target.value)}>
+            {options.map(|opt| <option value={opt}>{opt}</option>)}
+        </select>
+    </div>
+}
+
+component Dashboard(user: User) {
+    // Reactive state
+    let date_range = Signal::new("Last 30 Days");
+    let metrics = ReactiveVec::new();
+    let loading = Signal::new(true);
+
+    // Computed value - total revenue
+    let total_revenue = Computed::new(|| {
+        metrics.get()
+            .iter()
+            .find(|m| m.name == "Total Revenue")
+            .map(|m| m.value)
+            .unwrap_or(0.0)
+    });
+
+    // Effect: Fetch metrics when date range changes
+    create_effect(|| {
+        loading.set(true);
+        let fetched_metrics = fetch_metrics(user.id.clone(), date_range.get());
+        metrics.clear();
+        for metric in fetched_metrics {
+            metrics.push(metric);
+        }
+        loading.set(false);
+    });
+
+    return <div class="dashboard">
+        <header class="dashboard-header">
+            <h1>Analytics Dashboard</h1>
+            <div class="user-info">
+                <span>Welcome, {user.name}</span>
+                <span class="badge">{user.role}</span>
+            </div>
+        </header>
+
+        <div class="controls">
+            <DateRangePicker selected={date_range} />
+            <div class="summary">
+                Total Revenue: ${format!("{:.2}", total_revenue.get())}
+            </div>
+        </div>
+
+        {if loading.get() {
+            <div class="loading-overlay">
+                <div class="spinner"></div>
+                <p>Loading metrics...</p>
+            </div>
+        } else {
+            <div>
+                <section class="metrics-grid">
+                    {metrics.get().map(|metric| <MetricCard metric={metric} />)}
+                </section>
+
+                <section class="charts-section">
+                    <h2>Detailed Analytics</h2>
+                    <div class="charts-grid">
+                        {metrics.get().map(|metric|
+                            <ChartWidget metric={metric} />
+                        )}
+                    </div>
+                </section>
+            </div>
+        }}
+
+        <footer class="dashboard-footer">
+            <p>© 2025 Analytics Platform | Powered by RavensOne</p>
+        </footer>
+    </div>
+}
+
+// ==================== APPLICATION ENTRY POINT ====================
+
+component App() {
+    // In a real app, this would come from authentication
+    let current_user = User {
+        id: "user_123",
+        name: "Jane Smith",
+        email: "jane@company.com",
+        role: "Admin",
+    };
+
+    return <Dashboard user={current_user} />
+}
+
+// Export with SSR and hydration configuration
+export App with {
+    ssr: true,
+    hydration: HydrationPlan {
+        strategy: HydrationStrategy::Immediate,
+        priority: 255,
+    },
+    title: "Analytics Dashboard - RavensOne",
+    meta: [
+        { name: "description", content: "Real-time analytics dashboard built with RavensOne" },
+        { name: "viewport", content: "width=device-width, initial-scale=1.0" },
+    ],
+}

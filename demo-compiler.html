@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RavensOne Compiler Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .success-box {
+            background: #d4edda;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #28a745;
+            color: #155724;
+        }
+
+        .success-box h3 {
+            margin-bottom: 10px;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .keyword { color: #569cd6; }
+        .function { color: #dcdcaa; }
+        .comment { color: #6a9955; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .output {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔥 RavensOne Compiler</h1>
+        <p>From .raven to WebAssembly</p>
+    </div>
+
+    <div class="container">
+        <!-- Success Message -->
+        <div class="card">
+            <div class="success-box">
+                <h3>✅ Compiler Working!</h3>
+                <p>The RavensOne compiler successfully compiled a .raven component to WebAssembly!</p>
+            </div>
+        </div>
+
+        <!-- Source Code -->
+        <div class="card">
+            <h2>📝 Source Code (test-component.raven)</h2>
+            
+            <div class="code-block">
+<pre><span class="comment">// RavensOne Component</span>
+
+<span class="keyword">component</span> <span class="function">Counter</span>() {
+    <span class="keyword">return</span> &lt;button /&gt;;
+}</pre>
+            </div>
+        </div>
+
+        <!-- Compilation Stats -->
+        <div class="card">
+            <h2>📊 Compilation Results</h2>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value">43</div>
+                    <div class="stat-label">Bytes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="compile-time">~50ms</div>
+                    <div class="stat-label">Compile Time</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">1</div>
+                    <div class="stat-label">Functions</div>
+                </div>
+            </div>
+
+            <h3 style="margin: 20px 0 10px; color: #333;">Output File</h3>
+            <div class="output">
+                <strong>test-component.wasm</strong> (43 bytes)<br>
+                Magic: 0x6d736100 (\\0asm)<br>
+                Version: 1<br>
+                Exports: Counter
+            </div>
+        </div>
+
+        <!-- WASM Execution -->
+        <div class="card">
+            <h2>⚡ Execute WASM</h2>
+            <p style="color: #666; margin-bottom: 20px;">
+                Load and execute the compiled WebAssembly module:
+            </p>
+
+            <button class="btn" onclick="loadWasm()">Load WASM Module</button>
+            <button class="btn" onclick="callCounter()">Call Counter()</button>
+
+            <div id="wasm-output" class="output" style="display: none;">
+                <strong>WASM Output:</strong><br>
+                <span id="output-text"></span>
+            </div>
+        </div>
+
+        <!-- How It Works -->
+        <div class="card">
+            <h2>🔧 How It Works</h2>
+
+            <h3 style="margin: 20px 0 10px; color: #333;">1. Lexer</h3>
+            <div class="code-block">
+<pre><span class="comment">// Tokenizes source code</span>
+component → <span class="keyword">COMPONENT</span>
+Counter   → <span class="keyword">IDENTIFIER</span>
+(         → <span class="keyword">LPAREN</span>
+)         → <span class="keyword">RPAREN</span>
+...       → ...</pre>
+            </div>
+
+            <h3 style="margin: 20px 0 10px; color: #333;">2. Parser</h3>
+            <div class="code-block">
+<pre><span class="comment">// Builds Abstract Syntax Tree</span>
+ComponentDefinition {
+    name: "Counter",
+    parameters: [],
+    body: JsxElement { ... }
+}</pre>
+            </div>
+
+            <h3 style="margin: 20px 0 10px; color: #333;">3. Code Generator</h3>
+            <div class="code-block">
+<pre><span class="comment">// Generates WebAssembly bytecode</span>
+(module
+  (func (export "Counter") (result i32)
+    i32.const 0
+  )
+)</pre>
+            </div>
+        </div>
+
+        <!-- CLI Commands -->
+        <div class="card">
+            <h2>💻 CLI Commands</h2>
+
+            <div class="code-block">
+<pre><span class="comment"># Compile a .raven file</span>
+./target/release/raven compile test-component.raven -o test-component.wasm
+
+<span class="comment"># Create new project</span>
+./target/release/raven new my-project
+
+<span class="comment"># Deploy to production</span>
+./target/release/raven deploy --env production</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let wasmModule;
+
+        async function loadWasm() {
+            try {
+                console.log('Loading WASM...');
+                const response = await fetch('test-component.wasm');
+                const buffer = await response.arrayBuffer();
+                const module = await WebAssembly.instantiate(buffer);
+                
+                wasmModule = module.instance;
+                
+                const output = document.getElementById('wasm-output');
+                const text = document.getElementById('output-text');
+                
+                output.style.display = 'block';
+                text.textContent = '✅ WASM module loaded successfully!\nExports: ' + Object.keys(wasmModule.exports).join(', ');
+                
+                console.log('WASM loaded:', wasmModule);
+            } catch (error) {
+                const output = document.getElementById('wasm-output');
+                const text = document.getElementById('output-text');
+                
+                output.style.display = 'block';
+                text.textContent = '❌ Error loading WASM: ' + error.message;
+                
+                console.error('Error:', error);
+            }
+        }
+
+        function callCounter() {
+            if (!wasmModule) {
+                alert('Please load the WASM module first!');
+                return;
+            }
+
+            try {
+                const result = wasmModule.exports.Counter();
+                
+                const output = document.getElementById('wasm-output');
+                const text = document.getElementById('output-text');
+                
+                output.style.display = 'block';
+                text.textContent = '✅ Called Counter()\nResult: ' + result;
+                
+                console.log('Counter() returned:', result);
+            } catch (error) {
+                const output = document.getElementById('wasm-output');
+                const text = document.getElementById('output-text');
+                
+                output.style.display = 'block';
+                text.textContent = '❌ Error calling Counter(): ' + error.message;
+                
+                console.error('Error:', error);
+            }
+        }
+
+        // Auto-load on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('RavensOne Compiler Demo Ready!');
+        });
+    </script>
+</body>
+</html>

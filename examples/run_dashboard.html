@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - RavensOne Demo</title>
+    <link rel="stylesheet" href="analytics_dashboard.css">
+    <style>
+        /* Additional demo styles */
+        .demo-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .demo-header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        .demo-header p {
+            margin: 0.5rem 0 0;
+            opacity: 0.9;
+        }
+        .demo-note {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem;
+            margin: 1rem 2rem;
+            border-radius: 0.375rem;
+        }
+        .demo-note strong {
+            color: #92400e;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-header">
+        <h1>📊 RavensOne Analytics Dashboard</h1>
+        <p>A production-ready application showcasing all RavensOne features</p>
+        <p style="font-size: 0.875rem; margin-top: 1rem;">
+            Type System • SSR • Reactive State • Hydration • Full-Stack Type Safety
+        </p>
+    </div>
+
+    <div class="demo-note">
+        <strong>Demo Mode:</strong> This is a client-side simulation of the RavensOne app.
+        In production, this would be server-rendered with WebAssembly for optimal performance.
+    </div>
+
+    <div id="app">
+        <!-- Dashboard will be rendered here -->
+    </div>
+
+    <script>
+        // Simulate RavensOne reactive system
+        class Signal {
+            constructor(value) {
+                this.value = value;
+                this.subscribers = new Set();
+            }
+
+            get() {
+                return this.value;
+            }
+
+            set(newValue) {
+                this.value = newValue;
+                this.notify();
+            }
+
+            notify() {
+                this.subscribers.forEach(fn => fn());
+            }
+
+            subscribe(fn) {
+                this.subscribers.add(fn);
+                return () => this.subscribers.delete(fn);
+            }
+        }
+
+        class ReactiveVec {
+            constructor() {
+                this.signal = new Signal([]);
+            }
+
+            get() {
+                return this.signal.get();
+            }
+
+            push(item) {
+                const items = [...this.signal.get(), item];
+                this.signal.set(items);
+            }
+
+            clear() {
+                this.signal.set([]);
+            }
+
+            subscribe(fn) {
+                return this.signal.subscribe(fn);
+            }
+        }
+
+        // Mock data
+        const mockMetrics = [
+            {
+                id: 'm1',
+                name: 'Total Revenue',
+                value: 125430.50,
+                change_percent: 12.5
+            },
+            {
+                id: 'm2',
+                name: 'Active Users',
+                value: 3420,
+                change_percent: -5.2
+            },
+            {
+                id: 'm3',
+                name: 'Conversion Rate',
+                value: 3.8,
+                change_percent: 8.1
+            },
+            {
+                id: 'm4',
+                name: 'Avg Session Duration',
+                value: 245,
+                change_percent: 15.3
+            }
+        ];
+
+        // Reactive state
+        const dateRange = new Signal('Last 30 Days');
+        const metrics = new ReactiveVec();
+        const loading = new Signal(false);
+
+        // Simulated server function
+        function fetchMetrics(dateRange) {
+            loading.set(true);
+
+            // Simulate network delay
+            setTimeout(() => {
+                metrics.clear();
+
+                // Add random variance based on date range
+                const variance = dateRange === 'Last 7 Days' ? 0.9 :
+                                dateRange === 'Last 90 Days' ? 1.1 : 1.0;
+
+                mockMetrics.forEach(m => {
+                    metrics.push({
+                        ...m,
+                        value: m.value * variance,
+                        change_percent: m.change_percent * (0.8 + Math.random() * 0.4)
+                    });
+                });
+
+                loading.set(false);
+                render();
+            }, 500);
+        }
+
+        // Render functions
+        function formatNumber(num) {
+            if (num >= 1000) {
+                return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            return num.toFixed(2);
+        }
+
+        function renderMetricCard(metric) {
+            const isPositive = metric.change_percent > 0;
+            const changeClass = isPositive ? 'positive' : 'negative';
+            const changeIcon = isPositive ? '↑' : '↓';
+
+            return `
+                <div class="metric-card">
+                    <h3>${metric.name}</h3>
+                    <div class="metric-value">
+                        ${formatNumber(metric.value)}
+                    </div>
+                    <div class="metric-change ${changeClass}">
+                        <span>${changeIcon}</span>
+                        <span>${Math.abs(metric.change_percent).toFixed(1)}%</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderChart(metric) {
+            return `
+                <div class="chart-widget">
+                    <h4>Trend: ${metric.name}</h4>
+                    <canvas id="chart-${metric.id}" width="600" height="300"></canvas>
+                </div>
+            `;
+        }
+
+        function drawChart(canvasId, metric) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            // Generate mock data
+            const days = 30;
+            const data = [];
+            const baseValue = metric.value;
+
+            for (let i = 0; i < days; i++) {
+                data.push(baseValue * (0.9 + Math.random() * 0.2));
+            }
+
+            // Find min/max for scaling
+            const maxValue = Math.max(...data);
+            const minValue = Math.min(...data);
+            const range = maxValue - minValue;
+
+            // Draw grid
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = (height / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+
+            // Draw line
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            const stepX = width / (days - 1);
+            data.forEach((value, i) => {
+                const x = i * stepX;
+                const y = height - ((value - minValue) / range) * height;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+
+            // Draw points
+            ctx.fillStyle = '#3b82f6';
+            data.forEach((value, i) => {
+                const x = i * stepX;
+                const y = height - ((value - minValue) / range) * height;
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function render() {
+            const currentMetrics = metrics.get();
+            const totalRevenue = currentMetrics.find(m => m.name === 'Total Revenue')?.value || 0;
+
+            const html = `
+                <div class="dashboard">
+                    <header class="dashboard-header">
+                        <h1>Analytics Dashboard</h1>
+                        <div class="user-info">
+                            <span>Welcome, Jane Smith</span>
+                            <span class="badge">Admin</span>
+                        </div>
+                    </header>
+
+                    <div class="controls">
+                        <div class="date-range-picker">
+                            <label>Date Range:</label>
+                            <select id="date-range-select">
+                                <option value="Last 7 Days">Last 7 Days</option>
+                                <option value="Last 30 Days" selected>Last 30 Days</option>
+                                <option value="Last 90 Days">Last 90 Days</option>
+                                <option value="Year to Date">Year to Date</option>
+                            </select>
+                        </div>
+                        <div class="summary">
+                            Total Revenue: $${formatNumber(totalRevenue)}
+                        </div>
+                    </div>
+
+                    ${loading.get() ? `
+                        <div class="loading-overlay">
+                            <div class="spinner"></div>
+                            <p>Loading metrics...</p>
+                        </div>
+                    ` : `
+                        <section class="metrics-grid">
+                            ${currentMetrics.map(m => renderMetricCard(m)).join('')}
+                        </section>
+
+                        <section class="charts-section">
+                            <h2>Detailed Analytics</h2>
+                            <div class="charts-grid">
+                                ${currentMetrics.map(m => renderChart(m)).join('')}
+                            </div>
+                        </section>
+                    `}
+
+                    <footer class="dashboard-footer">
+                        <p>© 2025 Analytics Platform | Powered by RavensOne</p>
+                    </footer>
+                </div>
+            `;
+
+            document.getElementById('app').innerHTML = html;
+
+            // Attach event listener
+            const select = document.getElementById('date-range-select');
+            if (select) {
+                select.value = dateRange.get();
+                select.addEventListener('change', (e) => {
+                    dateRange.set(e.target.value);
+                    fetchMetrics(e.target.value);
+                });
+            }
+
+            // Draw charts
+            if (!loading.get()) {
+                setTimeout(() => {
+                    currentMetrics.forEach(m => drawChart(`chart-${m.id}`, m));
+                }, 100);
+            }
+        }
+
+        // Initialize
+        fetchMetrics(dateRange.get());
+
+        // Subscribe to changes
+        metrics.subscribe(render);
+        loading.subscribe(render);
+
+        console.log('🚀 RavensOne Analytics Dashboard Demo Loaded!');
+        console.log('Features demonstrated:');
+        console.log('  ✅ Reactive State (Signal, ReactiveVec)');
+        console.log('  ✅ Computed Values (Total Revenue)');
+        console.log('  ✅ Effects (Auto-render on state change)');
+        console.log('  ✅ Server Functions (simulated fetchMetrics)');
+        console.log('  ✅ Component Architecture');
+        console.log('  ✅ Canvas Rendering');
+    </script>
+</body>
+</html>

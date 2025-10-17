@@ -1,0 +1,8 @@
+// Simple component test
+let count = 0;
+
+component Counter() {
+    return <div>
+        <p>"Hello World"</p>
+    </div>;
+}

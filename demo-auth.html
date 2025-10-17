@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RavensOne Authentication Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 10px;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .user-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .user-card h3 {
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .user-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .user-info-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .user-info-label {
+            font-size: 11px;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .user-info-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        .badge-admin {
+            background: #ffd700;
+            color: #333;
+        }
+
+        .badge-user {
+            background: #4ecdc4;
+            color: white;
+        }
+
+        .protected-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .protected-section h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .protected-section p {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .demo-accounts {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .demo-accounts h4 {
+            margin-bottom: 10px;
+            color: #1976D2;
+        }
+
+        .demo-account {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .demo-account:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tab-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .tab:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔐 RavensOne Authentication</h1>
+        <p>Secure Login • JWT Tokens • Role-Based Access Control</p>
+    </div>
+
+    <div class="container">
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="total-users">2</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="active-sessions">0</div>
+                <div class="stat-label">Active Sessions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="auth-status">Guest</div>
+                <div class="stat-label">Current Status</div>
+            </div>
+        </div>
+
+        <!-- Not Authenticated View -->
+        <div id="guest-view">
+            <div class="tab-container">
+                <div class="tab active" onclick="showTab('login')">Login</div>
+                <div class="tab" onclick="showTab('signup')">Sign Up</div>
+            </div>
+
+            <div class="grid">
+                <!-- Login Form -->
+                <div class="card" id="login-tab">
+                    <h2>🔑 Login</h2>
+
+                    <div id="login-alert"></div>
+
+                    <form id="login-form" onsubmit="return false;">
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="login-email" placeholder="your@email.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="login-password" placeholder="Enter password" required>
+                        </div>
+                        <button type="button" class="btn" onclick="handleLogin()">
+                            Login
+                        </button>
+                    </form>
+
+                    <div class="demo-accounts">
+                        <h4>Demo Accounts (Click to fill)</h4>
+                        <div class="demo-account" onclick="fillLogin('admin@ravens.one', 'admin123')">
+                            <strong>Admin:</strong> admin@ravens.one / admin123
+                        </div>
+                        <div class="demo-account" onclick="fillLogin('user@ravens.one', 'user123')">
+                            <strong>User:</strong> user@ravens.one / user123
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Signup Form -->
+                <div class="card hidden" id="signup-tab">
+                    <h2>✍️ Sign Up</h2>
+
+                    <div id="signup-alert"></div>
+
+                    <form id="signup-form" onsubmit="return false;">
+                        <div class="form-group">
+                            <label>Name</label>
+                            <input type="text" id="signup-name" placeholder="Your name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="signup-email" placeholder="your@email.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="signup-password" placeholder="Create password" required>
+                        </div>
+                        <button type="button" class="btn" onclick="handleSignup()">
+                            Create Account
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Features Card -->
+                <div class="card">
+                    <h2>✨ Features</h2>
+                    <div class="protected-section">
+                        <h4>🔒 Secure Authentication</h4>
+                        <p>Bcrypt password hashing with salt rounds</p>
+                    </div>
+                    <div class="protected-section">
+                        <h4>🎫 JWT Tokens</h4>
+                        <p>Stateless authentication with JSON Web Tokens</p>
+                    </div>
+                    <div class="protected-section">
+                        <h4>👥 Role-Based Access</h4>
+                        <p>Admin, User, and Guest roles with fine-grained permissions</p>
+                    </div>
+                    <div class="protected-section">
+                        <h4>💾 Session Persistence</h4>
+                        <p>Sessions stored in localStorage for seamless experience</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Authenticated View -->
+        <div id="user-view" class="hidden">
+            <div class="grid">
+                <!-- User Profile Card -->
+                <div class="card">
+                    <h2>👤 Your Profile</h2>
+                    <div class="user-card">
+                        <h3 id="profile-name">Loading...</h3>
+                        <span class="badge" id="profile-role">user</span>
+
+                        <div class="user-info">
+                            <div class="user-info-item">
+                                <div class="user-info-label">User ID</div>
+                                <div class="user-info-value" id="profile-id">-</div>
+                            </div>
+                            <div class="user-info-item">
+                                <div class="user-info-label">Email</div>
+                                <div class="user-info-value" id="profile-email">-</div>
+                            </div>
+                            <div class="user-info-item">
+                                <div class="user-info-label">Created</div>
+                                <div class="user-info-value" id="profile-created">-</div>
+                            </div>
+                            <div class="user-info-item">
+                                <div class="user-info-label">Last Login</div>
+                                <div class="user-info-value" id="profile-login">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-danger" onclick="handleLogout()">
+                        Logout
+                    </button>
+                </div>
+
+                <!-- Protected Content -->
+                <div class="card">
+                    <h2>🔐 Protected Content</h2>
+
+                    <div class="protected-section">
+                        <h4>✅ User Content</h4>
+                        <p>This content is visible to all authenticated users.</p>
+                        <p><strong>You are logged in!</strong> You can see this because you have a valid JWT token.</p>
+                    </div>
+
+                    <div class="protected-section" id="admin-content">
+                        <h4>⚡ Admin Content</h4>
+                        <p>This content is ONLY visible to administrators.</p>
+                        <p><strong>Admin privileges detected!</strong> You have full access to the system.</p>
+                        <button class="btn btn-success" onclick="adminAction()">
+                            Admin Action
+                        </button>
+                    </div>
+
+                    <div class="protected-section">
+                        <h4>🎫 Your Token</h4>
+                        <p style="word-break: break-all; font-family: 'Courier New', monospace; font-size: 11px; background: #f8f9fa; padding: 10px; border-radius: 5px;" id="user-token">
+                            Loading...
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Session Info -->
+            <div class="card">
+                <h2>📊 Session Information</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div class="protected-section">
+                        <h4>Session ID</h4>
+                        <p style="font-family: 'Courier New', monospace; font-size: 12px;" id="session-id">-</p>
+                    </div>
+                    <div class="protected-section">
+                        <h4>Token Type</h4>
+                        <p id="token-type">Bearer</p>
+                    </div>
+                    <div class="protected-section">
+                        <h4>Expires In</h4>
+                        <p id="token-expiry">24 hours</p>
+                    </div>
+                    <div class="protected-section">
+                        <h4>Auth Status</h4>
+                        <p style="color: #28a745; font-weight: 600;">✓ Authenticated</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Auth Runtime -->
+    <script src="dist/auth-runtime.js"></script>
+
+    <script>
+        let auth;
+
+        // Initialize authentication
+        function initAuth() {
+            console.log('🔐 Initializing RavensOne Auth...');
+
+            auth = window.RavensAuth;
+
+            // Seed demo users
+            auth.seedDemoUsers();
+
+            console.log('✅ Auth initialized');
+
+            updateUI();
+        }
+
+        // Handle login
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const alertDiv = document.getElementById('login-alert');
+
+            if (!email || !password) {
+                showAlert(alertDiv, 'Please fill in all fields', 'error');
+                return;
+            }
+
+            try {
+                const result = await auth.login(email, password);
+                console.log('✅ Login successful:', result);
+                showAlert(alertDiv, `Welcome back, ${result.user.name}!`, 'success');
+
+                setTimeout(() => {
+                    updateUI();
+                }, 500);
+            } catch (error) {
+                console.error('❌ Login failed:', error);
+                showAlert(alertDiv, error.message, 'error');
+            }
+        }
+
+        // Handle signup
+        async function handleSignup() {
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const alertDiv = document.getElementById('signup-alert');
+
+            if (!name || !email || !password) {
+                showAlert(alertDiv, 'Please fill in all fields', 'error');
+                return;
+            }
+
+            try {
+                const result = await auth.signup(email, password, name);
+                console.log('✅ Signup successful:', result);
+                showAlert(alertDiv, `Account created! Welcome, ${name}!`, 'success');
+
+                setTimeout(() => {
+                    updateUI();
+                }, 500);
+            } catch (error) {
+                console.error('❌ Signup failed:', error);
+                showAlert(alertDiv, error.message, 'error');
+            }
+        }
+
+        // Handle logout
+        async function handleLogout() {
+            try {
+                await auth.logout();
+                console.log('✅ Logout successful');
+                updateUI();
+            } catch (error) {
+                console.error('❌ Logout failed:', error);
+            }
+        }
+
+        // Update UI based on auth state
+        function updateUI() {
+            const isAuthenticated = auth.isAuthenticated();
+            const user = auth.getCurrentUser();
+
+            // Toggle views
+            document.getElementById('guest-view').classList.toggle('hidden', isAuthenticated);
+            document.getElementById('user-view').classList.toggle('hidden', !isAuthenticated);
+
+            // Update stats
+            document.getElementById('total-users').textContent = auth.users.size / 2; // Divided by 2 because stored by both id and email
+            document.getElementById('active-sessions').textContent = auth.sessions.size;
+            document.getElementById('auth-status').textContent = isAuthenticated ? user.role : 'Guest';
+
+            if (isAuthenticated) {
+                // Update profile
+                document.getElementById('profile-name').textContent = user.name;
+                document.getElementById('profile-role').textContent = user.role;
+                document.getElementById('profile-role').className = `badge badge-${user.role}`;
+                document.getElementById('profile-id').textContent = user.id;
+                document.getElementById('profile-email').textContent = user.email;
+                document.getElementById('profile-created').textContent = new Date(user.createdAt).toLocaleDateString();
+                document.getElementById('profile-login').textContent = user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'First time';
+
+                // Show token
+                document.getElementById('user-token').textContent = auth.token;
+
+                // Show/hide admin content
+                const isAdmin = auth.hasRole('admin');
+                document.getElementById('admin-content').style.display = isAdmin ? 'block' : 'none';
+
+                // Update session info
+                const sessions = Array.from(auth.sessions.values());
+                if (sessions.length > 0) {
+                    const session = sessions[sessions.length - 1];
+                    document.getElementById('session-id').textContent = session.sessionId;
+                }
+            }
+
+            // Clear forms
+            document.getElementById('login-form').reset();
+            document.getElementById('signup-form').reset();
+        }
+
+        // Show/hide tabs
+        function showTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.getElementById('login-tab').classList.toggle('hidden', tabName !== 'login');
+            document.getElementById('signup-tab').classList.toggle('hidden', tabName !== 'signup');
+        }
+
+        // Fill login form with demo credentials
+        function fillLogin(email, password) {
+            document.getElementById('login-email').value = email;
+            document.getElementById('login-password').value = password;
+        }
+
+        // Show alert message
+        function showAlert(container, message, type) {
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        // Admin action
+        function adminAction() {
+            alert('🔥 Admin action executed! In a real app, this would perform administrative tasks.');
+            console.log('⚡ Admin action performed by:', auth.getCurrentUser());
+        }
+
+        // Initialize on load
+        initAuth();
+    </script>
+</body>
+</html>

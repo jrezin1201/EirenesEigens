@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RavensOne HTTP Client Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .controls {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .api-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .api-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .api-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .api-button.active {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-right: 15px;
+            border: 3px solid #667eea;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .card-subtitle {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .card-body {
+            color: #444;
+            line-height: 1.6;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-right: 5px;
+            margin-top: 10px;
+        }
+
+        .stats {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            color: white;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌐 RavensOne HTTP Client</h1>
+        <p>Type-Safe HTTP Requests • Real API Integration • Zero Boilerplate</p>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <h2 style="margin-bottom: 15px;">📡 Select API</h2>
+            <div class="api-selector">
+                <button class="api-button active" onclick="fetchGitHubUsers()">
+                    GitHub Users
+                </button>
+                <button class="api-button" onclick="fetchGitHubRepos()">
+                    GitHub Repos
+                </button>
+                <button class="api-button" onclick="fetchJSONPlaceholder()">
+                    JSON Placeholder
+                </button>
+                <button class="api-button" onclick="fetchRandomUsers()">
+                    Random Users
+                </button>
+            </div>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stats-grid" id="stats-content"></div>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <!-- Load HTTP runtime -->
+    <script src="dist/http-runtime.js"></script>
+
+    <script>
+        let currentRequest = null;
+
+        function showLoading() {
+            const results = document.getElementById('results');
+            results.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Fetching data...</p>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            const results = document.getElementById('results');
+            results.innerHTML = `
+                <div class="error">
+                    <strong>❌ Error:</strong> ${message}
+                </div>
+            `;
+        }
+
+        function updateStats(label, data) {
+            const stats = document.getElementById('stats');
+            const statsContent = document.getElementById('stats-content');
+            stats.style.display = 'block';
+
+            statsContent.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${data.length}</div>
+                    <div class="stat-label">${label}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${currentRequest ? currentRequest.status : 0}</div>
+                    <div class="stat-label">HTTP Status</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${currentRequest ? (currentRequest.body.length / 1024).toFixed(1) : 0}KB</div>
+                    <div class="stat-label">Response Size</div>
+                </div>
+            `;
+        }
+
+        async function fetchGitHubUsers() {
+            showLoading();
+            setActiveButton(0);
+
+            try {
+                const response = await window.RavensHTTP.getJSON('https://api.github.com/users?per_page=12');
+                currentRequest = response;
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const users = response.json;
+                updateStats('Users Loaded', users);
+
+                const results = document.getElementById('results');
+                results.innerHTML = users.map(user => `
+                    <div class="card">
+                        <div class="card-header">
+                            <img src="${user.avatar_url}" alt="${user.login}" class="avatar">
+                            <div>
+                                <div class="card-title">${user.login}</div>
+                                <div class="card-subtitle">ID: ${user.id}</div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="badge">Type: ${user.type}</div>
+                            <div class="badge">
+                                <a href="${user.html_url}" target="_blank" style="color: white; text-decoration: none;">
+                                    View Profile →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function fetchGitHubRepos() {
+            showLoading();
+            setActiveButton(1);
+
+            try {
+                const response = await window.RavensHTTP.getJSON('https://api.github.com/repositories?per_page=12');
+                currentRequest = response;
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const repos = response.json;
+                updateStats('Repositories Loaded', repos);
+
+                const results = document.getElementById('results');
+                results.innerHTML = repos.map(repo => `
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">${repo.name}</div>
+                                <div class="card-subtitle">Owner: ${repo.owner.login}</div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p style="margin-bottom: 10px;">Repository ID: ${repo.id}</p>
+                            <div class="badge">
+                                <a href="${repo.html_url}" target="_blank" style="color: white; text-decoration: none;">
+                                    View Repo →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function fetchJSONPlaceholder() {
+            showLoading();
+            setActiveButton(2);
+
+            try {
+                const response = await window.RavensHTTP.getJSON('https://jsonplaceholder.typicode.com/posts?_limit=12');
+                currentRequest = response;
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const posts = response.json;
+                updateStats('Posts Loaded', posts);
+
+                const results = document.getElementById('results');
+                results.innerHTML = posts.map(post => `
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">${post.title}</div>
+                                <div class="card-subtitle">Post #${post.id}</div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p>${post.body.substring(0, 100)}...</p>
+                            <div class="badge">User ID: ${post.userId}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function fetchRandomUsers() {
+            showLoading();
+            setActiveButton(3);
+
+            try {
+                const response = await window.RavensHTTP.getJSON('https://randomuser.me/api/?results=12');
+                currentRequest = response;
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = response.json;
+                const users = data.results;
+                updateStats('Random Users Loaded', users);
+
+                const results = document.getElementById('results');
+                results.innerHTML = users.map(user => `
+                    <div class="card">
+                        <div class="card-header">
+                            <img src="${user.picture.large}" alt="${user.name.first}" class="avatar">
+                            <div>
+                                <div class="card-title">${user.name.first} ${user.name.last}</div>
+                                <div class="card-subtitle">${user.location.city}, ${user.location.country}</div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p>📧 ${user.email}</p>
+                            <p>📱 ${user.phone}</p>
+                            <div class="badge">Age: ${user.dob.age}</div>
+                            <div class="badge">${user.gender}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function setActiveButton(index) {
+            const buttons = document.querySelectorAll('.api-button');
+            buttons.forEach((btn, i) => {
+                if (i === index) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // Load GitHub users by default
+        fetchGitHubUsers();
+    </script>
+</body>
+</html>

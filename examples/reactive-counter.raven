@@ -1,0 +1,37 @@
+// RavensOne Reactive Counter Demo
+// This demonstrates the full reactive system with:
+// - Auto-wrapped reactive variables (Signal<T>)
+// - Event handlers
+// - JSX with interpolation
+// - Conditional rendering with if/else
+
+component Counter() {
+    // Auto-wrapped as Signal<i32> inside components
+    let count = 0;
+
+    // Computed value
+    let isEven = count % 2 == 0;
+
+    return <div class="container">
+        <h2>"Reactive Counter"</h2>
+
+        <div class="count-display">
+            <p>"Current count: "</p>
+            <p class="count-value">{count}</p>
+        </div>
+
+        <div class="status">
+            <p>{isEven}</p>
+        </div>
+
+        <div class="buttons">
+            <button onclick={() => count = count + 1}>"Increment"</button>
+            <button onclick={() => count = count - 1}>"Decrement"</button>
+            <button onclick={() => count = 0}>"Reset"</button>
+        </div>
+    </div>;
+}
+
+fn main() {
+    return 0;
+}

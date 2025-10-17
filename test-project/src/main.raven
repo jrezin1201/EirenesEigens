@@ -1,0 +1,5 @@
+// test-project - Main entry point
+
+fn main() {
+    console.log("Hello from RavensOne! 🎯");
+}
