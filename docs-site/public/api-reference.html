@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Reference - RavensOne Documentation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        nav {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        nav .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+        }
+        nav a { color: #333; text-decoration: none; margin: 0 1rem; transition: color 0.2s; }
+        nav a:hover { color: #667eea; }
+        .logo { font-weight: bold; font-size: 1.5rem; color: #667eea; }
+
+        .layout {
+            max-width: 1400px;
+            margin: 2rem auto;
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 2rem;
+            padding: 0 2rem;
+        }
+
+        .sidebar {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: fit-content;
+            position: sticky;
+            top: 80px;
+        }
+
+        .sidebar h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+        .sidebar li {
+            margin: 0.5rem 0;
+        }
+
+        .sidebar a {
+            color: #555;
+            text-decoration: none;
+            display: block;
+            padding: 0.3rem 0;
+            transition: color 0.2s;
+        }
+
+        .sidebar a:hover {
+            color: #667eea;
+        }
+
+        .content {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 { color: #667eea; margin-bottom: 1rem; font-size: 2.5rem; }
+        h2 { color: #667eea; margin: 2rem 0 1rem; border-bottom: 2px solid #667eea; padding-bottom: 0.5rem; }
+        h3 { color: #764ba2; margin: 1.5rem 0 0.5rem; }
+        h4 { color: #333; margin: 1rem 0 0.5rem; font-size: 1.1rem; }
+
+        code {
+            background: #f4f4f4;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        .api-function {
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .api-function h4 {
+            color: #667eea;
+            font-family: 'Monaco', monospace;
+        }
+
+        .param-list {
+            margin: 1rem 0;
+        }
+
+        .param {
+            margin: 0.5rem 0;
+            padding-left: 1rem;
+        }
+
+        .param-name {
+            font-weight: bold;
+            color: #764ba2;
+        }
+
+        .return-type {
+            color: #2ea043;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+        }
+
+        footer {
+            background: #2d2d2d;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 4rem;
+        }
+
+        @media (max-width: 968px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                position: static;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <div class="logo">RavensOne</div>
+            <div>
+                <a href="/">Home</a>
+                <a href="/getting-started.html">Get Started</a>
+                <a href="/api-reference.html">API</a>
+                <a href="/tutorials.html">Tutorials</a>
+                <a href="https://github.com/jrezin1201/RavensOne">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="layout">
+        <aside class="sidebar">
+            <h3>API Reference</h3>
+            <ul>
+                <li><a href="#reactive">Reactive Primitives</a></li>
+                <li><a href="#components">Components</a></li>
+                <li><a href="#stdlib">Standard Library</a></li>
+                <li><a href="#http">HTTP Client</a></li>
+                <li><a href="#dom">DOM APIs</a></li>
+                <li><a href="#router">Routing</a></li>
+                <li><a href="#forms">Forms</a></li>
+                <li><a href="#server">Server Functions</a></li>
+            </ul>
+        </aside>
+
+        <main class="content">
+            <h1>API Reference</h1>
+            <p>Complete API documentation for RavensOne framework and standard library.</p>
+
+            <!-- REACTIVE PRIMITIVES -->
+            <h2 id="reactive">Reactive Primitives</h2>
+            <p>Fine-grained reactivity system for building responsive UIs.</p>
+
+            <div class="api-function">
+                <h4>Signal::new(initial_value)</h4>
+                <p>Creates a reactive value that automatically updates subscribers when changed.</p>
+
+                <h4>Parameters:</h4>
+                <div class="param-list">
+                    <div class="param">
+                        <span class="param-name">initial_value</span>: T - The initial value
+                    </div>
+                </div>
+
+                <h4>Returns:</h4>
+                <p><span class="return-type">Signal&lt;T&gt;</span></p>
+
+                <h4>Example:</h4>
+                <pre><code>let count = Signal::new(0);
+count.set(5);           // Update value
+let value = count.get(); // Read value: 5
+count.update(|v| v + 1); // Update based on current: 6</code></pre>
+            </div>
+
+            <div class="api-function">
+                <h4>Signal.get()</h4>
+                <p>Returns the current value of the signal.</p>
+                <h4>Returns:</h4>
+                <p><span class="return-type">T</span> - Current value</p>
+            </div>
+
+            <div class="api-function">
+                <h4>Signal.set(new_value)</h4>
+                <p>Sets a new value and notifies all subscribers.</p>
+                <h4>Parameters:</h4>
+                <div class="param">
+                    <span class="param-name">new_value</span>: T - The new value
+                </div>
+            </div>
+
+            <div class="api-function">
+                <h4>Signal.update(updater)</h4>
+                <p>Updates the value based on the current value.</p>
+                <h4>Parameters:</h4>
+                <div class="param">
+                    <span class="param-name">updater</span>: fn(T) -> T - Function that receives current value and returns new value
+                </div>
+                <h4>Example:</h4>
+                <pre><code>count.update(|v| v * 2); // Double the current value</code></pre>
+            </div>
+
+            <div class="api-function">
+                <h4>Computed::new(getter)</h4>
+                <p>Creates a derived value that automatically recomputes when dependencies change.</p>
+                <h4>Parameters:</h4>
+                <div class="param">
+                    <span class="param-name">getter</span>: fn() -> T - Function that computes the value
+                </div>
+                <h4>Returns:</h4>
+                <p><span class="return-type">Computed&lt;T&gt;</span></p>
+                <h4>Example:</h4>
+                <pre><code>let count = Signal::new(5);
+let doubled = Computed::new(|| count.get() * 2);
+console.log(doubled.get()); // 10
+
+count.set(10);
+console.log(doubled.get()); // 20 (automatically updated)</code></pre>
+            </div>
+
+            <div class="api-function">
+                <h4>Effect::new(effect_fn)</h4>
+                <p>Runs side effects when reactive dependencies change.</p>
+                <h4>Parameters:</h4>
+                <div class="param">
+                    <span class="param-name">effect_fn</span>: fn() -> () - Function to run when dependencies change
+                </div>
+                <h4>Example:</h4>
+                <pre><code>let count = Signal::new(0);
+
+Effect::new(|| {
+    console.log("Count changed to:", count.get());
+});
+
+count.set(5); // Logs: "Count changed to: 5"</code></pre>
+            </div>
+
+            <div class="api-function">
+                <h4>Resource::new(fetcher)</h4>
+                <p>Manages async data fetching with loading and error states.</p>
+                <h4>Parameters:</h4>
+                <div class="param">
+                    <span class="param-name">fetcher</span>: async fn() -> Result&lt;T, Error&gt;
+                </div>
+                <h4>Example:</h4>
+                <pre><code>let user = Resource::new(async {
+    let response = fetch("/api/user").await?;
+    response.json().await
+});
+
+// In component:
+{match user.get() {
+    Loading => <p>"Loading..."</p>,
+    Ok(data) => <p>"Hello, " {data.name}</p>,
+    Err(e) => <p>"Error: " {e}</p>
+}}</code></pre>
+            </div>
+
+            <!-- COMPONENTS -->
+            <h2 id="components">Components</h2>
+            <p>Building blocks for creating reactive user interfaces.</p>
+
+            <div class="api-function">
+                <h4>component ComponentName(props?) { ... }</h4>
+                <p>Declares a reusable component.</p>
+                <h4>Syntax:</h4>
+                <pre><code>// Without props
+component Button() {
+    <button>"Click me"</button>
+}
+
+// With props
+component Button(props: { text: String, onClick: fn() -> () }) {
+    <button onclick={props.onClick}>{props.text}</button>
+}
+
+// With destructured props
+component Card({ title, content }: { title: String, content: String }) {
+    <div class="card">
+        <h3>{title}</h3>
+        <p>{content}</p>
+    </div>
+}</code></pre>
+            </div>
+
+            <h3>Lifecycle Hooks</h3>
+
+            <div class="api-function">
+                <h4>onMount(callback)</h4>
+                <p>Runs when component is first mounted to the DOM.</p>
+                <pre><code>component App() {
+    onMount(|| {
+        console.log("Component mounted!");
+    });
+
+    <div>"Hello"</div>
+}</code></pre>
+            </div>
+
+            <div class="api-function">
+                <h4>onCleanup(callback)</h4>
+                <p>Runs when component is removed from the DOM.</p>
+                <pre><code>onCleanup(|| {
+    console.log("Cleaning up...");
+});</code></pre>
+            </div>
+
+            <!-- STDLIB -->
+            <h2 id="stdlib">Standard Library</h2>
+
+            <h3>Console</h3>
+            <table>
+                <tr>
+                    <th>Function</th>
+                    <th>Description</th>
+                    <th>Example</th>
+                </tr>
+                <tr>
+                    <td><code>console.log(msg)</code></td>
+                    <td>Print message to console</td>
+                    <td><code>console.log("Hello")</code></td>
+                </tr>
+                <tr>
+                    <td><code>console.error(msg)</code></td>
+                    <td>Print error message</td>
+                    <td><code>console.error("Oops!")</code></td>
+                </tr>
+                <tr>
+                    <td><code>console.warn(msg)</code></td>
+                    <td>Print warning message</td>
+                    <td><code>console.warn("Warning")</code></td>
+                </tr>
+            </table>
+
+            <h3>String Methods</h3>
+            <table>
+                <tr>
+                    <th>Method</th>
+                    <th>Description</th>
+                    <th>Example</th>
+                </tr>
+                <tr>
+                    <td><code>str.len()</code></td>
+                    <td>Get string length</td>
+                    <td><code>"hello".len() // 5</code></td>
+                </tr>
+                <tr>
+                    <td><code>str.to_uppercase()</code></td>
+                    <td>Convert to uppercase</td>
+                    <td><code>"hello".to_uppercase() // "HELLO"</code></td>
+                </tr>
+                <tr>
+                    <td><code>str.to_lowercase()</code></td>
+                    <td>Convert to lowercase</td>
+                    <td><code>"HELLO".to_lowercase() // "hello"</code></td>
+                </tr>
+                <tr>
+                    <td><code>str.trim()</code></td>
+                    <td>Remove whitespace</td>
+                    <td><code>" hi ".trim() // "hi"</code></td>
+                </tr>
+                <tr>
+                    <td><code>str.split(sep)</code></td>
+                    <td>Split into array</td>
+                    <td><code>"a,b,c".split(",") // ["a","b","c"]</code></td>
+                </tr>
+                <tr>
+                    <td><code>str.contains(substr)</code></td>
+                    <td>Check if contains substring</td>
+                    <td><code>"hello".contains("ell") // true</code></td>
+                </tr>
+            </table>
+
+            <h3>Array Methods</h3>
+            <table>
+                <tr>
+                    <th>Method</th>
+                    <th>Description</th>
+                    <th>Example</th>
+                </tr>
+                <tr>
+                    <td><code>arr.len()</code></td>
+                    <td>Get array length</td>
+                    <td><code>[1,2,3].len() // 3</code></td>
+                </tr>
+                <tr>
+                    <td><code>arr.push(item)</code></td>
+                    <td>Add item to end</td>
+                    <td><code>arr.push(4)</code></td>
+                </tr>
+                <tr>
+                    <td><code>arr.pop()</code></td>
+                    <td>Remove last item</td>
+                    <td><code>arr.pop() // last item</code></td>
+                </tr>
+                <tr>
+                    <td><code>arr.map(fn)</code></td>
+                    <td>Transform each element</td>
+                    <td><code>[1,2].map(|x| x * 2) // [2,4]</code></td>
+                </tr>
+                <tr>
+                    <td><code>arr.filter(fn)</code></td>
+                    <td>Filter elements</td>
+                    <td><code>[1,2,3].filter(|x| x > 1) // [2,3]</code></td>
+                </tr>
+                <tr>
+                    <td><code>arr.reduce(fn, init)</code></td>
+                    <td>Reduce to single value</td>
+                    <td><code>[1,2,3].reduce(|a,b| a+b, 0) // 6</code></td>
+                </tr>
+            </table>
+
+            <!-- HTTP CLIENT -->
+            <h2 id="http">HTTP Client</h2>
+
+            <div class="api-function">
+                <h4>fetch(url, options?)</h4>
+                <p>Make HTTP requests.</p>
+                <h4>Parameters:</h4>
+                <div class="param-list">
+                    <div class="param"><span class="param-name">url</span>: String</div>
+                    <div class="param"><span class="param-name">options</span>: FetchOptions (optional)</div>
+                </div>
+                <h4>Returns:</h4>
+                <p><span class="return-type">Promise&lt;Response&gt;</span></p>
+                <h4>Example:</h4>
+                <pre><code>// GET request
+let response = await fetch("/api/users");
+let users = await response.json();
+
+// POST request
+let response = await fetch("/api/users", {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON::stringify({ name: "Alice" })
+});
+
+// With error handling
+let result = await fetch("/api/data")
+    .then(|r| r.json())
+    .catch(|e| console.error("Error:", e));</code></pre>
+            </div>
+
+            <!-- DOM APIs -->
+            <h2 id="dom">DOM APIs</h2>
+
+            <h3>Document Methods</h3>
+            <table>
+                <tr>
+                    <th>Method</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>document.getElementById(id)</code></td>
+                    <td>Get element by ID</td>
+                </tr>
+                <tr>
+                    <td><code>document.querySelector(selector)</code></td>
+                    <td>Get first matching element</td>
+                </tr>
+                <tr>
+                    <td><code>document.querySelectorAll(selector)</code></td>
+                    <td>Get all matching elements</td>
+                </tr>
+            </table>
+
+            <h3>Element Methods</h3>
+            <table>
+                <tr>
+                    <th>Method</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>element.classList.add(name)</code></td>
+                    <td>Add CSS class</td>
+                </tr>
+                <tr>
+                    <td><code>element.classList.remove(name)</code></td>
+                    <td>Remove CSS class</td>
+                </tr>
+                <tr>
+                    <td><code>element.classList.toggle(name)</code></td>
+                    <td>Toggle CSS class</td>
+                </tr>
+                <tr>
+                    <td><code>element.setAttribute(name, value)</code></td>
+                    <td>Set attribute</td>
+                </tr>
+                <tr>
+                    <td><code>element.addEventListener(event, handler)</code></td>
+                    <td>Add event listener</td>
+                </tr>
+            </table>
+
+            <!-- SERVER FUNCTIONS -->
+            <h2 id="server">Server Functions</h2>
+
+            <div class="api-function">
+                <h4>server fn function_name(params) -> Result&lt;T, Error&gt; { ... }</h4>
+                <p>Declare a function that runs only on the server but can be called from the client.</p>
+                <pre><code>// Server-side function
+server fn get_user(user_id: Int) -> Result<User, Error> {
+    let user = database::query("SELECT * FROM users WHERE id = ?", [user_id]).await?;
+    Ok(user)
+}
+
+// Call from client
+component UserProfile(props: { user_id: Int }) {
+    let user = Resource::new(async {
+        get_user(props.user_id).await
+    });
+
+    {match user.get() {
+        Ok(data) => <div>"Hello, " {data.name}</div>,
+        Loading => <div>"Loading..."</div>,
+        Err(e) => <div>"Error: " {e}</div>
+    }}
+}</code></pre>
+            </div>
+
+            <h2>Type System</h2>
+
+            <h3>Primitive Types</h3>
+            <table>
+                <tr>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Example</th>
+                </tr>
+                <tr>
+                    <td><code>Int</code></td>
+                    <td>32-bit integer</td>
+                    <td><code>let x: Int = 42;</code></td>
+                </tr>
+                <tr>
+                    <td><code>Float</code></td>
+                    <td>64-bit floating point</td>
+                    <td><code>let pi: Float = 3.14;</code></td>
+                </tr>
+                <tr>
+                    <td><code>String</code></td>
+                    <td>UTF-8 string</td>
+                    <td><code>let name: String = "Alice";</code></td>
+                </tr>
+                <tr>
+                    <td><code>Bool</code></td>
+                    <td>Boolean</td>
+                    <td><code>let flag: Bool = true;</code></td>
+                </tr>
+                <tr>
+                    <td><code>Array&lt;T&gt;</code></td>
+                    <td>Dynamic array</td>
+                    <td><code>let nums: Array<Int> = [1, 2, 3];</code></td>
+                </tr>
+            </table>
+
+            <h3>Option Type</h3>
+            <pre><code>// Represents optional values
+let maybe_value: Option<Int> = Some(42);
+let nothing: Option<Int> = None;
+
+// Pattern matching
+match maybe_value {
+    Some(x) => console.log("Value:", x),
+    None => console.log("No value")
+}</code></pre>
+
+            <h3>Result Type</h3>
+            <pre><code>// Represents success or error
+fn divide(a: Int, b: Int) -> Result<Float, String> {
+    if b == 0 {
+        return Err("Division by zero");
+    }
+    Ok(a / b)
+}
+
+// Usage
+match divide(10, 2) {
+    Ok(result) => console.log("Result:", result),
+    Err(e) => console.error("Error:", e)
+}</code></pre>
+
+        </main>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 RavensOne. MIT License.</p>
+        <p style="margin-top: 0.5rem;">
+            <a href="https://github.com/jrezin1201/RavensOne" style="color: #667eea;">GitHub</a> "
+            <a href="/getting-started.html" style="color: #667eea;">Documentation</a> "
+            <a href="/api-reference.html" style="color: #667eea;">API Reference</a>
+        </p>
+    </footer>
+</body>
+</html>

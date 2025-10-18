@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tutorials - RavensOne</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
+        nav { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        nav .container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; }
+        nav a { color: #333; text-decoration: none; margin: 0 1rem; }
+        nav a:hover { color: #667eea; }
+        .logo { font-weight: bold; font-size: 1.5rem; color: #667eea; }
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 2rem; }
+        h1 { color: #667eea; font-size: 2.5rem; margin-bottom: 1rem; }
+        .tutorial-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin: 2rem 0; }
+        .tutorial-card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 2rem; }
+        .tutorial-card h3 { color: #667eea; margin-bottom: 0.5rem; }
+        .tutorial-meta { color: #666; font-size: 0.9rem; margin: 0.5rem 0; }
+        footer { background: #2d2d2d; color: white; text-align: center; padding: 2rem; margin-top: 4rem; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container" style="max-width: none;">
+            <div class="logo">RavensOne</div>
+            <div>
+                <a href="/">Home</a>
+                <a href="/getting-started.html">Get Started</a>
+                <a href="/api-reference.html">API</a>
+                <a href="/tutorials.html">Tutorials</a>
+                <a href="https://github.com/jrezin1201/RavensOne">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Tutorials</h1>
+        <p>Step-by-step guides to build real-world applications with RavensOne.</p>
+
+        <div class="tutorial-grid">
+            <div class="tutorial-card">
+                <h3>✅ Todo App</h3>
+                <p class="tutorial-meta">Beginner | 20 minutes</p>
+                <p>Build a complete CRUD todo application with local storage persistence and filtering.</p>
+            </div>
+
+            <div class="tutorial-card">
+                <h3>📝 Blog with SSR</h3>
+                <p class="tutorial-meta">Intermediate | 45 minutes</p>
+                <p>Create a server-side rendered blog with dynamic routes and markdown support for perfect SEO.</p>
+            </div>
+
+            <div class="tutorial-card">
+                <h3>💬 Real-time Chat</h3>
+                <p class="tutorial-meta">Intermediate | 40 minutes</p>
+                <p>Build a WebSocket-powered chat application with real-time message updates and online user tracking.</p>
+            </div>
+
+            <div class="tutorial-card">
+                <h3>🛒 E-commerce Store</h3>
+                <p class="tutorial-meta">Advanced | 90 minutes</p>
+                <p>Full-featured online store with cart management, checkout flow, and payment integration.</p>
+            </div>
+
+            <div class="tutorial-card">
+                <h3>📊 Analytics Dashboard</h3>
+                <p class="tutorial-meta">Intermediate | 60 minutes</p>
+                <p>Create an interactive dashboard with charts, graphs, and real-time data visualization.</p>
+            </div>
+
+            <div class="tutorial-card">
+                <h3>🔐 Authentication System</h3>
+                <p class="tutorial-meta">Intermediate | 50 minutes</p>
+                <p>Implement secure user authentication with JWT tokens, protected routes, and session management.</p>
+            </div>
+        </div>
+
+        <p style="text-align: center; margin-top: 3rem; color: #666;">
+            Full tutorial content coming soon! Check out the <a href="/getting-started.html" style="color: #667eea;">Getting Started guide</a> and 
+            <a href="https://github.com/jrezin1201/RavensOne/tree/main/examples" style="color: #667eea;">example applications</a> in the meantime.
+        </p>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 RavensOne. MIT License.</p>
+        <p style="margin-top: 0.5rem;">
+            <a href="https://github.com/jrezin1201/RavensOne" style="color: #667eea;">GitHub</a> •
+            <a href="/getting-started.html" style="color: #667eea;">Documentation</a>
+        </p>
+    </footer>
+</body>
+</html>
