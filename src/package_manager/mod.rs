@@ -1,11 +1,14 @@
 // Package Manager for RavensOne
 // Handles dependencies, versioning, and package installation
 
+pub mod registry;
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use semver::{Version, VersionReq};
+use registry::RegistryClient;
 
 /// Package manifest (raven.toml)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -102,14 +105,19 @@ pub struct PackageManager {
     manifest_path: PathBuf,
     lock_path: PathBuf,
     packages_dir: PathBuf,
+    registry: RegistryClient,
 }
 
 impl PackageManager {
     pub fn new(project_root: &Path) -> Self {
+        let mut registry = RegistryClient::new();
+        let _ = registry.load_credentials(); // Load saved credentials if available
+
         PackageManager {
             manifest_path: project_root.join("raven.toml"),
             lock_path: project_root.join("raven.lock"),
             packages_dir: project_root.join("raven_packages"),
+            registry,
         }
     }
 
@@ -384,6 +392,79 @@ impl PackageManager {
         println!("✅ Dependencies updated!");
         Ok(())
     }
+
+    /// Login to the package registry
+    pub fn login(&mut self) -> Result<(), PackageError> {
+        self.registry
+            .login()
+            .map_err(|e| PackageError::RegistryError(e.to_string()))?;
+        Ok(())
+    }
+
+    /// Register a new account on the package registry
+    pub fn register(&mut self) -> Result<(), PackageError> {
+        self.registry
+            .register()
+            .map_err(|e| PackageError::RegistryError(e.to_string()))?;
+        Ok(())
+    }
+
+    /// Publish the current package to the registry
+    pub fn publish(&self) -> Result<(), PackageError> {
+        // Get package directory (parent of manifest)
+        let package_dir = self
+            .manifest_path
+            .parent()
+            .ok_or_else(|| PackageError::IoError("Invalid manifest path".to_string()))?;
+
+        self.registry
+            .publish(package_dir)
+            .map_err(|e| PackageError::RegistryError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// Search for packages in the registry
+    pub fn search(&self, query: &str) -> Result<(), PackageError> {
+        let results = self
+            .registry
+            .search(query, 20)
+            .map_err(|e| PackageError::RegistryError(e.to_string()))?;
+
+        if results.results.is_empty() {
+            println!("No packages found matching '{}'", query);
+            return Ok(());
+        }
+
+        println!("Found {} packages:\n", results.total);
+
+        for result in results.results {
+            println!("📦 {} @ {}", result.name, result.version);
+            println!("   {}", result.description);
+            if !result.keywords.is_empty() {
+                println!("   Keywords: {}", result.keywords.join(", "));
+            }
+            println!("   Downloads: {} | Score: {:.2}", result.downloads, result.score);
+            println!();
+        }
+
+        Ok(())
+    }
+
+    /// Install a package from the registry
+    fn install_package_from_registry(
+        &self,
+        name: &str,
+        version: &str,
+    ) -> Result<(), PackageError> {
+        let package_dir = self.packages_dir.join(name);
+
+        self.registry
+            .download(name, version, &package_dir)
+            .map_err(|e| PackageError::RegistryError(e.to_string()))?;
+
+        Ok(())
+    }
 }
 
 /// Package Manager Errors
@@ -398,6 +479,7 @@ pub enum PackageError {
     InvalidVersion(String),
     NoCompatibleVersion(String, String),
     CircularDependency(String),
+    RegistryError(String),
 }
 
 impl std::fmt::Display for PackageError {
@@ -416,6 +498,7 @@ impl std::fmt::Display for PackageError {
             PackageError::CircularDependency(name) => {
                 write!(f, "Circular dependency detected: {}", name)
             }
+            PackageError::RegistryError(e) => write!(f, "Registry error: {}", e),
         }
     }
 }

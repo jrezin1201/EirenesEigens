@@ -133,6 +133,16 @@ enum PkgCommands {
     },
     /// Update dependencies to latest compatible versions
     Update,
+    /// Login to the package registry
+    Login,
+    /// Register a new account
+    Register,
+    /// Publish the current package to the registry
+    Publish,
+    /// Search for packages in the registry
+    Search {
+        query: String,
+    },
 }
 
 fn main() {
@@ -336,6 +346,34 @@ fn main() {
                     let pkg_mgr = PackageManager::new(&PathBuf::from("."));
                     if let Err(e) = pkg_mgr.update() {
                         eprintln!("❌ Update failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::Login => {
+                    let mut pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    if let Err(e) = pkg_mgr.login() {
+                        eprintln!("❌ Login failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::Register => {
+                    let mut pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    if let Err(e) = pkg_mgr.register() {
+                        eprintln!("❌ Registration failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::Publish => {
+                    let pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    if let Err(e) = pkg_mgr.publish() {
+                        eprintln!("❌ Publish failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::Search { query } => {
+                    let pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    if let Err(e) = pkg_mgr.search(&query) {
+                        eprintln!("❌ Search failed: {}", e);
                         process::exit(1);
                     }
                 }
