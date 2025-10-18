@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="utf-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1" />
+ <title>Bluebird — Social Feed (API Connected)</title>
+ <link rel="stylesheet" href="./styles.css" />
+ <link rel="preconnect" href="https://images.unsplash.com" />
+</head>
+<body>
+ <header class="nav">
+ <div class="container nav-inner">
+ <div class="brand">
+ <div class="logo">🐦</div>
+ <span class="brand-name">Bluebird</span>
+ </div>
+ <div class="nav-actions">
+ <input class="search" type="search" placeholder="Search" aria-label="Search" />
+ <div class="profile">
+ <div class="avatar gradient-a" aria-hidden="true"></div>
+ <span class="username">you</span>
+ </div>
+ </div>
+ </div>
+ </header>
+
+ <main class="container">
+ <div id="loading" style="text-align: center; padding: 40px; color: #666;">
+ Loading posts...
+ </div>
+ <div id="error" style="display: none; text-align: center; padding: 40px; color: #e53e3e;">
+ </div>
+ <section class="feed" aria-label="Social feed" id="feed">
+ <!-- Posts will be dynamically loaded here -->
+ </section>
+ </main>
+
+ <script>
+ // API Configuration
+ const API_BASE_URL = 'http://localhost:9000/api';
+
+ // Mock current user ID (in production, this would come from auth)
+ const CURRENT_USER_ID = '6ecfe611-2677-4eb6-8d2a-f7e627e23d6a'; // Alex Chen's ID
+
+ // Utility: Format date relative to now
+ function formatRelativeTime(dateString) {
+ const date = new Date(dateString);
+ const now = new Date();
+ const diffMs = now - date;
+ const diffMins = Math.floor(diffMs / 60000);
+ const diffHours = Math.floor(diffMs / 3600000);
+ const diffDays = Math.floor(diffMs / 86400000);
+
+ if (diffMins < 60) return diffMins <= 1 ? 'Just now' : `${diffMins}m ago`;
+ if (diffHours < 24) return `${diffHours}h ago`;
+ if (diffDays === 1) return 'Yesterday';
+ if (diffDays < 7) return `${diffDays} days ago`;
+ return 'Last week';
+ }
+
+ // Utility: Create avatar class from gradient string
+ function getAvatarClass(gradient) {
+ return gradient || 'gradient-a';
+ }
+
+ // Create post HTML
+ function createPostHTML(post) {
+ const avatarClass = getAvatarClass(post.user.avatar_gradient);
+ const timeAgo = formatRelativeTime(post.created_at);
+ const likedClass = post.liked_by_current_user ? 'liked' : '';
+ const likedAttr = post.liked_by_current_user ? 'true' : 'false';
+
+ return `
+ <article class="card" tabindex="0" data-post-id="${post.id}">
+ <header class="card-head">
+ <div class="avatar ${avatarClass}" aria-hidden="true"></div>
+ <div class="meta">
+ <div class="user">${post.user.display_name}</div>
+ <time class="time" datetime="${post.created_at}">${timeAgo}</time>
+ </div>
+ </header>
+ <div class="card-media">
+ <img loading="lazy" alt="${post.caption}" src="${post.image_url}" />
+ </div>
+ <div class="card-body">
+ <p class="caption">${post.caption}</p>
+ <div class="actions">
+ <button class="btn like-btn" aria-pressed="${likedAttr}" data-liked="${likedAttr}" data-count="${post.like_count}">
+ <svg viewBox="0 0 24 24" class="icon heart ${likedClass}" aria-hidden="true"><path d="M12.1 8.64l-.1.1-.11-.11C10.14 6.9 7.1 7.24 5.6 9.1c-1.63 2.05-1.06 5.02 1.17 6.52L12 21l5.23-5.38c2.23-1.5 2.8-4.47 1.17-6.52-1.5-1.86-4.54-2.2-6.3-.46z"></path></svg>
+ <span class="count">${post.like_count}</span>
+ </button>
+ <button class="btn comment-btn" aria-label="Comments">
+ <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M20 2H4a2 2 0 00-2 2v14l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"></path></svg>
+ <span class="count">${post.comment_count}</span>
+ </button>
+ <button class="btn share-btn" data-share-title="${post.user.display_name} — Bluebird" data-share-url="#${post.user.username}">
+ <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M14 9l-1-1 5-5 1 1-5 5zm-4 6l1 1-5 5-1-1 5-5z"></path><path d="M5 14V9a4 4 0 014-4h5"></path><path d="M15 15h-5a4 4 0 01-4-4"></path></svg>
+ <span>Share</span>
+ </button>
+ </div>
+ </div>
+ </article>
+ `;
+ }
+
+ // API: Fetch all posts
+ async function fetchPosts() {
+ const response = await fetch(`${API_BASE_URL}/posts`);
+ if (!response.ok) throw new Error('Failed to fetch posts');
+ return await response.json();
+ }
+
+ // API: Toggle like on a post
+ async function toggleLike(postId) {
+ const response = await fetch(`${API_BASE_URL}/posts/${postId}/like`, {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify({ user_id: CURRENT_USER_ID })
+ });
+ if (!response.ok) throw new Error('Failed to toggle like');
+ return await response.json();
+ }
+
+ // Handle like button click
+ function handleLikeClick(event) {
+ const btn = event.currentTarget;
+ const article = btn.closest('[data-post-id]');
+ const postId = article.dataset.postId;
+
+ // Optimistic UI update
+ const liked = btn.getAttribute('data-liked') === 'true';
+ const countEl = btn.querySelector('.count');
+ const icon = btn.querySelector('.heart');
+ let count = parseInt(btn.getAttribute('data-count'), 10);
+
+ if (!liked) {
+ count += 1;
+ btn.setAttribute('data-liked', 'true');
+ btn.setAttribute('aria-pressed', 'true');
+ icon.classList.add('liked');
+ } else {
+ count = Math.max(0, count - 1);
+ btn.setAttribute('data-liked', 'false');
+ btn.setAttribute('aria-pressed', 'false');
+ icon.classList.remove('liked');
+ }
+
+ btn.setAttribute('data-count', String(count));
+ countEl.textContent = count;
+
+ // Send to backend
+ toggleLike(postId).catch(err => {
+ console.error('Failed to toggle like:', err);
+ // Revert UI on error
+ if (!liked) {
+ count -= 1;
+ btn.setAttribute('data-liked', 'false');
+ btn.setAttribute('aria-pressed', 'false');
+ icon.classList.remove('liked');
+ } else {
+ count += 1;
+ btn.setAttribute('data-liked', 'true');
+ btn.setAttribute('aria-pressed', 'true');
+ icon.classList.add('liked');
+ }
+ btn.setAttribute('data-count', String(count));
+ countEl.textContent = count;
+ alert('Failed to update like. Please try again.');
+ });
+ }
+
+ // Handle share button click
+ async function handleShareClick(event) {
+ const btn = event.currentTarget;
+ const title = btn.getAttribute('data-share-title') || 'Bluebird';
+ const url = location.origin + location.pathname + (btn.getAttribute('data-share-url') || '');
+
+ try {
+ if (navigator.share) {
+ await navigator.share({ title: title, url: url });
+ } else {
+ await navigator.clipboard.writeText(url);
+ btn.classList.add('shared');
+ setTimeout(() => btn.classList.remove('shared'), 1200);
+ alert('Link copied to clipboard');
+ }
+ } catch (e) {
+ // User canceled or share failed
+ console.log('Share canceled or failed:', e);
+ }
+ }
+
+ // Attach event listeners to buttons
+ function attachEventListeners() {
+ document.querySelectorAll('.like-btn').forEach(btn => {
+ btn.addEventListener('click', handleLikeClick);
+ });
+
+ document.querySelectorAll('.share-btn').forEach(btn => {
+ btn.addEventListener('click', handleShareClick);
+ });
+ }
+
+ // Load and render posts
+ async function loadPosts() {
+ const loadingEl = document.getElementById('loading');
+ const errorEl = document.getElementById('error');
+ const feedEl = document.getElementById('feed');
+
+ try {
+ const posts = await fetchPosts();
+
+ loadingEl.style.display = 'none';
+
+ if (posts.length === 0) {
+ feedEl.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No posts yet</p>';
+ return;
+ }
+
+ feedEl.innerHTML = posts.map(post => createPostHTML(post)).join('');
+ attachEventListeners();
+
+ } catch (error) {
+ console.error('Error loading posts:', error);
+ loadingEl.style.display = 'none';
+ errorEl.style.display = 'block';
+ errorEl.textContent = `Failed to load posts: ${error.message}. Make sure the backend is running on port 9000.`;
+ }
+ }
+
+ // Initialize on page load
+ document.addEventListener('DOMContentLoaded', loadPosts);
+ </script>
+</body>
+</html>
