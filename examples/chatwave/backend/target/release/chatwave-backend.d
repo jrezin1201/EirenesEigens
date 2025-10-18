@@ -1,0 +1,1 @@
+/Users/jordanhill/Documents/JRez-Soft-Projects/ravensone/examples/chatwave/backend/target/release/chatwave-backend: /Users/jordanhill/Documents/JRez-Soft-Projects/ravensone/examples/chatwave/backend/schema.sql /Users/jordanhill/Documents/JRez-Soft-Projects/ravensone/examples/chatwave/backend/src/main.rs

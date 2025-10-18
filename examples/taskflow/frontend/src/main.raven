@@ -1,0 +1,667 @@
+// TaskFlow - A full-stack todo application with authentication
+// Built with RavensOne
+
+use raven::prelude::*;
+use raven_ui::{Button, Input, Card, Modal, Spinner, Badge};
+use raven_router::{Router, Route, Link, useNavigate, Redirect};
+use raven_http::Http;
+use raven_forms::Form;
+
+// ============================================================================
+// Types & Models
+// ============================================================================
+
+struct User {
+    id: String,
+    email: String,
+    name: String,
+}
+
+struct Todo {
+    id: String,
+    user_id: String,
+    title: String,
+    description: Option<String>,
+    completed: bool,
+    created_at: String,
+    updated_at: String,
+}
+
+struct AuthState {
+    user: Option<User>,
+    token: Option<String>,
+}
+
+// ============================================================================
+// API Service
+// ============================================================================
+
+const API_BASE: &str = "http://localhost:3000/api";
+
+async fn register_user(email: String, password: String, name: String) -> Result<AuthState, String> {
+    let response = Http::post(
+        &format!("{}/auth/register", API_BASE),
+        json!({
+            "email": email,
+            "password": password,
+            "name": name
+        })
+    ).await?;
+
+    Ok(AuthState {
+        user: Some(response.user),
+        token: Some(response.token),
+    })
+}
+
+async fn login_user(email: String, password: String) -> Result<AuthState, String> {
+    let response = Http::post(
+        &format!("{}/auth/login", API_BASE),
+        json!({
+            "email": email,
+            "password": password
+        })
+    ).await?;
+
+    Ok(AuthState {
+        user: Some(response.user),
+        token: Some(response.token),
+    })
+}
+
+async fn fetch_todos(token: &str) -> Result<Vec<Todo>, String> {
+    Http::get(&format!("{}/todos", API_BASE))
+        .header("Authorization", &format!("Bearer {}", token))
+        .await
+}
+
+async fn create_todo(token: &str, title: String, description: Option<String>) -> Result<Todo, String> {
+    Http::post(
+        &format!("{}/todos", API_BASE),
+        json!({
+            "title": title,
+            "description": description
+        })
+    )
+    .header("Authorization", &format!("Bearer {}", token))
+    .await
+}
+
+async fn update_todo(token: &str, id: &str, title: Option<String>, description: Option<String>, completed: Option<bool>) -> Result<Todo, String> {
+    Http::put(
+        &format!("{}/todos/{}", API_BASE, id),
+        json!({
+            "title": title,
+            "description": description,
+            "completed": completed
+        })
+    )
+    .header("Authorization", &format!("Bearer {}", token))
+    .await
+}
+
+async fn delete_todo(token: &str, id: &str) -> Result<(), String> {
+    Http::delete(&format!("{}/todos/{}", API_BASE, id))
+        .header("Authorization", &format!("Bearer {}", token))
+        .await
+}
+
+// ============================================================================
+// Global State
+// ============================================================================
+
+// Using Signals for global state management
+let auth_state = Signal::new(AuthState {
+    user: None,
+    token: None,
+});
+
+// Load auth state from localStorage on app start
+fn init_auth() {
+    if let Some(token) = localStorage::get("token") {
+        if let Some(user_json) = localStorage::get("user") {
+            if let Ok(user) = serde_json::from_str(&user_json) {
+                auth_state.set(AuthState {
+                    user: Some(user),
+                    token: Some(token),
+                });
+            }
+        }
+    }
+}
+
+fn save_auth(auth: &AuthState) {
+    if let Some(token) = &auth.token {
+        localStorage::set("token", token);
+    }
+    if let Some(user) = &auth.user {
+        if let Ok(user_json) = serde_json::to_string(user) {
+            localStorage::set("user", &user_json);
+        }
+    }
+}
+
+fn clear_auth() {
+    localStorage::remove("token");
+    localStorage::remove("user");
+    auth_state.set(AuthState {
+        user: None,
+        token: None,
+    });
+}
+
+// ============================================================================
+// Components
+// ============================================================================
+
+component LoginPage() {
+    let email = Signal::new(String::new());
+    let password = Signal::new(String::new());
+    let error = Signal::new(None::<String>);
+    let loading = Signal::new(false);
+    let navigate = useNavigate();
+
+    let handle_login = move || {
+        loading.set(true);
+        error.set(None);
+
+        spawn_local(async move {
+            match login_user(email.get(), password.get()).await {
+                Ok(auth) => {
+                    save_auth(&auth);
+                    auth_state.set(auth);
+                    navigate("/dashboard");
+                }
+                Err(e) => {
+                    error.set(Some(e));
+                    loading.set(false);
+                }
+            }
+        });
+    };
+
+    <div class="auth-page">
+        <Card class="auth-card">
+            <h1>Welcome to TaskFlow</h1>
+            <p class="subtitle">Sign in to manage your tasks</p>
+
+            {if let Some(err) = error.get() {
+                <div class="alert alert-error">{err}</div>
+            }}
+
+            <form class="auth-form" onsubmit={move |e| {
+                e.prevent_default();
+                handle_login();
+            }}>
+                <Input
+                    label="Email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email.get()}
+                    oninput={move |e| email.set(e.target.value)}
+                    required={true}
+                />
+
+                <Input
+                    label="Password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password.get()}
+                    oninput={move |e| password.set(e.target.value)}
+                    required={true}
+                />
+
+                <Button
+                    variant={ButtonVariant::Primary}
+                    type="submit"
+                    disabled={loading.get()}
+                    full_width={true}
+                >
+                    {if loading.get() {
+                        <><Spinner size="sm" /> Signing in...</>
+                    } else {
+                        <>Sign In</>
+                    }}
+                </Button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Don't have an account? <Link to="/register">Register</Link></p>
+            </div>
+        </Card>
+    </div>
+}
+
+component RegisterPage() {
+    let name = Signal::new(String::new());
+    let email = Signal::new(String::new());
+    let password = Signal::new(String::new());
+    let confirm_password = Signal::new(String::new());
+    let error = Signal::new(None::<String>);
+    let loading = Signal::new(false);
+    let navigate = useNavigate();
+
+    let password_match = Computed::new(move || {
+        password.get() == confirm_password.get()
+    });
+
+    let handle_register = move || {
+        if !password_match.get() {
+            error.set(Some("Passwords do not match".to_string()));
+            return;
+        }
+
+        loading.set(true);
+        error.set(None);
+
+        spawn_local(async move {
+            match register_user(email.get(), password.get(), name.get()).await {
+                Ok(auth) => {
+                    save_auth(&auth);
+                    auth_state.set(auth);
+                    navigate("/dashboard");
+                }
+                Err(e) => {
+                    error.set(Some(e));
+                    loading.set(false);
+                }
+            }
+        });
+    };
+
+    <div class="auth-page">
+        <Card class="auth-card">
+            <h1>Create Account</h1>
+            <p class="subtitle">Join TaskFlow to stay organized</p>
+
+            {if let Some(err) = error.get() {
+                <div class="alert alert-error">{err}</div>
+            }}
+
+            <form class="auth-form" onsubmit={move |e| {
+                e.prevent_default();
+                handle_register();
+            }}>
+                <Input
+                    label="Name"
+                    type="text"
+                    placeholder="John Doe"
+                    value={name.get()}
+                    oninput={move |e| name.set(e.target.value)}
+                    required={true}
+                />
+
+                <Input
+                    label="Email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email.get()}
+                    oninput={move |e| email.set(e.target.value)}
+                    required={true}
+                />
+
+                <Input
+                    label="Password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password.get()}
+                    oninput={move |e| password.set(e.target.value)}
+                    required={true}
+                />
+
+                <Input
+                    label="Confirm Password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirm_password.get()}
+                    oninput={move |e| confirm_password.set(e.target.value)}
+                    required={true}
+                    error={if !password_match.get() && !confirm_password.get().is_empty() {
+                        Some("Passwords do not match")
+                    } else {
+                        None
+                    }}
+                />
+
+                <Button
+                    variant={ButtonVariant::Primary}
+                    type="submit"
+                    disabled={loading.get() || !password_match.get()}
+                    full_width={true}
+                >
+                    {if loading.get() {
+                        <><Spinner size="sm" /> Creating account...</>
+                    } else {
+                        <>Create Account</>
+                    }}
+                </Button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Already have an account? <Link to="/login">Sign In</Link></p>
+            </div>
+        </Card>
+    </div>
+}
+
+component Dashboard() {
+    let todos = Signal::new(Vec::new());
+    let loading = Signal::new(true);
+    let error = Signal::new(None::<String>);
+    let filter = Signal::new("all"); // all, active, completed
+    let show_add_modal = Signal::new(false);
+
+    let auth = auth_state.get();
+    let token = auth.token.as_ref().unwrap();
+
+    // Load todos on mount
+    Effect::new(move || {
+        spawn_local(async move {
+            match fetch_todos(token).await {
+                Ok(fetched_todos) => {
+                    todos.set(fetched_todos);
+                    loading.set(false);
+                }
+                Err(e) => {
+                    error.set(Some(e));
+                    loading.set(false);
+                }
+            }
+        });
+    });
+
+    let filtered_todos = Computed::new(move || {
+        let all_todos = todos.get();
+        match filter.get().as_str() {
+            "active" => all_todos.into_iter().filter(|t| !t.completed).collect(),
+            "completed" => all_todos.into_iter().filter(|t| t.completed).collect(),
+            _ => all_todos,
+        }
+    });
+
+    let stats = Computed::new(move || {
+        let all_todos = todos.get();
+        let total = all_todos.len();
+        let completed = all_todos.iter().filter(|t| t.completed).count();
+        let active = total - completed;
+        (total, active, completed)
+    });
+
+    let handle_logout = move || {
+        clear_auth();
+    };
+
+    <div class="dashboard">
+        <header class="dashboard-header">
+            <div class="container">
+                <div class="header-content">
+                    <h1>TaskFlow</h1>
+                    <div class="header-actions">
+                        <span class="user-name">Hello, {auth.user.as_ref().unwrap().name}!</span>
+                        <Button
+                            variant={ButtonVariant::Ghost}
+                            onclick={handle_logout}
+                        >
+                            Logout
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard-main">
+            <div class="container">
+                <div class="dashboard-stats">
+                    <StatCard label="Total Tasks" value={stats.get().0} />
+                    <StatCard label="Active" value={stats.get().1} variant="primary" />
+                    <StatCard label="Completed" value={stats.get().2} variant="success" />
+                </div>
+
+                <div class="todos-section">
+                    <div class="todos-header">
+                        <h2>Your Tasks</h2>
+                        <Button
+                            variant={ButtonVariant::Primary}
+                            onclick={move || show_add_modal.set(true)}
+                        >
+                            + Add Task
+                        </Button>
+                    </div>
+
+                    <div class="filter-tabs">
+                        <button
+                            class={if filter.get() == "all" { "active" } else { "" }}
+                            onclick={move || filter.set("all".to_string())}
+                        >
+                            All
+                        </button>
+                        <button
+                            class={if filter.get() == "active" { "active" } else { "" }}
+                            onclick={move || filter.set("active".to_string())}
+                        >
+                            Active
+                        </button>
+                        <button
+                            class={if filter.get() == "completed" { "active" } else { "" }}
+                            onclick={move || filter.set("completed".to_string())}
+                        >
+                            Completed
+                        </button>
+                    </div>
+
+                    {if loading.get() {
+                        <div class="loading-state">
+                            <Spinner />
+                            <p>Loading your tasks...</p>
+                        </div>
+                    } else if let Some(err) = error.get() {
+                        <div class="error-state">
+                            <p>Error: {err}</p>
+                        </div>
+                    } else if filtered_todos.get().is_empty() {
+                        <div class="empty-state">
+                            <p>No tasks found</p>
+                            <Button onclick={move || show_add_modal.set(true)}>
+                                Create your first task
+                            </Button>
+                        </div>
+                    } else {
+                        <div class="todos-list">
+                            {filtered_todos.get().iter().map(|todo| {
+                                <TodoItem
+                                    todo={todo.clone()}
+                                    on_toggle={move |id| {
+                                        spawn_local(async move {
+                                            let todo = todos.get().iter().find(|t| t.id == id).cloned();
+                                            if let Some(todo) = todo {
+                                                match update_todo(token, &id, None, None, Some(!todo.completed)).await {
+                                                    Ok(updated) => {
+                                                        todos.update(|list| {
+                                                            if let Some(t) = list.iter_mut().find(|t| t.id == id) {
+                                                                *t = updated;
+                                                            }
+                                                        });
+                                                    }
+                                                    Err(e) => {
+                                                        error.set(Some(e));
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    }}
+                                    on_delete={move |id| {
+                                        spawn_local(async move {
+                                            match delete_todo(token, &id).await {
+                                                Ok(_) => {
+                                                    todos.update(|list| {
+                                                        list.retain(|t| t.id != id);
+                                                    });
+                                                }
+                                                Err(e) => {
+                                                    error.set(Some(e));
+                                                }
+                                            }
+                                        });
+                                    }}
+                                />
+                            }).collect()}
+                        </div>
+                    }}
+                </div>
+            </div>
+        </main>
+
+        {if show_add_modal.get() {
+            <AddTodoModal
+                on_close={move || show_add_modal.set(false)}
+                on_add={move |title, description| {
+                    spawn_local(async move {
+                        match create_todo(token, title, description).await {
+                            Ok(new_todo) => {
+                                todos.update(|list| {
+                                    list.insert(0, new_todo);
+                                });
+                                show_add_modal.set(false);
+                            }
+                            Err(e) => {
+                                error.set(Some(e));
+                            }
+                        }
+                    });
+                }}
+            />
+        }}
+    </div>
+}
+
+component StatCard(label: String, value: usize, variant: Option<String>) {
+    <div class={format!("stat-card {}", variant.unwrap_or_default())}>
+        <div class="stat-value">{value}</div>
+        <div class="stat-label">{label}</div>
+    </div>
+}
+
+component TodoItem(
+    todo: Todo,
+    on_toggle: fn(String),
+    on_delete: fn(String)
+) {
+    <div class={format!("todo-item {}", if todo.completed { "completed" } else { "" })}>
+        <input
+            type="checkbox"
+            checked={todo.completed}
+            onchange={move || on_toggle(todo.id.clone())}
+        />
+        <div class="todo-content">
+            <h3>{todo.title}</h3>
+            {if let Some(desc) = &todo.description {
+                <p class="todo-description">{desc}</p>
+            }}
+        </div>
+        <div class="todo-actions">
+            {if todo.completed {
+                <Badge variant={BadgeVariant::Success}>Done</Badge>
+            }}
+            <Button
+                variant={ButtonVariant::Danger}
+                size="sm"
+                onclick={move || on_delete(todo.id.clone())}
+            >
+                Delete
+            </Button>
+        </div>
+    </div>
+}
+
+component AddTodoModal(
+    on_close: fn(),
+    on_add: fn(String, Option<String>)
+) {
+    let title = Signal::new(String::new());
+    let description = Signal::new(String::new());
+
+    let handle_submit = move || {
+        if !title.get().is_empty() {
+            on_add(
+                title.get(),
+                if description.get().is_empty() { None } else { Some(description.get()) }
+            );
+        }
+    };
+
+    <Modal title="Add New Task" on_close={on_close}>
+        <form class="add-todo-form" onsubmit={move |e| {
+            e.prevent_default();
+            handle_submit();
+        }}>
+            <Input
+                label="Task Title"
+                type="text"
+                placeholder="What needs to be done?"
+                value={title.get()}
+                oninput={move |e| title.set(e.target.value)}
+                required={true}
+                autofocus={true}
+            />
+
+            <div class="form-group">
+                <label>Description (optional)</label>
+                <textarea
+                    placeholder="Add more details..."
+                    value={description.get()}
+                    oninput={move |e| description.set(e.target.value)}
+                    rows="3"
+                />
+            </div>
+
+            <div class="modal-actions">
+                <Button
+                    variant={ButtonVariant::Ghost}
+                    onclick={on_close}
+                >
+                    Cancel
+                </Button>
+                <Button
+                    variant={ButtonVariant::Primary}
+                    type="submit"
+                    disabled={title.get().is_empty()}
+                >
+                    Add Task
+                </Button>
+            </div>
+        </form>
+    </Modal>
+}
+
+component ProtectedRoute(component: Component) {
+    let auth = auth_state.get();
+
+    {if auth.token.is_some() {
+        <component />
+    } else {
+        <Redirect to="/login" />
+    }}
+}
+
+// ============================================================================
+// Main App
+// ============================================================================
+
+component App() {
+    // Initialize auth on app start
+    init_auth();
+
+    <Router>
+        <Route path="/login" component={LoginPage} />
+        <Route path="/register" component={RegisterPage} />
+        <Route path="/dashboard" component={ProtectedRoute(Dashboard)} />
+        <Route path="/" component={|| {
+            let auth = auth_state.get();
+            if auth.token.is_some() {
+                <Redirect to="/dashboard" />
+            } else {
+                <Redirect to="/login" />
+            }
+        }} />
+    </Router>
+}

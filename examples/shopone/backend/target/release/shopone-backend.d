@@ -1,0 +1,1 @@
+/Users/jordanhill/Documents/JRez-Soft-Projects/ravensone/examples/shopone/backend/target/release/shopone-backend: /Users/jordanhill/Documents/JRez-Soft-Projects/ravensone/examples/shopone/backend/schema.sql /Users/jordanhill/Documents/JRez-Soft-Projects/ravensone/examples/shopone/backend/src/main.rs

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RavensOne - Modern Reactive Web Framework</title>
+    <meta name="description" content="A modern, reactive web framework with built-in signals, WebAssembly compilation, and a complete package ecosystem.">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <span class="logo">🦅 RavensOne</span>
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="pages/getting-started.html">Getting Started</a>
+                <a href="pages/docs.html">Documentation</a>
+                <a href="pages/packages.html">Packages</a>
+                <a href="pages/examples.html">Examples</a>
+                <a href="https://github.com/ravensone/ravensone" target="_blank">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    Build reactive web apps<br/>
+                    <span class="gradient-text">with confidence</span>
+                </h1>
+                <p class="hero-subtitle">
+                    A modern web framework that compiles to WebAssembly.<br/>
+                    Built-in reactivity, type safety, and a growing package ecosystem.
+                </p>
+                <div class="hero-buttons">
+                    <a href="pages/getting-started.html" class="btn btn-primary">Get Started</a>
+                    <a href="pages/docs.html" class="btn btn-secondary">Documentation</a>
+                </div>
+                <div class="hero-code">
+                    <pre><code class="language-rust">component Counter() {
+    let count = Signal::new(0);
+
+    &lt;div class="counter"&gt;
+        &lt;h2&gt;Count: {count.get()}&lt;/h2&gt;
+        &lt;button onclick={move || count.update(|n| n + 1)}&gt;
+            Increment
+        &lt;/button&gt;
+    &lt;/div&gt;
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Why RavensOne?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Fine-Grained Reactivity</h3>
+                    <p>Built-in Signals for efficient, automatic UI updates. Only re-render what actually changed.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Type Safe</h3>
+                    <p>Strong static typing catches errors at compile time, not in production.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>WebAssembly Native</h3>
+                    <p>Compiles directly to WASM for near-native performance in the browser.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📦</div>
+                    <h3>Package Manager</h3>
+                    <p>Built-in package manager with dependency resolution, caching, and a central registry.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔥</div>
+                    <h3>Hot Module Replacement</h3>
+                    <p>See your changes instantly without losing application state.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛠️</div>
+                    <h3>Developer Tools</h3>
+                    <p>VSCode extension, LSP support, and comprehensive error messages.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="code-examples">
+        <div class="container">
+            <h2 class="section-title">See It In Action</h2>
+            <div class="examples-grid">
+                <div class="example">
+                    <h3>Reactive State</h3>
+                    <pre><code class="language-rust">let name = Signal::new("World");
+let greeting = Computed::new(move || {
+    format!("Hello, {}!", name.get())
+});
+
+// Automatically updates when name changes
+&lt;h1&gt;{greeting.get()}&lt;/h1&gt;</code></pre>
+                </div>
+                <div class="example">
+                    <h3>Effects & Side Effects</h3>
+                    <pre><code class="language-rust">let count = Signal::new(0);
+
+// Run code when dependencies change
+create_effect(move || {
+    console::log(&format!("Count: {}", count.get()));
+});
+
+&lt;button onclick={move || count.update(|n| n + 1)}&gt;
+    Click me
+&lt;/button&gt;</code></pre>
+                </div>
+                <div class="example">
+                    <h3>Component Composition</h3>
+                    <pre><code class="language-rust">component TodoList(items: Vec&lt;String&gt;) {
+    &lt;ul&gt;
+        {items.iter().map(|item| {
+            &lt;TodoItem text={item.clone()} /&gt;
+        }).collect()}
+    &lt;/ul&gt;
+}
+
+component TodoItem(text: String) {
+    &lt;li&gt;{text}&lt;/li&gt;
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-value">85+</div>
+                    <div class="stat-label">Passing Tests</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">6,800+</div>
+                    <div class="stat-label">Lines of Code</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">65K</div>
+                    <div class="stat-label">Compilations/sec</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">2.9x</div>
+                    <div class="stat-label">Code Compression</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="ecosystem">
+        <div class="container">
+            <h2 class="section-title">Growing Ecosystem</h2>
+            <div class="ecosystem-grid">
+                <div class="ecosystem-item">
+                    <h3>🎨 raven-ui</h3>
+                    <p>Production-ready UI components with accessibility built-in</p>
+                    <code>raven pkg add raven-ui</code>
+                </div>
+                <div class="ecosystem-item">
+                    <h3>🌐 raven-router</h3>
+                    <p>Client-side routing with nested routes and guards</p>
+                    <code>raven pkg add raven-router</code>
+                </div>
+                <div class="ecosystem-item">
+                    <h3>📡 raven-http</h3>
+                    <p>HTTP client with async/await support</p>
+                    <code>raven pkg add raven-http</code>
+                </div>
+                <div class="ecosystem-item">
+                    <h3>💾 raven-store</h3>
+                    <p>Advanced state management for complex applications</p>
+                    <code>raven pkg add raven-store</code>
+                </div>
+                <div class="ecosystem-item">
+                    <h3>📝 raven-forms</h3>
+                    <p>Form handling with validation and error management</p>
+                    <code>raven pkg add raven-forms</code>
+                </div>
+                <div class="ecosystem-item">
+                    <h3>🌍 raven-i18n</h3>
+                    <p>Internationalization with reactive locale switching</p>
+                    <code>raven pkg add raven-i18n</code>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta">
+        <div class="container">
+            <h2>Ready to build something amazing?</h2>
+            <p>Get started with RavensOne in less than a minute</p>
+            <div class="cta-buttons">
+                <a href="pages/getting-started.html" class="btn btn-primary btn-large">Get Started</a>
+                <a href="pages/docs.html" class="btn btn-secondary btn-large">Read the Docs</a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Documentation</h4>
+                    <ul>
+                        <li><a href="pages/getting-started.html">Getting Started</a></li>
+                        <li><a href="pages/docs.html">Full Documentation</a></li>
+                        <li><a href="pages/packages.html">Package Manager</a></li>
+                        <li><a href="pages/examples.html">Examples</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Community</h4>
+                    <ul>
+                        <li><a href="https://github.com/ravensone/ravensone">GitHub</a></li>
+                        <li><a href="https://discord.gg/ravensone">Discord</a></li>
+                        <li><a href="https://twitter.com/ravensone">Twitter</a></li>
+                        <li><a href="https://ravensone-registry.fly.dev">Package Registry</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="pages/roadmap.html">Roadmap</a></li>
+                        <li><a href="pages/benchmarks.html">Benchmarks</a></li>
+                        <li><a href="pages/contributing.html">Contributing</a></li>
+                        <li><a href="pages/changelog.html">Changelog</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 RavensOne. Built with passion for the web.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/rust.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

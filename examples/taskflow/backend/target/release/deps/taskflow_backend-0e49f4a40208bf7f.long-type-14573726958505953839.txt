@@ -1,0 +1,2 @@
+fn(State<Arc<AppState>>, AuthUser, axum::extract::Path<Uuid>) -> impl std::future::Future<Output = Result<axum::http::StatusCode, (axum::http::StatusCode, std::string::String)>> {delete_todo}
+fn(State<Arc<AppState>>, AuthUser, axum::extract::Path<Uuid>) -> impl std::future::Future<Output = Result<axum::http::StatusCode, (axum::http::StatusCode, std::string::String)>> {delete_todo}: Handler<_, _>

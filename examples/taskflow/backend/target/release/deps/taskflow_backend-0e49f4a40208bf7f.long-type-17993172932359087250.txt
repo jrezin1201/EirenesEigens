@@ -1,0 +1,2 @@
+fn(State<Arc<AppState>>, AuthUser, axum::extract::Path<Uuid>, axum::Json<UpdateTodoRequest>) -> impl std::future::Future<Output = Result<axum::Json<Todo>, (axum::http::StatusCode, std::string::String)>> {update_todo}
+fn(State<Arc<AppState>>, AuthUser, axum::extract::Path<Uuid>, axum::Json<UpdateTodoRequest>) -> impl std::future::Future<Output = Result<axum::Json<Todo>, (axum::http::StatusCode, std::string::String)>> {update_todo}: Handler<_, _>

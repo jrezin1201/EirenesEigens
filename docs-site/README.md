@@ -1,75 +1,39 @@
 # RavensOne Documentation Site
 
-Official documentation website for RavensOne - the AI-first full-stack web framework.
+Modern, responsive documentation site for the RavensOne web framework.
 
-## 🚀 Quick Start
+## 🌐 Live Site
 
-### Build the site
-
-```bash
-node build.js
-```
-
-This will convert the markdown documentation in `../docs/` to HTML and output to `public/`.
-
-### Deploy to Vercel
-
-```bash
-# Install Vercel CLI if not already installed
-npm install -g vercel
-
-# Deploy
-vercel --prod
-```
-
-Or connect your GitHub repository to Vercel for automatic deployments.
+**https://ravensone-docs.fly.dev**
 
 ## 📁 Structure
 
 ```
 docs-site/
-├── public/              # Static HTML files (generated)
-│   ├── index.html       # Homepage
-│   └── getting-started.html  # Getting Started guide
-├── build.js             # Build script (converts MD → HTML)
-├── vercel.json          # Vercel deployment config
-└── README.md            # This file
+├── index.html              # Landing page
+├── css/
+│   ├── style.css          # Main stylesheet
+│   └── docs.css           # Documentation-specific styles
+├── js/
+│   └── main.js            # Interactive features
+├── pages/
+│   ├── getting-started.html  # Getting Started guide
+│   ├── docs.html            # Full documentation
+│   └── packages.html        # Package manager docs
+├── Dockerfile             # Container configuration
+├── nginx.conf             # Web server config
+└── fly.toml               # Fly.io deployment config
 ```
 
-## 🔧 Development
+## 🚀 Deployment
 
-To preview the site locally:
-
+Deploy to Fly.io:
 ```bash
-# Simple Python server
-python3 -m http.server 8000 --directory public
-
-# Or use Node.js
-npx serve public
+flyctl deploy --app ravensone-docs
 ```
 
-Then visit `http://localhost:8000`
+## 💰 Cost
 
-## 📝 Adding New Pages
-
-1. Create markdown file in `../docs/`
-2. Update `build.js` to convert the new markdown file
-3. Run `node build.js`
-4. Deploy to Vercel
-
-## 🎨 Styling
-
-All styles are inline in the HTML template in `build.js`. To update the theme:
-
-1. Edit the `template()` function in `build.js`
-2. Rebuild with `node build.js`
-
-## 🌐 Live Site
-
-Once deployed, the site will be available at:
-- Production: https://ravensone.vercel.app (or your custom domain)
-- Preview: Vercel will generate preview URLs for each deployment
-
-## 📄 License
-
-MIT License - see LICENSE file in the main repository
+- **$0/month** (Free tier)
+- Auto-stop/start machines
+- 20MB image size

@@ -74,35 +74,6 @@ enum Commands {
         #[arg(short, long)]
         release: bool,
     },
-    /// Login to the package registry
-    Login {
-        #[arg(long, default_value = "http://localhost:4000")]
-        registry: String,
-    },
-    /// Register a new account with the package registry
-    Register {
-        #[arg(long, default_value = "http://localhost:4000")]
-        registry: String,
-    },
-    /// Publish package to registry
-    Publish {
-        #[arg(long, default_value = "http://localhost:4000")]
-        registry: String,
-    },
-    /// Search for packages in registry
-    Search {
-        query: String,
-        #[arg(long, default_value = "http://localhost:4000")]
-        registry: String,
-    },
-    /// Install a package from registry
-    Install {
-        package: String,
-        #[arg(long)]
-        version: Option<String>,
-        #[arg(long, default_value = "http://localhost:4000")]
-        registry: String,
-    },
     /// Package manager commands
     Pkg {
         #[command(subcommand)]
@@ -143,6 +114,22 @@ enum PkgCommands {
     Search {
         query: String,
     },
+    /// Display dependency tree
+    Tree,
+    /// Check for outdated dependencies
+    Outdated,
+    /// List all installed packages
+    List,
+    /// Show detailed information about a package
+    Info {
+        name: String,
+    },
+    /// Show build cache statistics
+    Cache,
+    /// Clear build cache
+    Clean,
+    /// Audit dependencies for security vulnerabilities
+    Audit,
 }
 
 fn main() {
@@ -270,41 +257,6 @@ fn main() {
                 process::exit(1);
             }
         }
-        Commands::Login { registry } => {
-            println!("🔐 Logging in to package registry...");
-            if let Err(e) = login_to_registry(&registry) {
-                eprintln!("❌ Login failed: {}", e);
-                process::exit(1);
-            }
-        }
-        Commands::Register { registry } => {
-            println!("📝 Registering with package registry...");
-            if let Err(e) = register_with_registry(&registry) {
-                eprintln!("❌ Registration failed: {}", e);
-                process::exit(1);
-            }
-        }
-        Commands::Publish { registry } => {
-            println!("📤 Publishing package to registry...");
-            if let Err(e) = publish_package(&registry) {
-                eprintln!("❌ Publish failed: {}", e);
-                process::exit(1);
-            }
-        }
-        Commands::Search { query, registry } => {
-            println!("🔍 Searching for '{}'...", query);
-            if let Err(e) = search_packages(&query, &registry) {
-                eprintln!("❌ Search failed: {}", e);
-                process::exit(1);
-            }
-        }
-        Commands::Install { package, version, registry } => {
-            println!("📥 Installing package '{}'...", package);
-            if let Err(e) = install_package(&package, version.as_deref(), &registry) {
-                eprintln!("❌ Installation failed: {}", e);
-                process::exit(1);
-            }
-        }
         Commands::Pkg { command } => {
             use ravensone_compiler::package_manager::PackageManager;
 
@@ -374,6 +326,55 @@ fn main() {
                     let pkg_mgr = PackageManager::new(&PathBuf::from("."));
                     if let Err(e) = pkg_mgr.search(&query) {
                         eprintln!("❌ Search failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::Tree => {
+                    let pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    if let Err(e) = pkg_mgr.tree() {
+                        eprintln!("❌ Tree failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::Outdated => {
+                    let pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    if let Err(e) = pkg_mgr.outdated() {
+                        eprintln!("❌ Outdated check failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::List => {
+                    let pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    if let Err(e) = pkg_mgr.list() {
+                        eprintln!("❌ List failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::Info { name } => {
+                    let pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    if let Err(e) = pkg_mgr.info(&name) {
+                        eprintln!("❌ Info failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::Cache => {
+                    let pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    if let Err(e) = pkg_mgr.cache_stats() {
+                        eprintln!("❌ Cache stats failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::Clean => {
+                    let pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    if let Err(e) = pkg_mgr.clean_cache() {
+                        eprintln!("❌ Cache clean failed: {}", e);
+                        process::exit(1);
+                    }
+                }
+                PkgCommands::Audit => {
+                    let pkg_mgr = PackageManager::new(&PathBuf::from("."));
+                    if let Err(e) = pkg_mgr.audit() {
+                        eprintln!("❌ Audit failed: {}", e);
                         process::exit(1);
                     }
                 }
@@ -766,302 +767,6 @@ fn build_project(release: bool) -> std::io::Result<()> {
     }
 
     println!("\n✨ Build artifacts in dist/");
-
-    Ok(())
-}
-
-// Package Registry Functions
-
-fn login_to_registry(registry_url: &str) -> Result<(), Box<dyn std::error::Error>> {
-    use ravensone_compiler::registry_client::{RegistryClient, prompt_login};
-
-    let (username, password) = prompt_login()?;
-
-    let client = RegistryClient::new(Some(registry_url));
-    let response = client.login(&username, &password)?;
-
-    client.save_token(&response.token)?;
-
-    println!("\n✅ Login successful!");
-    println!("   User: {}", response.username);
-    println!("   ID: {}", response.user_id);
-
-    Ok(())
-}
-
-fn register_with_registry(registry_url: &str) -> Result<(), Box<dyn std::error::Error>> {
-    use ravensone_compiler::registry_client::{RegistryClient, prompt_register};
-
-    let (username, email, password) = prompt_register()?;
-
-    println!("\n📡 Registering with registry...");
-
-    let client = RegistryClient::new(Some(registry_url));
-    let response = client.register(&username, &email, &password)?;
-
-    client.save_token(&response.token)?;
-
-    println!("\n✅ Registration successful!");
-    println!("   User: {}", response.username);
-    println!("   ID: {}", response.user_id);
-
-    Ok(())
-}
-
-fn publish_package(registry_url: &str) -> Result<(), Box<dyn std::error::Error>> {
-    use ravensone_compiler::registry_client::{RegistryClient, PublishRequest};
-    use std::collections::HashMap;
-    use flate2::write::GzEncoder;
-    use flate2::Compression;
-
-    // Read package metadata from raven.toml
-    let toml_path = PathBuf::from("raven.toml");
-    if !toml_path.exists() {
-        return Err("raven.toml not found. Run 'raven pkg init' to create one.".into());
-    }
-
-    let toml_content = fs::read_to_string(&toml_path)?;
-    let manifest: toml::Value = toml::from_str(&toml_content)?;
-
-    // Extract package info
-    let package = manifest.get("package")
-        .ok_or("Missing [package] section in raven.toml")?;
-
-    let name = package.get("name")
-        .and_then(|v| v.as_str())
-        .ok_or("Missing 'name' in package")?
-        .to_string();
-
-    let version = package.get("version")
-        .and_then(|v| v.as_str())
-        .ok_or("Missing 'version' in package")?
-        .to_string();
-
-    let description = package.get("description")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-
-    let license = package.get("license")
-        .and_then(|v| v.as_str())
-        .unwrap_or("MIT")
-        .to_string();
-
-    let repository = package.get("repository")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-
-    let homepage = package.get("homepage")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-
-    let authors: Vec<String> = package.get("authors")
-        .and_then(|v| v.as_array())
-        .map(|arr| arr.iter()
-            .filter_map(|v| v.as_str())
-            .map(|s| s.to_string())
-            .collect())
-        .unwrap_or_else(|| vec!["Unknown <unknown@example.com>".to_string()]);
-
-    let keywords: Vec<String> = package.get("keywords")
-        .and_then(|v| v.as_array())
-        .map(|arr| arr.iter()
-            .filter_map(|v| v.as_str())
-            .map(|s| s.to_string())
-            .collect())
-        .unwrap_or_default();
-
-    // Extract dependencies
-    let dependencies: HashMap<String, String> = manifest.get("dependencies")
-        .and_then(|v| v.as_table())
-        .map(|table| table.iter()
-            .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
-            .collect())
-        .unwrap_or_default();
-
-    let dev_dependencies: HashMap<String, String> = manifest.get("dev-dependencies")
-        .and_then(|v| v.as_table())
-        .map(|table| table.iter()
-            .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
-            .collect())
-        .unwrap_or_default();
-
-    println!("📦 Package: {} v{}", name, version);
-    println!("   Authors: {}", authors.join(", "));
-    if let Some(ref desc) = description {
-        println!("   Description: {}", desc);
-    }
-
-    // Build the project first
-    println!("\n🔨 Building project...");
-    build_project(true)?;
-
-    // Create package tarball
-    println!("\n📦 Creating package archive...");
-    let archive_path = format!("{}-{}.tar.gz", name, version);
-
-    let tar_gz = fs::File::create(&archive_path)?;
-    let enc = GzEncoder::new(tar_gz, Compression::default());
-    let mut tar = tar::Builder::new(enc);
-
-    // Add files to tarball
-    if PathBuf::from("src").exists() {
-        tar.append_dir_all("src", "src")?;
-    }
-    if PathBuf::from("dist").exists() {
-        tar.append_dir_all("dist", "dist")?;
-    }
-    tar.append_path("raven.toml")?;
-
-    tar.finish()?;
-
-    println!("✅ Created {}", archive_path);
-
-    // Upload to registry
-    println!("\n📤 Publishing to registry...");
-
-    let client = RegistryClient::new(Some(registry_url));
-
-    let request = PublishRequest {
-        name: name.clone(),
-        version: version.clone(),
-        description,
-        authors,
-        license,
-        repository,
-        homepage,
-        keywords,
-        dependencies,
-        dev_dependencies,
-    };
-
-    let response = client.publish(request, &PathBuf::from(&archive_path))?;
-
-    // Clean up archive
-    let _ = fs::remove_file(&archive_path);
-
-    println!("\n✅ Package published successfully!");
-    println!("   Package ID: {}", response.package_id);
-    println!("   Download URL: {}", response.download_url);
-    println!("   Checksum: {}", response.checksum);
-    println!("   Published at: {}", response.published_at);
-
-    Ok(())
-}
-
-fn search_packages(query: &str, registry_url: &str) -> Result<(), Box<dyn std::error::Error>> {
-    use ravensone_compiler::registry_client::RegistryClient;
-
-    let client = RegistryClient::new(Some(registry_url));
-    let response = client.search(query, 20, 0)?;
-
-    if response.results.is_empty() {
-        println!("No packages found matching '{}'", query);
-    } else {
-        println!("\n📦 Found {} package(s):\n", response.total);
-
-        for pkg in &response.results {
-            println!("  {} v{}", pkg.name, pkg.version);
-            if let Some(ref desc) = pkg.description {
-                println!("    {}", desc);
-            }
-            if !pkg.keywords.is_empty() {
-                println!("    Keywords: {}", pkg.keywords.join(", "));
-            }
-            println!("    Downloads: {} | Score: {:.2}", pkg.downloads, pkg.score);
-            println!();
-        }
-    }
-
-    Ok(())
-}
-
-fn install_package(package: &str, version: Option<&str>, registry_url: &str) -> Result<(), Box<dyn std::error::Error>> {
-    use ravensone_compiler::registry_client::RegistryClient;
-    use flate2::read::GzDecoder;
-
-    let version_str = version.unwrap_or("latest");
-
-    // First, get package info
-    let info_url = if version.is_some() {
-        format!("{}/api/packages/{}/{}", registry_url, package, version_str)
-    } else {
-        format!("{}/api/packages/{}", registry_url, package)
-    };
-
-    println!("📡 Fetching package info...");
-
-    let output = process::Command::new("curl")
-        .arg("-s")
-        .arg(&info_url)
-        .output()?;
-
-    if !output.status.success() {
-        return Err(Box::new(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "Package not found"
-        )));
-    }
-
-    let response = String::from_utf8_lossy(&output.stdout);
-    let pkg_info: serde_json::Value = serde_json::from_str(&response)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-
-    let pkg_version = if version.is_some() {
-        version_str.to_string()
-    } else {
-        pkg_info["latestVersion"]
-            .as_str()
-            .unwrap_or("0.1.0")
-            .to_string()
-    };
-
-    println!("📥 Installing {} v{}...", package, pkg_version);
-
-    // Download package files
-    let download_url = format!("{}/api/packages/{}/{}/download", registry_url, package, pkg_version);
-
-    let dl_output = process::Command::new("curl")
-        .arg("-s")
-        .arg(&download_url)
-        .output()?;
-
-    if !dl_output.status.success() {
-        return Err(Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Download failed"
-        )));
-    }
-
-    // Create raven_modules directory
-    let modules_dir = PathBuf::from("raven_modules").join(package);
-    fs::create_dir_all(&modules_dir)?;
-
-    // Parse file list and download each file
-    let files_response = String::from_utf8_lossy(&dl_output.stdout);
-    if let Ok(files_info) = serde_json::from_str::<serde_json::Value>(&files_response) {
-        if let Some(files) = files_info["files"].as_array() {
-            for file in files {
-                if let Some(file_url) = file["url"].as_str() {
-                    if let Some(file_name) = file["name"].as_str() {
-                        let full_url = format!("{}{}", registry_url, file_url);
-                        let file_output = process::Command::new("curl")
-                            .arg("-s")
-                            .arg(&full_url)
-                            .output()?;
-
-                        if file_output.status.success() {
-                            let file_path = modules_dir.join(file_name);
-                            fs::write(&file_path, &file_output.stdout)?;
-                            println!("  ✅ Downloaded {}", file_name);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    println!("\n✅ Package {} v{} installed successfully!", package, pkg_version);
-    println!("📂 Location: raven_modules/{}", package);
 
     Ok(())
 }

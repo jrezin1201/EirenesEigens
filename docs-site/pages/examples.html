@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Examples & Cookbook - RavensOne</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/docs.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <a href="../index.html" style="text-decoration: none;">
+                    <span class="logo">🦅 RavensOne</span>
+                </a>
+            </div>
+            <div class="nav-links">
+                <a href="../index.html#features">Features</a>
+                <a href="getting-started.html">Getting Started</a>
+                <a href="docs.html">Documentation</a>
+                <a href="packages.html">Packages</a>
+                <a href="examples.html" class="active">Examples</a>
+                <a href="https://github.com/ravensone/ravensone" target="_blank">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="docs-layout">
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <h3>Basics</h3>
+                    <ul>
+                        <li><a href="#counter">Counter</a></li>
+                        <li><a href="#todo-list">Todo List</a></li>
+                        <li><a href="#form-validation">Form Validation</a></li>
+                    </ul>
+                </div>
+                <div class="nav-section">
+                    <h3>Intermediate</h3>
+                    <ul>
+                        <li><a href="#api-data">Fetching Data</a></li>
+                        <li><a href="#router-example">Routing</a></li>
+                        <li><a href="#global-state">Global State</a></li>
+                    </ul>
+                </div>
+                <div class="nav-section">
+                    <h3>Advanced</h3>
+                    <ul>
+                        <li><a href="#auth">Authentication</a></li>
+                        <li><a href="#realtime">Real-time Chat</a></li>
+                        <li><a href="#i18n-example">Internationalization</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="docs-content">
+            <article>
+                <h1>Examples & Cookbook</h1>
+                <p class="lead">Practical examples to help you build real-world applications with RavensOne.</p>
+
+                <!-- BASICS -->
+                <section id="counter">
+                    <h2>Counter App</h2>
+                    <p>The classic counter demonstrates basic reactivity and event handling.</p>
+                    <pre><code class="language-rust">component Counter() {
+    let count = Signal::new(0);
+
+    <div class="counter">
+        <h2>Count: {count.get()}</h2>
+        <button onclick={move || count.update(|n| n + 1)}>
+            Increment
+        </button>
+        <button onclick={move || count.update(|n| n - 1)}>
+            Decrement
+        </button>
+        <button onclick={move || count.set(0)}>
+            Reset
+        </button>
+    </div>
+}</code></pre>
+                </section>
+
+                <section id="todo-list">
+                    <h2>Todo List</h2>
+                    <p>A complete todo app with add, toggle, and delete functionality.</p>
+                    <pre><code class="language-rust">use raven::prelude::*;
+
+struct Todo {
+    id: u32,
+    text: String,
+    completed: bool,
+}
+
+component TodoApp() {
+    let todos = Signal::new(Vec::new());
+    let input = Signal::new(String::new());
+    let next_id = Signal::new(1u32);
+
+    let add_todo = move || {
+        if !input.get().is_empty() {
+            let new_todo = Todo {
+                id: next_id.get(),
+                text: input.get().clone(),
+                completed: false,
+            };
+            todos.update(|list| list.push(new_todo));
+            next_id.update(|id| id + 1);
+            input.set(String::new());
+        }
+    };
+
+    let toggle_todo = move |id: u32| {
+        todos.update(|list| {
+            if let Some(todo) = list.iter_mut().find(|t| t.id == id) {
+                todo.completed = !todo.completed;
+            }
+        });
+    };
+
+    let delete_todo = move |id: u32| {
+        todos.update(|list| list.retain(|t| t.id != id));
+    };
+
+    <div class="todo-app">
+        <h1>My Tasks</h1>
+
+        <div class="input-group">
+            <input
+                type="text"
+                placeholder="What needs to be done?"
+                value={input.get()}
+                oninput={move |e| input.set(e.target.value)}
+                onkeypress={move |e| if e.key == "Enter" { add_todo() }}
+            />
+            <button onclick={add_todo}>Add</button>
+        </div>
+
+        <ul class="todo-list">
+            {todos.get().iter().map(|todo| {
+                <li class={if todo.completed { "completed" } else { "" }}>
+                    <input
+                        type="checkbox"
+                        checked={todo.completed}
+                        onchange={move || toggle_todo(todo.id)}
+                    />
+                    <span>{todo.text}</span>
+                    <button onclick={move || delete_todo(todo.id)}>
+                        Delete
+                    </button>
+                </li>
+            }).collect()}
+        </ul>
+
+        <div class="stats">
+            <span>{todos.get().iter().filter(|t| !t.completed).count()} remaining</span>
+        </div>
+    </div>
+}</code></pre>
+                </section>
+
+                <section id="form-validation">
+                    <h2>Form Validation</h2>
+                    <p>Real-time form validation with error messages using raven-forms.</p>
+                    <pre><code class="language-rust">use raven_forms::{Form, Validator};
+
+component SignupForm() {
+    let email = Signal::new(String::new());
+    let password = Signal::new(String::new());
+    let confirm_password = Signal::new(String::new());
+    let errors = Signal::new(HashMap::new());
+
+    let validate_email = Computed::new(move || {
+        let email_val = email.get();
+        if email_val.is_empty() {
+            Some("Email is required")
+        } else if !email_val.contains('@') {
+            Some("Invalid email format")
+        } else {
+            None
+        }
+    });
+
+    let validate_password = Computed::new(move || {
+        let pwd = password.get();
+        if pwd.len() < 8 {
+            Some("Password must be at least 8 characters")
+        } else {
+            None
+        }
+    });
+
+    let validate_confirm = Computed::new(move || {
+        if password.get() != confirm_password.get() {
+            Some("Passwords do not match")
+        } else {
+            None
+        }
+    });
+
+    let is_valid = Computed::new(move || {
+        validate_email.get().is_none() &&
+        validate_password.get().is_none() &&
+        validate_confirm.get().is_none()
+    });
+
+    let submit = move || {
+        if is_valid.get() {
+            // Submit form
+            console::log("Form submitted!");
+        }
+    };
+
+    <form class="signup-form" onsubmit={move |e| { e.prevent_default(); submit() }}>
+        <h2>Create Account</h2>
+
+        <div class="form-group">
+            <label>Email</label>
+            <input
+                type="email"
+                value={email.get()}
+                oninput={move |e| email.set(e.target.value)}
+                class={if validate_email.get().is_some() { "error" } else { "" }}
+            />
+            {if let Some(err) = validate_email.get() {
+                <span class="error-msg">{err}</span>
+            }}
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            <input
+                type="password"
+                value={password.get()}
+                oninput={move |e| password.set(e.target.value)}
+                class={if validate_password.get().is_some() { "error" } else { "" }}
+            />
+            {if let Some(err) = validate_password.get() {
+                <span class="error-msg">{err}</span>
+            }}
+        </div>
+
+        <div class="form-group">
+            <label>Confirm Password</label>
+            <input
+                type="password"
+                value={confirm_password.get()}
+                oninput={move |e| confirm_password.set(e.target.value)}
+                class={if validate_confirm.get().is_some() { "error" } else { "" }}
+            />
+            {if let Some(err) = validate_confirm.get() {
+                <span class="error-msg">{err}</span>
+            }}
+        </div>
+
+        <button type="submit" disabled={!is_valid.get()}>
+            Sign Up
+        </button>
+    </form>
+}</code></pre>
+                </section>
+
+                <!-- INTERMEDIATE -->
+                <section id="api-data">
+                    <h2>Fetching API Data</h2>
+                    <p>Load and display data from an API with loading states using raven-http.</p>
+                    <pre><code class="language-rust">use raven_http::Http;
+
+#[derive(Serialize, Deserialize)]
+struct User {
+    id: u32,
+    name: String,
+    email: String,
+}
+
+component UserList() {
+    let users = Signal::new(Vec::new());
+    let loading = Signal::new(true);
+    let error = Signal::new(None);
+
+    // Fetch users on mount
+    Effect::new(move || {
+        spawn_local(async move {
+            loading.set(true);
+
+            match Http::get("/api/users").await {
+                Ok(data) => {
+                    users.set(data);
+                    loading.set(false);
+                }
+                Err(e) => {
+                    error.set(Some(e.to_string()));
+                    loading.set(false);
+                }
+            }
+        });
+    });
+
+    <div class="user-list">
+        <h1>Users</h1>
+
+        {if loading.get() {
+            <div class="spinner">Loading...</div>
+        } else if let Some(err) = error.get() {
+            <div class="error">Error: {err}</div>
+        } else {
+            <ul>
+                {users.get().iter().map(|user| {
+                    <li key={user.id}>
+                        <strong>{user.name}</strong>
+                        <span>{user.email}</span>
+                    </li>
+                }).collect()}
+            </ul>
+        }}
+    </div>
+}</code></pre>
+                </section>
+
+                <section id="router-example">
+                    <h2>Multi-Page Routing</h2>
+                    <p>Build a multi-page app with client-side routing using raven-router.</p>
+                    <pre><code class="language-rust">use raven_router::{Router, Route, Link, useParams};
+
+component App() {
+    <Router>
+        <nav>
+            <Link to="/">Home</Link>
+            <Link to="/about">About</Link>
+            <Link to="/users">Users</Link>
+        </nav>
+
+        <Route path="/" component={Home} />
+        <Route path="/about" component={About} />
+        <Route path="/users" component={UserList} />
+        <Route path="/users/:id" component={UserDetail} />
+    </Router>
+}
+
+component Home() {
+    <div class="page">
+        <h1>Welcome Home</h1>
+        <p>This is the home page.</p>
+    </div>
+}
+
+component About() {
+    <div class="page">
+        <h1>About Us</h1>
+        <p>Learn more about our application.</p>
+    </div>
+}
+
+component UserDetail() {
+    let params = useParams();
+    let user_id = params.get("id").unwrap();
+
+    <div class="page">
+        <h1>User Details</h1>
+        <p>Showing details for user {user_id}</p>
+    </div>
+}</code></pre>
+                </section>
+
+                <section id="global-state">
+                    <h2>Global State Management</h2>
+                    <p>Share state across components using raven-store.</p>
+                    <pre><code class="language-rust">use raven_store::{Store, Action};
+
+// Define state
+#[derive(Clone)]
+struct AppState {
+    user: Option<User>,
+    theme: String,
+    notifications: Vec<String>,
+}
+
+// Define actions
+enum AppAction {
+    SetUser(User),
+    Logout,
+    SetTheme(String),
+    AddNotification(String),
+}
+
+// Create store
+let store = Store::new(AppState {
+    user: None,
+    theme: "dark".to_string(),
+    notifications: Vec::new(),
+});
+
+// Reducer
+store.reducer(|state, action| {
+    match action {
+        AppAction::SetUser(user) => {
+            state.user = Some(user);
+        }
+        AppAction::Logout => {
+            state.user = None;
+        }
+        AppAction::SetTheme(theme) => {
+            state.theme = theme;
+        }
+        AppAction::AddNotification(msg) => {
+            state.notifications.push(msg);
+        }
+    }
+});
+
+// Use in components
+component Header() {
+    let state = store.get_state();
+
+    <header class={format!("header theme-{}", state.theme)}>
+        {if let Some(user) = &state.user {
+            <div>Welcome, {user.name}!</div>
+            <button onclick={move || store.dispatch(AppAction::Logout)}>
+                Logout
+            </button>
+        } else {
+            <Link to="/login">Login</Link>
+        }}
+    </header>
+}
+
+component ThemeToggle() {
+    let state = store.get_state();
+
+    let toggle = move || {
+        let new_theme = if state.theme == "dark" { "light" } else { "dark" };
+        store.dispatch(AppAction::SetTheme(new_theme.to_string()));
+    };
+
+    <button onclick={toggle}>
+        Toggle Theme (Current: {state.theme})
+    </button>
+}</code></pre>
+                </section>
+
+                <!-- ADVANCED -->
+                <section id="auth">
+                    <h2>Authentication Flow</h2>
+                    <p>Complete authentication with JWT tokens and protected routes.</p>
+                    <pre><code class="language-rust">use raven_http::Http;
+use raven_router::{Router, Route, Redirect, useNavigate};
+
+struct AuthState {
+    token: Option<String>,
+    user: Option<User>,
+}
+
+component Login() {
+    let email = Signal::new(String::new());
+    let password = Signal::new(String::new());
+    let error = Signal::new(None);
+    let navigate = useNavigate();
+
+    let login = move || {
+        spawn_local(async move {
+            let credentials = json!({
+                "email": email.get(),
+                "password": password.get(),
+            });
+
+            match Http::post("/api/auth/login", credentials).await {
+                Ok(response) => {
+                    // Save token
+                    localStorage::set("token", &response.token);
+
+                    // Redirect to dashboard
+                    navigate("/dashboard");
+                }
+                Err(e) => {
+                    error.set(Some("Invalid credentials"));
+                }
+            }
+        });
+    };
+
+    <div class="login-page">
+        <form onsubmit={move |e| { e.prevent_default(); login() }}>
+            <h1>Login</h1>
+
+            {if let Some(err) = error.get() {
+                <div class="alert error">{err}</div>
+            }}
+
+            <input
+                type="email"
+                placeholder="Email"
+                value={email.get()}
+                oninput={move |e| email.set(e.target.value)}
+            />
+
+            <input
+                type="password"
+                placeholder="Password"
+                value={password.get()}
+                oninput={move |e| password.set(e.target.value)}
+            />
+
+            <button type="submit">Login</button>
+        </form>
+    </div>
+}
+
+// Protected route component
+component ProtectedRoute(props: { component: Component }) {
+    let token = localStorage::get("token");
+
+    {if token.is_some() {
+        <props.component />
+    } else {
+        <Redirect to="/login" />
+    }}
+}
+
+component App() {
+    <Router>
+        <Route path="/login" component={Login} />
+        <Route path="/dashboard" component={ProtectedRoute(Dashboard)} />
+    </Router>
+}</code></pre>
+                </section>
+
+                <section id="realtime">
+                    <h2>Real-time Chat</h2>
+                    <p>Build a real-time chat application with WebSockets.</p>
+                    <pre><code class="language-rust">use web_sys::WebSocket;
+
+struct Message {
+    user: String,
+    text: String,
+    timestamp: u64,
+}
+
+component ChatRoom() {
+    let messages = Signal::new(Vec::new());
+    let input = Signal::new(String::new());
+    let ws = Signal::new(None);
+    let username = Signal::new("User".to_string());
+
+    // Connect to WebSocket
+    Effect::new(move || {
+        let socket = WebSocket::new("wss://chat.example.com").unwrap();
+
+        // On message received
+        let onmessage = Closure::wrap(Box::new(move |e: MessageEvent| {
+            if let Ok(msg) = e.data().dyn_into::<JsString>() {
+                let message: Message = serde_json::from_str(&msg).unwrap();
+                messages.update(|msgs| msgs.push(message));
+            }
+        }) as Box<dyn FnMut(MessageEvent)>);
+
+        socket.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+        onmessage.forget();
+
+        ws.set(Some(socket));
+    });
+
+    let send_message = move || {
+        if let Some(socket) = ws.get() {
+            let msg = Message {
+                user: username.get(),
+                text: input.get(),
+                timestamp: Date::now() as u64,
+            };
+
+            socket.send_with_str(&serde_json::to_string(&msg).unwrap()).unwrap();
+            input.set(String::new());
+        }
+    };
+
+    <div class="chat-room">
+        <div class="chat-header">
+            <h2>Chat Room</h2>
+            <input
+                type="text"
+                placeholder="Your name"
+                value={username.get()}
+                oninput={move |e| username.set(e.target.value)}
+            />
+        </div>
+
+        <div class="messages">
+            {messages.get().iter().map(|msg| {
+                <div class="message">
+                    <strong>{msg.user}:</strong>
+                    <span>{msg.text}</span>
+                    <time>{format_time(msg.timestamp)}</time>
+                </div>
+            }).collect()}
+        </div>
+
+        <div class="input-area">
+            <input
+                type="text"
+                placeholder="Type a message..."
+                value={input.get()}
+                oninput={move |e| input.set(e.target.value)}
+                onkeypress={move |e| if e.key == "Enter" { send_message() }}
+            />
+            <button onclick={send_message}>Send</button>
+        </div>
+    </div>
+}</code></pre>
+                </section>
+
+                <section id="i18n-example">
+                    <h2>Internationalization</h2>
+                    <p>Multi-language support with reactive locale switching using raven-i18n.</p>
+                    <pre><code class="language-rust">use raven_i18n::{I18n, t, useLocale};
+
+// Define translations
+let translations = json!({
+    "en": {
+        "welcome": "Welcome",
+        "greeting": "Hello, {name}!",
+        "items_count": "{count} items"
+    },
+    "es": {
+        "welcome": "Bienvenido",
+        "greeting": "¡Hola, {name}!",
+        "items_count": "{count} elementos"
+    },
+    "fr": {
+        "welcome": "Bienvenue",
+        "greeting": "Bonjour, {name}!",
+        "items_count": "{count} éléments"
+    }
+});
+
+component App() {
+    let i18n = I18n::new(translations, "en");
+
+    <I18nProvider value={i18n}>
+        <LanguageSwitcher />
+        <Content />
+    </I18nProvider>
+}
+
+component LanguageSwitcher() {
+    let locale = useLocale();
+
+    <div class="lang-switcher">
+        <button onclick={move || locale.set("en")}>English</button>
+        <button onclick={move || locale.set("es")}>Español</button>
+        <button onclick={move || locale.set("fr")}>Français</button>
+    </div>
+}
+
+component Content() {
+    let name = Signal::new("World");
+    let count = Signal::new(5);
+
+    <div class="content">
+        <h1>{t("welcome")}</h1>
+
+        <p>{t("greeting", json!({ "name": name.get() }))}</p>
+
+        <p>{t("items_count", json!({ "count": count.get() }))}</p>
+
+        <input
+            type="text"
+            placeholder="Your name"
+            value={name.get()}
+            oninput={move |e| name.set(e.target.value)}
+        />
+    </div>
+}</code></pre>
+                </section>
+
+                <div class="help-box">
+                    <h3>More Examples</h3>
+                    <p>Check out the <a href="https://github.com/ravensone/ravensone/tree/main/examples" target="_blank">examples directory</a> on GitHub for more complete applications and patterns.</p>
+                </div>
+
+                <div class="next-steps-grid">
+                    <div class="next-step-card">
+                        <h3>Documentation</h3>
+                        <p>Explore the complete API reference</p>
+                        <a href="docs.html" class="btn btn-secondary">Read Docs</a>
+                    </div>
+                    <div class="next-step-card">
+                        <h3>Packages</h3>
+                        <p>Browse the package ecosystem</p>
+                        <a href="packages.html" class="btn btn-secondary">View Packages</a>
+                    </div>
+                </div>
+            </article>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2025 RavensOne. Built with passion for the web.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/rust.min.js"></script>
+    <script src="../js/main.js"></script>
+</body>
+</html>

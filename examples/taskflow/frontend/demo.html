@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow - Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .auth-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .auth-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 420px;
+            width: 100%;
+        }
+
+        h1 {
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            margin-bottom: 2rem;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #f1f5f9;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            background: #6366f1;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button.secondary {
+            background: transparent;
+            border: 1px solid #334155;
+        }
+
+        button.danger {
+            background: transparent;
+            border: 1px solid #ef4444;
+            color: #ef4444;
+        }
+
+        a {
+            color: #6366f1;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .dashboard-header {
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+            padding: 1.5rem 0;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .todos-section {
+            background: #1e293b;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            padding: 2rem;
+        }
+
+        .todos-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #334155;
+        }
+
+        .filter-tabs button {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .filter-tabs button.active {
+            color: #6366f1;
+            border-bottom-color: #6366f1;
+        }
+
+        .todo-item {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .todo-item.completed {
+            opacity: 0.6;
+        }
+
+        .todo-content {
+            flex: 1;
+        }
+
+        .todo-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 0;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">Loading...</div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+
+        let state = {
+            user: null,
+            token: null,
+            todos: [],
+            currentPage: 'login',
+            filter: 'all',
+            loading: false,
+            error: null,
+            showModal: false
+        };
+
+        function loadAuth() {
+            const token = localStorage.getItem('token');
+            const userJson = localStorage.getItem('user');
+            if (token && userJson) {
+                state.token = token;
+                state.user = JSON.parse(userJson);
+                state.currentPage = 'dashboard';
+            }
+        }
+
+        function saveAuth(token, user) {
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(user));
+            state.token = token;
+            state.user = user;
+        }
+
+        function logout() {
+            localStorage.clear();
+            state.token = null;
+            state.user = null;
+            state.currentPage = 'login';
+            state.todos = [];
+            render();
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = e.target.email.value;
+            const password = e.target.password.value;
+
+            state.loading = true;
+            state.error = null;
+            render();
+
+            try {
+                const res = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (!res.ok) throw new Error('Invalid credentials');
+
+                const data = await res.json();
+                saveAuth(data.token, data.user);
+                state.currentPage = 'dashboard';
+                await loadTodos();
+            } catch (err) {
+                state.error = err.message;
+                state.loading = false;
+                render();
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const name = e.target.name.value;
+            const email = e.target.email.value;
+            const password = e.target.password.value;
+            const confirmPassword = e.target.confirmPassword.value;
+
+            if (password !== confirmPassword) {
+                state.error = 'Passwords do not match';
+                render();
+                return;
+            }
+
+            state.loading = true;
+            state.error = null;
+            render();
+
+            try {
+                const res = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, name })
+                });
+
+                if (!res.ok) {
+                    const text = await res.text();
+                    throw new Error(text || 'Registration failed');
+                }
+
+                const data = await res.json();
+                saveAuth(data.token, data.user);
+                state.currentPage = 'dashboard';
+                await loadTodos();
+            } catch (err) {
+                state.error = err.message;
+                state.loading = false;
+                render();
+            }
+        }
+
+        async function loadTodos() {
+            try {
+                const res = await fetch(`${API_BASE}/todos`, {
+                    headers: { 'Authorization': `Bearer ${state.token}` }
+                });
+
+                if (!res.ok) throw new Error('Failed to load todos');
+
+                state.todos = await res.json();
+                state.loading = false;
+                render();
+            } catch (err) {
+                state.error = err.message;
+                state.loading = false;
+                render();
+            }
+        }
+
+        async function createTodo(title, description) {
+            try {
+                const res = await fetch(`${API_BASE}/todos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${state.token}`
+                    },
+                    body: JSON.stringify({ title, description })
+                });
+
+                if (!res.ok) throw new Error('Failed to create todo');
+
+                const todo = await res.json();
+                state.todos.unshift(todo);
+                state.showModal = false;
+                render();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function toggleTodo(id) {
+            const todo = state.todos.find(t => t.id === id);
+            if (!todo) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/todos/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${state.token}`
+                    },
+                    body: JSON.stringify({ completed: !todo.completed })
+                });
+
+                if (!res.ok) throw new Error('Failed to update todo');
+
+                const updated = await res.json();
+                const index = state.todos.findIndex(t => t.id === id);
+                state.todos[index] = updated;
+                render();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function deleteTodo(id) {
+            if (!confirm('Delete this todo?')) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/todos/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${state.token}` }
+                });
+
+                if (!res.ok) throw new Error('Failed to delete todo');
+
+                state.todos = state.todos.filter(t => t.id !== id);
+                render();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+
+            if (state.currentPage === 'login') {
+                app.innerHTML = `
+                    <div class="auth-page">
+                        <div class="auth-card">
+                            <h1>Welcome to TaskFlow</h1>
+                            <p class="subtitle">Sign in to manage your tasks</p>
+
+                            ${state.error ? `<div class="alert alert-error">${state.error}</div>` : ''}
+
+                            <form onsubmit="handleLogin(event); return false;">
+                                <div>
+                                    <label>Email</label>
+                                    <input type="email" name="email" required>
+                                </div>
+                                <div>
+                                    <label>Password</label>
+                                    <input type="password" name="password" required>
+                                </div>
+                                <button type="submit" ${state.loading ? 'disabled' : ''}>
+                                    ${state.loading ? 'Signing in...' : 'Sign In'}
+                                </button>
+                            </form>
+
+                            <p style="margin-top: 1.5rem; text-align: center; color: #94a3b8;">
+                                Don't have an account? <a href="#" onclick="state.currentPage='register'; state.error=null; render(); return false;">Register</a>
+                            </p>
+                        </div>
+                    </div>
+                `;
+            } else if (state.currentPage === 'register') {
+                app.innerHTML = `
+                    <div class="auth-page">
+                        <div class="auth-card">
+                            <h1>Create Account</h1>
+                            <p class="subtitle">Join TaskFlow to stay organized</p>
+
+                            ${state.error ? `<div class="alert alert-error">${state.error}</div>` : ''}
+
+                            <form onsubmit="handleRegister(event); return false;">
+                                <div>
+                                    <label>Name</label>
+                                    <input type="text" name="name" required>
+                                </div>
+                                <div>
+                                    <label>Email</label>
+                                    <input type="email" name="email" required>
+                                </div>
+                                <div>
+                                    <label>Password</label>
+                                    <input type="password" name="password" required>
+                                </div>
+                                <div>
+                                    <label>Confirm Password</label>
+                                    <input type="password" name="confirmPassword" required>
+                                </div>
+                                <button type="submit" ${state.loading ? 'disabled' : ''}>
+                                    ${state.loading ? 'Creating account...' : 'Create Account'}
+                                </button>
+                            </form>
+
+                            <p style="margin-top: 1.5rem; text-align: center; color: #94a3b8;">
+                                Already have an account? <a href="#" onclick="state.currentPage='login'; state.error=null; render(); return false;">Sign In</a>
+                            </p>
+                        </div>
+                    </div>
+                `;
+            } else if (state.currentPage === 'dashboard') {
+                const filtered = state.todos.filter(t => {
+                    if (state.filter === 'active') return !t.completed;
+                    if (state.filter === 'completed') return t.completed;
+                    return true;
+                });
+
+                const total = state.todos.length;
+                const active = state.todos.filter(t => !t.completed).length;
+                const completed = state.todos.filter(t => t.completed).length;
+
+                app.innerHTML = `
+                    <div class="dashboard-header">
+                        <div class="container header-content">
+                            <h1>TaskFlow</h1>
+                            <div class="header-actions">
+                                <span style="color: #94a3b8; font-size: 0.875rem;">Hello, ${state.user.name}!</span>
+                                <button class="secondary" onclick="logout()">Logout</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="container">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value">${total}</div>
+                                <div class="stat-label">Total Tasks</div>
+                            </div>
+                            <div class="stat-card" style="background: rgba(99, 102, 241, 0.1); border-color: #6366f1;">
+                                <div class="stat-value">${active}</div>
+                                <div class="stat-label">Active</div>
+                            </div>
+                            <div class="stat-card" style="background: rgba(16, 185, 129, 0.1); border-color: #10b981;">
+                                <div class="stat-value">${completed}</div>
+                                <div class="stat-label">Completed</div>
+                            </div>
+                        </div>
+
+                        <div class="todos-section">
+                            <div class="todos-header">
+                                <h2>Your Tasks</h2>
+                                <button onclick="state.showModal=true; render();">+ Add Task</button>
+                            </div>
+
+                            <div class="filter-tabs">
+                                <button class="${state.filter === 'all' ? 'active' : ''}" onclick="state.filter='all'; render();">All</button>
+                                <button class="${state.filter === 'active' ? 'active' : ''}" onclick="state.filter='active'; render();">Active</button>
+                                <button class="${state.filter === 'completed' ? 'active' : ''}" onclick="state.filter='completed'; render();">Completed</button>
+                            </div>
+
+                            ${filtered.length === 0 ? `
+                                <div class="empty-state">
+                                    <p style="font-size: 1.125rem; margin-bottom: 1.5rem;">No tasks found</p>
+                                    <button onclick="state.showModal=true; render();">Create your first task</button>
+                                </div>
+                            ` : filtered.map(todo => `
+                                <div class="todo-item ${todo.completed ? 'completed' : ''}">
+                                    <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleTodo('${todo.id}')" style="width: 20px; height: 20px; cursor: pointer; accent-color: #6366f1;">
+                                    <div class="todo-content">
+                                        <h3 style="${todo.completed ? 'text-decoration: line-through;' : ''}">${todo.title}</h3>
+                                        ${todo.description ? `<p style="color: #94a3b8; ${todo.completed ? 'text-decoration: line-through;' : ''}">${todo.description}</p>` : ''}
+                                    </div>
+                                    <div class="todo-actions">
+                                        ${todo.completed ? '<span style="padding: 0.25rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: 12px; font-size: 0.75rem; color: #10b981;">Done</span>' : ''}
+                                        <button class="danger" style="padding: 0.5rem 1rem; font-size: 0.875rem;" onclick="deleteTodo('${todo.id}')">Delete</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    ${state.showModal ? `
+                        <div class="modal" onclick="if(event.target === this) { state.showModal=false; render(); }">
+                            <div class="modal-content" onclick="event.stopPropagation()">
+                                <h2>Add New Task</h2>
+                                <form onsubmit="handleCreateTodo(event); return false;">
+                                    <div>
+                                        <label>Task Title</label>
+                                        <input type="text" name="title" required autofocus>
+                                    </div>
+                                    <div>
+                                        <label>Description (optional)</label>
+                                        <textarea name="description" rows="3"></textarea>
+                                    </div>
+                                    <div class="modal-actions">
+                                        <button type="button" class="secondary" onclick="state.showModal=false; render();">Cancel</button>
+                                        <button type="submit">Add Task</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+            }
+        }
+
+        function handleCreateTodo(e) {
+            e.preventDefault();
+            const title = e.target.title.value;
+            const description = e.target.description.value || null;
+            createTodo(title, description);
+        }
+
+        // Initialize
+        loadAuth();
+        if (state.currentPage === 'dashboard') {
+            loadTodos();
+        } else {
+            render();
+        }
+    </script>
+</body>
+</html>

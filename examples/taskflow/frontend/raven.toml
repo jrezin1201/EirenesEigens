@@ -1,0 +1,11 @@
+[package]
+name = "taskflow"
+version = "0.1.0"
+authors = ["RavensOne Team"]
+description = "A full-stack todo application with authentication"
+
+[dependencies]
+raven-ui = "0.1.0"
+raven-router = "0.1.0"
+raven-http = "0.1.0"
+raven-forms = "0.1.0"

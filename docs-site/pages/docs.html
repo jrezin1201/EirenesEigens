@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation - RavensOne</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/docs.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <a href="../index.html" style="text-decoration: none;">
+                    <span class="logo">🦅 RavensOne</span>
+                </a>
+            </div>
+            <div class="nav-links">
+                <a href="../index.html#features">Features</a>
+                <a href="getting-started.html">Getting Started</a>
+                <a href="docs.html" class="active">Documentation</a>
+                <a href="packages.html">Packages</a>
+                <a href="examples.html">Examples</a>
+                <a href="https://github.com/ravensone/ravensone" target="_blank">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="docs-layout">
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <h3>Core Concepts</h3>
+                    <ul>
+                        <li><a href="#reactivity">Reactivity System</a></li>
+                        <li><a href="#components">Components</a></li>
+                        <li><a href="#templates">Templates</a></li>
+                        <li><a href="#events">Event Handling</a></li>
+                    </ul>
+                </div>
+                <div class="nav-section">
+                    <h3>Reactivity</h3>
+                    <ul>
+                        <li><a href="#signals">Signals</a></li>
+                        <li><a href="#computed">Computed Values</a></li>
+                        <li><a href="#effects">Effects</a></li>
+                        <li><a href="#reactive-context">Reactive Context</a></li>
+                    </ul>
+                </div>
+                <div class="nav-section">
+                    <h3>Advanced</h3>
+                    <ul>
+                        <li><a href="#routing">Routing</a></li>
+                        <li><a href="#state-management">State Management</a></li>
+                        <li><a href="#forms">Forms</a></li>
+                        <li><a href="#i18n">Internationalization</a></li>
+                    </ul>
+                </div>
+                <div class="nav-section">
+                    <h3>Development</h3>
+                    <ul>
+                        <li><a href="#cli">CLI Commands</a></li>
+                        <li><a href="#hmr">Hot Module Replacement</a></li>
+                        <li><a href="#testing">Testing</a></li>
+                        <li><a href="#deployment">Deployment</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="docs-content">
+            <article>
+                <h1>RavensOne Documentation</h1>
+                <p class="lead">Complete guide to building reactive web applications with RavensOne.</p>
+
+                <section id="reactivity">
+                    <h2>Reactivity System</h2>
+                    <p>RavensOne uses a fine-grained reactivity system based on Signals. This approach provides:</p>
+                    <ul>
+                        <li><strong>Automatic Updates:</strong> UI updates automatically when state changes</li>
+                        <li><strong>Surgical Precision:</strong> Only changed elements re-render</li>
+                        <li><strong>No Virtual DOM:</strong> Direct DOM manipulation for better performance</li>
+                        <li><strong>Composable:</strong> Build complex reactive graphs easily</li>
+                    </ul>
+
+                    <div class="info-box">
+                        <h4>💡 Why Fine-Grained Reactivity?</h4>
+                        <p>Unlike frameworks that re-render entire component trees, RavensOne tracks dependencies at the expression level. When a signal changes, only the specific DOM nodes that depend on it update.</p>
+                    </div>
+                </section>
+
+                <section id="signals">
+                    <h2>Signals</h2>
+                    <p>Signals are the foundation of RavensOne's reactivity. They hold a value that can be read and updated.</p>
+
+                    <h3>Creating Signals</h3>
+                    <pre><code class="language-rust">// Create a signal with an initial value
+let count = Signal::new(0);
+let name = Signal::new("Alice");
+let items = Signal::new(vec![1, 2, 3]);</code></pre>
+
+                    <h3>Reading Signals</h3>
+                    <pre><code class="language-rust">// Use .get() to read the current value
+let current_count = count.get();
+println!("Count is: {}", current_count);
+
+// In templates, signals are reactive
+&lt;h1&gt;{count.get()}&lt;/h1&gt;  // Updates when count changes</code></pre>
+
+                    <h3>Updating Signals</h3>
+                    <pre><code class="language-rust">// Set a new value
+count.set(10);
+
+// Update based on current value
+count.update(|n| n + 1);
+
+// Complex updates
+items.update(|list| {
+    list.push(4);
+    list
+});</code></pre>
+
+                    <h3>Signal Methods</h3>
+                    <table class="api-table">
+                        <tr>
+                            <th>Method</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>new(value)</code></td>
+                            <td>Create a new signal with initial value</td>
+                        </tr>
+                        <tr>
+                            <td><code>get()</code></td>
+                            <td>Read the current value (creates dependency)</td>
+                        </tr>
+                        <tr>
+                            <td><code>set(value)</code></td>
+                            <td>Set a new value, triggers updates</td>
+                        </tr>
+                        <tr>
+                            <td><code>update(fn)</code></td>
+                            <td>Update based on current value</td>
+                        </tr>
+                    </table>
+                </section>
+
+                <section id="computed">
+                    <h2>Computed Values</h2>
+                    <p>Computed values derive from signals and update automatically when dependencies change.</p>
+
+                    <pre><code class="language-rust">let first_name = Signal::new("John");
+let last_name = Signal::new("Doe");
+
+// Automatically recomputes when either signal changes
+let full_name = Computed::new(move || {
+    format!("{} {}", first_name.get(), last_name.get())
+});
+
+// Use in templates
+&lt;h1&gt;Hello, {full_name.get()}!&lt;/h1&gt;</code></pre>
+
+                    <h3>Derived State</h3>
+                    <pre><code class="language-rust">let todos = Signal::new(vec![
+    Todo { text: "Learn RavensOne", done: false },
+    Todo { text: "Build an app", done: true },
+]);
+
+let completed_count = Computed::new(move || {
+    todos.get().iter().filter(|t| t.done).count()
+});
+
+let remaining_count = Computed::new(move || {
+    todos.get().len() - completed_count.get()
+});</code></pre>
+                </section>
+
+                <section id="effects">
+                    <h2>Effects</h2>
+                    <p>Effects run side effects when their dependencies change.</p>
+
+                    <h3>Basic Effects</h3>
+                    <pre><code class="language-rust">let count = Signal::new(0);
+
+// Runs immediately and when count changes
+create_effect(move || {
+    console::log(&format!("Count: {}", count.get()));
+});</code></pre>
+
+                    <h3>Cleanup</h3>
+                    <pre><code class="language-rust">create_effect(move || {
+    let id = count.get();
+
+    // Setup
+    let subscription = api::subscribe(id);
+
+    // Cleanup function
+    on_cleanup(move || {
+        subscription.unsubscribe();
+    });
+});</code></pre>
+
+                    <h3>Effect Use Cases</h3>
+                    <ul>
+                        <li>Logging state changes</li>
+                        <li>Synchronizing with external systems</li>
+                        <li>Setting up subscriptions</li>
+                        <li>localStorage persistence</li>
+                        <li>Analytics tracking</li>
+                    </ul>
+                </section>
+
+                <section id="components">
+                    <h2>Components</h2>
+                    <p>Components are reusable, composable building blocks.</p>
+
+                    <h3>Basic Component</h3>
+                    <pre><code class="language-rust">component Button(text: String, onclick: fn()) {
+    &lt;button onclick={onclick}&gt;
+        {text}
+    &lt;/button&gt;
+}
+
+// Usage
+&lt;Button text="Click me" onclick={|| alert("Clicked!")} /&gt;</code></pre>
+
+                    <h3>Component with State</h3>
+                    <pre><code class="language-rust">component Toggle(label: String) {
+    let is_on = Signal::new(false);
+
+    &lt;div class="toggle"&gt;
+        &lt;label&gt;{label}&lt;/label&gt;
+        &lt;button onclick={move || is_on.update(|v| !v)}&gt;
+            {if is_on.get() { "ON" } else { "OFF" }}
+        &lt;/button&gt;
+    &lt;/div&gt;
+}</code></pre>
+
+                    <h3>Props Pattern</h3>
+                    <pre><code class="language-rust">struct CardProps {
+    title: String,
+    children: Vec&lt;VNode&gt;,
+    variant: CardVariant,
+}
+
+component Card(props: CardProps) {
+    &lt;div class={format!("card card-{}", props.variant)}&gt;
+        &lt;h3&gt;{props.title}&lt;/h3&gt;
+        &lt;div class="card-body"&gt;
+            {props.children}
+        &lt;/div&gt;
+    &lt;/div&gt;
+}</code></pre>
+                </section>
+
+                <section id="templates">
+                    <h2>Templates</h2>
+                    <p>RavensOne uses JSX-like syntax for templates.</p>
+
+                    <h3>Conditional Rendering</h3>
+                    <pre><code class="language-rust">let is_logged_in = Signal::new(false);
+
+&lt;div&gt;
+    {if is_logged_in.get() {
+        &lt;Dashboard /&gt;
+    } else {
+        &lt;LoginForm /&gt;
+    }}
+&lt;/div&gt;</code></pre>
+
+                    <h3>List Rendering</h3>
+                    <pre><code class="language-rust">let items = Signal::new(vec!["Apple", "Banana", "Cherry"]);
+
+&lt;ul&gt;
+    {items.get().iter().map(|item| {
+        &lt;li key={item}&gt;{item}&lt;/li&gt;
+    }).collect()}
+&lt;/ul&gt;</code></pre>
+
+                    <h3>Dynamic Attributes</h3>
+                    <pre><code class="language-rust">let is_active = Signal::new(true);
+let color = Signal::new("blue");
+
+&lt;div
+    class={if is_active.get() { "active" } else { "" }}
+    style={format!("color: {}", color.get())}
+    data-id={user_id.get()}
+&gt;
+    Content
+&lt;/div&gt;</code></pre>
+                </section>
+
+                <section id="events">
+                    <h2>Event Handling</h2>
+                    <p>Handle user interactions with event handlers.</p>
+
+                    <h3>Click Events</h3>
+                    <pre><code class="language-rust">let count = Signal::new(0);
+
+&lt;button onclick={move || count.update(|n| n + 1)}&gt;
+    Clicked {count.get()} times
+&lt;/button&gt;</code></pre>
+
+                    <h3>Input Events</h3>
+                    <pre><code class="language-rust">let text = Signal::new(String::new());
+
+&lt;input
+    type="text"
+    value={text.get()}
+    oninput={move |e| text.set(e.target.value)}
+/&gt;</code></pre>
+
+                    <h3>Form Events</h3>
+                    <pre><code class="language-rust">let email = Signal::new(String::new());
+let password = Signal::new(String::new());
+
+let handle_submit = move |e: Event| {
+    e.prevent_default();
+    api::login(email.get(), password.get());
+};
+
+&lt;form onsubmit={handle_submit}&gt;
+    &lt;input type="email" oninput={move |e| email.set(e.target.value)} /&gt;
+    &lt;input type="password" oninput={move |e| password.set(e.target.value)} /&gt;
+    &lt;button type="submit"&gt;Login&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+
+                    <h3>Available Events</h3>
+                    <ul>
+                        <li><code>onclick</code>, <code>ondblclick</code></li>
+                        <li><code>oninput</code>, <code>onchange</code></li>
+                        <li><code>onsubmit</code></li>
+                        <li><code>onmouseenter</code>, <code>onmouseleave</code></li>
+                        <li><code>onkeydown</code>, <code>onkeyup</code></li>
+                        <li><code>onfocus</code>, <code>onblur</code></li>
+                    </ul>
+                </section>
+
+                <section id="routing">
+                    <h2>Routing</h2>
+                    <p>Build multi-page applications with client-side routing using <code>raven-router</code>.</p>
+
+                    <h3>Basic Setup</h3>
+                    <pre><code class="language-rust">use raven_router::{Router, Route};
+
+component App() {
+    &lt;Router&gt;
+        &lt;Route path="/" component={Home} /&gt;
+        &lt;Route path="/about" component={About} /&gt;
+        &lt;Route path="/users/:id" component={UserProfile} /&gt;
+    &lt;/Router&gt;
+}</code></pre>
+
+                    <h3>Navigation</h3>
+                    <pre><code class="language-rust">use raven_router::Link;
+
+&lt;nav&gt;
+    &lt;Link href="/"&gt;Home&lt;/Link&gt;
+    &lt;Link href="/about"&gt;About&lt;/Link&gt;
+    &lt;Link href="/users/123"&gt;Profile&lt;/Link&gt;
+&lt;/nav&gt;</code></pre>
+
+                    <h3>Route Parameters</h3>
+                    <pre><code class="language-rust">component UserProfile() {
+    let params = use_params();
+    let user_id = params.get("id");
+
+    &lt;div&gt;
+        &lt;h1&gt;User #{user_id}&lt;/h1&gt;
+    &lt;/div&gt;
+}</code></pre>
+                </section>
+
+                <section id="state-management">
+                    <h2>State Management</h2>
+                    <p>For complex applications, use <code>raven-store</code> for centralized state.</p>
+
+                    <h3>Create a Store</h3>
+                    <pre><code class="language-rust">use raven_store::{Store, Action};
+
+struct AppState {
+    user: Option&lt;User&gt;,
+    cart: Vec&lt;CartItem&gt;,
+    theme: Theme,
+}
+
+enum AppAction {
+    Login(User),
+    Logout,
+    AddToCart(CartItem),
+    SetTheme(Theme),
+}
+
+let store = Store::new(AppState {
+    user: None,
+    cart: vec![],
+    theme: Theme::Light,
+});</code></pre>
+
+                    <h3>Dispatch Actions</h3>
+                    <pre><code class="language-rust">store.dispatch(AppAction::Login(user));
+store.dispatch(AppAction::AddToCart(item));</code></pre>
+
+                    <h3>Subscribe to State</h3>
+                    <pre><code class="language-rust">component CartBadge() {
+    let cart_count = store.select(|state| state.cart.len());
+
+    &lt;span class="badge"&gt;{cart_count.get()}&lt;/span&gt;
+}</code></pre>
+                </section>
+
+                <section id="forms">
+                    <h2>Forms</h2>
+                    <p>Handle forms with validation using <code>raven-forms</code>.</p>
+
+                    <h3>Form with Validation</h3>
+                    <pre><code class="language-rust">use raven_forms::{Form, validate};
+
+component SignupForm() {
+    let form = Form::new(SignupData {
+        email: String::new(),
+        password: String::new(),
+    });
+
+    form.add_validator("email", |email| {
+        if !email.contains("@") {
+            Err("Invalid email")
+        } else {
+            Ok(())
+        }
+    });
+
+    &lt;form onsubmit={form.handle_submit(|data| {
+        api::signup(data);
+    })}&gt;
+        &lt;Input
+            label="Email"
+            value={form.field("email")}
+            error={form.error("email")}
+        /&gt;
+        &lt;button type="submit"&gt;Sign Up&lt;/button&gt;
+    &lt;/form&gt;
+}</code></pre>
+                </section>
+
+                <section id="i18n">
+                    <h2>Internationalization</h2>
+                    <p>Support multiple languages with <code>raven-i18n</code>.</p>
+
+                    <pre><code class="language-rust">use raven_i18n::{I18n, t};
+
+let i18n = I18n::new()
+    .add_translations("en", translations_en)
+    .add_translations("es", translations_es)
+    .set_locale("en");
+
+component Greeting() {
+    &lt;h1&gt;{t!("welcome")}&lt;/h1&gt;
+    &lt;p&gt;{t!("user.greeting", name: user.name)}&lt;/p&gt;
+}</code></pre>
+                </section>
+
+                <section id="cli">
+                    <h2>CLI Commands</h2>
+                    <p>RavensOne provides a comprehensive CLI for development.</p>
+
+                    <table class="api-table">
+                        <tr>
+                            <th>Command</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>raven compile &lt;file&gt;</code></td>
+                            <td>Compile to WebAssembly</td>
+                        </tr>
+                        <tr>
+                            <td><code>raven dev</code></td>
+                            <td>Start development server with HMR</td>
+                        </tr>
+                        <tr>
+                            <td><code>raven build</code></td>
+                            <td>Production build</td>
+                        </tr>
+                        <tr>
+                            <td><code>raven pkg init</code></td>
+                            <td>Initialize package manifest</td>
+                        </tr>
+                        <tr>
+                            <td><code>raven pkg add &lt;name&gt;</code></td>
+                            <td>Add a dependency</td>
+                        </tr>
+                        <tr>
+                            <td><code>raven pkg install</code></td>
+                            <td>Install all dependencies</td>
+                        </tr>
+                    </table>
+                </section>
+
+                <section id="hmr">
+                    <h2>Hot Module Replacement</h2>
+                    <p>See your changes instantly without losing application state.</p>
+
+                    <pre><code class="language-bash"># Start dev server with HMR
+raven dev
+
+# Watching on http://localhost:3000
+# WebSocket server on port 3001</code></pre>
+
+                    <div class="info-box">
+                        <h4>💡 HMR Features</h4>
+                        <ul>
+                            <li>Instant code updates</li>
+                            <li>Preserves application state</li>
+                            <li>CSS hot reload</li>
+                            <li>Error overlay</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section id="deployment">
+                    <h2>Deployment</h2>
+                    <p>Deploy your RavensOne app to production.</p>
+
+                    <h3>Production Build</h3>
+                    <pre><code class="language-bash"># Create optimized build
+raven build --release
+
+# Output: dist/app.wasm (optimized and compressed)</code></pre>
+
+                    <h3>Static Hosting</h3>
+                    <p>Deploy to any static hosting provider:</p>
+                    <ul>
+                        <li>Vercel</li>
+                        <li>Netlify</li>
+                        <li>Cloudflare Pages</li>
+                        <li>GitHub Pages</li>
+                        <li>AWS S3 + CloudFront</li>
+                    </ul>
+
+                    <h3>Example: Vercel</h3>
+                    <pre><code class="language-bash"># Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel deploy dist/</code></pre>
+                </section>
+
+            </article>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2025 RavensOne. Built with passion for the web.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/rust.min.js"></script>
+    <script src="../js/main.js"></script>
+
+    <style>
+        .api-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: var(--spacing-md) 0;
+        }
+
+        .api-table th,
+        .api-table td {
+            padding: var(--spacing-sm);
+            text-align: left;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .api-table th {
+            background: var(--color-bg-elevated);
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .api-table td {
+            color: var(--color-text-secondary);
+        }
+
+        .api-table code {
+            background: var(--color-bg);
+            padding: 0.2em 0.4em;
+            border-radius: var(--radius-sm);
+            color: var(--color-primary);
+        }
+    </style>
+</body>
+</html>

@@ -20,8 +20,12 @@ impl RegistryClient {
         let home = dirs::home_dir().expect("Could not find home directory");
         let raven_dir = home.join(".raven");
 
+        // Check for RAVEN_REGISTRY environment variable, default to production registry
+        let base_url = std::env::var("RAVEN_REGISTRY")
+            .unwrap_or_else(|_| "https://ravensone-registry.fly.dev/api/v1".to_string());
+
         RegistryClient {
-            base_url: "https://registry.ravensone.dev/api/v1".to_string(),
+            base_url,
             token: None,
             credentials_path: raven_dir.join("credentials.json"),
         }
@@ -227,8 +231,29 @@ impl RegistryClient {
         println!("  📁 Creating package tarball...");
         let tarball_path = self.create_tarball(package_dir, &manifest)?;
 
-        // Convert manifest to JSON for API
-        let manifest_json = serde_json::to_string(&manifest)
+        // Create PublishRequest matching server's expected format
+        // Convert DependencySpec to JSON values
+        let deps: HashMap<String, serde_json::Value> = manifest.dependencies.iter()
+            .map(|(k, v)| (k.clone(), serde_json::to_value(v).unwrap()))
+            .collect();
+        let dev_deps: HashMap<String, serde_json::Value> = manifest.dev_dependencies.iter()
+            .map(|(k, v)| (k.clone(), serde_json::to_value(v).unwrap()))
+            .collect();
+
+        let publish_request = serde_json::json!({
+            "name": manifest.package.name,
+            "version": manifest.package.version,
+            "authors": manifest.package.authors,
+            "description": if manifest.package.description.is_empty() { None } else { Some(manifest.package.description.clone()) },
+            "license": manifest.package.license,
+            "repository": if manifest.package.repository.is_empty() { None } else { Some(manifest.package.repository.clone()) },
+            "homepage": if manifest.package.homepage.is_empty() { None } else { Some(manifest.package.homepage.clone()) },
+            "keywords": manifest.package.keywords,
+            "dependencies": deps,
+            "dev_dependencies": dev_deps,
+        });
+
+        let manifest_json = serde_json::to_string(&publish_request)
             .map_err(|e| RegistryError::SerializationError(e.to_string()))?;
 
         // Upload to registry
@@ -240,7 +265,7 @@ impl RegistryClient {
             .map_err(|e| RegistryError::IoError(e.to_string()))?;
 
         let form = reqwest::blocking::multipart::Form::new()
-            .text("manifest", manifest_json)
+            .text("metadata", manifest_json)
             .part(
                 "tarball",
                 reqwest::blocking::multipart::Part::bytes(tarball_bytes)
@@ -371,6 +396,54 @@ impl RegistryClient {
         Ok(search_response)
     }
 
+    /// Get package manifest (to fetch dependencies)
+    pub fn get_package_manifest(
+        &self,
+        name: &str,
+        version: &str,
+    ) -> Result<super::PackageManifest, RegistryError> {
+        let url = format!("{}/packages/{}/{}/download", self.base_url, name, version);
+
+        let client = reqwest::blocking::Client::new();
+        let mut response = client
+            .get(&url)
+            .send()
+            .map_err(|e| RegistryError::NetworkError(e.to_string()))?;
+
+        if !response.status().is_success() {
+            return Err(RegistryError::PackageNotFound(format!("{} v{}", name, version)));
+        }
+
+        // Download tarball to temp location
+        let temp_dir = std::env::temp_dir().join(format!("raven-manifest-{}-{}", name, version));
+        fs::create_dir_all(&temp_dir)
+            .map_err(|e| RegistryError::IoError(e.to_string()))?;
+
+        let tarball_path = temp_dir.join(format!("{}-{}.tar.gz", name, version));
+        let mut tarball_file = fs::File::create(&tarball_path)
+            .map_err(|e| RegistryError::IoError(e.to_string()))?;
+
+        response
+            .copy_to(&mut tarball_file)
+            .map_err(|e| RegistryError::NetworkError(e.to_string()))?;
+
+        // Extract tarball
+        self.extract_tarball(&tarball_path, &temp_dir)?;
+
+        // Read manifest
+        let manifest_path = temp_dir.join("raven.toml");
+        let manifest_content = fs::read_to_string(&manifest_path)
+            .map_err(|e| RegistryError::IoError(e.to_string()))?;
+
+        let manifest: super::PackageManifest = toml::from_str(&manifest_content)
+            .map_err(|e| RegistryError::ParseError(e.to_string()))?;
+
+        // Clean up temp directory
+        let _ = fs::remove_dir_all(&temp_dir);
+
+        Ok(manifest)
+    }
+
     /// Create a tarball from a package directory
     fn create_tarball(
         &self,
@@ -498,8 +571,8 @@ pub struct PackageInfo {
     pub versions: Vec<String>,
     pub owner: OwnerInfo,
     pub license: String,
-    pub repository: String,
-    pub homepage: String,
+    pub repository: Option<String>,
+    pub homepage: Option<String>,
     pub keywords: Vec<String>,
     pub downloads_total: u64,
     pub downloads_last_month: u64,

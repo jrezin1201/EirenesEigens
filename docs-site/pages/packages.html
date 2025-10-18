@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Package Manager - RavensOne</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/docs.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <a href="../index.html" style="text-decoration: none;">
+                    <span class="logo">🦅 RavensOne</span>
+                </a>
+            </div>
+            <div class="nav-links">
+                <a href="../index.html#features">Features</a>
+                <a href="getting-started.html">Getting Started</a>
+                <a href="docs.html">Documentation</a>
+                <a href="packages.html" class="active">Packages</a>
+                <a href="examples.html">Examples</a>
+                <a href="https://github.com/ravensone/ravensone" target="_blank">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="docs-layout">
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <h3>Quick Start</h3>
+                    <ul>
+                        <li><a href="#installation">Installation</a></li>
+                        <li><a href="#commands">Commands</a></li>
+                    </ul>
+                </div>
+                <div class="nav-section">
+                    <h3>Official Packages</h3>
+                    <ul>
+                        <li><a href="#raven-ui">raven-ui</a></li>
+                        <li><a href="#raven-router">raven-router</a></li>
+                        <li><a href="#raven-http">raven-http</a></li>
+                        <li><a href="#raven-store">raven-store</a></li>
+                        <li><a href="#raven-forms">raven-forms</a></li>
+                        <li><a href="#raven-i18n">raven-i18n</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="docs-content">
+            <article>
+                <h1>Package Manager</h1>
+                <p class="lead">Manage dependencies with ease using the built-in package manager.</p>
+
+                <section id="installation">
+                    <h2>Quick Start</h2>
+                    <pre><code class="language-bash"># Initialize a new project
+raven pkg init
+
+# Add a package
+raven pkg add raven-ui
+
+# Install all dependencies
+raven pkg install</code></pre>
+                </section>
+
+                <section id="commands">
+                    <h2>Core Commands</h2>
+                    <table class="api-table">
+                        <tr><th>Command</th><th>Description</th></tr>
+                        <tr><td><code>raven pkg init</code></td><td>Initialize package manifest</td></tr>
+                        <tr><td><code>raven pkg add &lt;name&gt;</code></td><td>Add a dependency</td></tr>
+                        <tr><td><code>raven pkg install</code></td><td>Install all dependencies</td></tr>
+                        <tr><td><code>raven pkg update</code></td><td>Update to latest versions</td></tr>
+                        <tr><td><code>raven pkg tree</code></td><td>Show dependency tree</td></tr>
+                        <tr><td><code>raven pkg search &lt;query&gt;</code></td><td>Search for packages</td></tr>
+                        <tr><td><code>raven pkg publish</code></td><td>Publish to registry</td></tr>
+                    </table>
+                </section>
+
+                <section id="raven-ui">
+                    <h2>raven-ui</h2>
+                    <p>Production-ready UI component library with 10+ components.</p>
+                    <pre><code class="language-bash">raven pkg add raven-ui</code></pre>
+                    <pre><code class="language-rust">import { Button, Input, Card } from "raven-ui"
+
+&lt;Card title="Welcome"&gt;
+    &lt;Input label="Name" /&gt;
+    &lt;Button variant="primary"&gt;Submit&lt;/Button&gt;
+&lt;/Card&gt;</code></pre>
+                    <p><strong>Components:</strong> Button, Input, Card, Modal, Dropdown, Tabs, Accordion, Tooltip, Badge, Spinner</p>
+                </section>
+
+                <section id="raven-router">
+                    <h2>raven-router</h2>
+                    <p>Client-side routing with nested routes and guards.</p>
+                    <pre><code class="language-bash">raven pkg add raven-router</code></pre>
+                    <pre><code class="language-rust">use raven_router::{Router, Route, Link};
+
+&lt;Router&gt;
+    &lt;Route path="/" component={Home} /&gt;
+    &lt;Route path="/about" component={About} /&gt;
+&lt;/Router&gt;</code></pre>
+                </section>
+
+                <section id="raven-http">
+                    <h2>raven-http</h2>
+                    <p>HTTP client for making API requests.</p>
+                    <pre><code class="language-bash">raven pkg add raven-http</code></pre>
+                    <pre><code class="language-rust">use raven_http::Http;
+
+let data = Http::get("/api/users").await?;
+Http::post("/api/users", user_data).await?;</code></pre>
+                </section>
+
+                <section id="raven-store">
+                    <h2>raven-store</h2>
+                    <p>Advanced state management for complex applications.</p>
+                    <pre><code class="language-bash">raven pkg add raven-store</code></pre>
+                    <pre><code class="language-rust">use raven_store::Store;
+
+let store = Store::new(AppState { ... });
+store.dispatch(Action::UpdateUser(user));</code></pre>
+                </section>
+
+                <section id="raven-forms">
+                    <h2>raven-forms</h2>
+                    <p>Form handling with validation and error management.</p>
+                    <pre><code class="language-bash">raven pkg add raven-forms</code></pre>
+                </section>
+
+                <section id="raven-i18n">
+                    <h2>raven-i18n</h2>
+                    <p>Internationalization with reactive locale switching.</p>
+                    <pre><code class="language-bash">raven pkg add raven-i18n</code></pre>
+                </section>
+
+                <div class="help-box">
+                    <h3>Registry</h3>
+                    <p>Browse all available packages at <a href="https://ravensone-registry.fly.dev" target="_blank">ravensone-registry.fly.dev</a></p>
+                </div>
+            </article>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2025 RavensOne. Built with passion for the web.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/rust.min.js"></script>
+    <script src="../js/main.js"></script>
+    <style>
+        .api-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: var(--spacing-md) 0;
+        }
+        .api-table th, .api-table td {
+            padding: var(--spacing-sm);
+            text-align: left;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .api-table th {
+            background: var(--color-bg-elevated);
+            font-weight: 600;
+            color: var(--color-text);
+        }
+        .api-table code {
+            background: var(--color-bg);
+            padding: 0.2em 0.4em;
+            border-radius: var(--radius-sm);
+            color: var(--color-primary);
+        }
+    </style>
+</body>
+</html>

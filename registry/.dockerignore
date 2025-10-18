@@ -1,0 +1,33 @@
+# Ignore build artifacts
+target/
+*.tar.gz
+
+# Ignore local config
+.env
+.env.local
+*.local
+
+# Ignore storage
+storage/
+packages/
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore Git
+.git/
+.gitignore
+
+# Ignore documentation
+*.md
+docs/
+
+# Ignore tests
+tests/
+
+# Ignore CI/CD
+.github/

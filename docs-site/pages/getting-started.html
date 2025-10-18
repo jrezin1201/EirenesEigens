@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Getting Started - RavensOne</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/docs.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <a href="../index.html" style="text-decoration: none;">
+                    <span class="logo">🦅 RavensOne</span>
+                </a>
+            </div>
+            <div class="nav-links">
+                <a href="../index.html#features">Features</a>
+                <a href="getting-started.html" class="active">Getting Started</a>
+                <a href="docs.html">Documentation</a>
+                <a href="packages.html">Packages</a>
+                <a href="examples.html">Examples</a>
+                <a href="https://github.com/ravensone/ravensone" target="_blank">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="docs-layout">
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <h3>Getting Started</h3>
+                    <ul>
+                        <li><a href="#installation">Installation</a></li>
+                        <li><a href="#first-app">Your First App</a></li>
+                        <li><a href="#reactivity">Understanding Reactivity</a></li>
+                        <li><a href="#components">Components</a></li>
+                        <li><a href="#next-steps">Next Steps</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="docs-content">
+            <article>
+                <h1>Getting Started with RavensOne</h1>
+                <p class="lead">Learn how to build reactive web applications with RavensOne in minutes.</p>
+
+                <section id="installation">
+                    <h2>Installation</h2>
+                    <p>RavensOne can be installed using the official installer or built from source.</p>
+
+                    <h3>Quick Install (Recommended)</h3>
+                    <p>Run the installation script:</p>
+                    <pre><code class="language-bash"># macOS/Linux
+curl -fsSL https://ravensone.dev/install.sh | sh
+
+# Windows
+iwr https://ravensone.dev/install.cmd -useb | iex</code></pre>
+
+                    <h3>Build from Source</h3>
+                    <p>Clone the repository and build:</p>
+                    <pre><code class="language-bash">git clone https://github.com/ravensone/ravensone
+cd ravensone
+cargo build --release
+
+# Add to PATH
+export PATH="$PWD/target/release:$PATH"</code></pre>
+
+                    <h3>Verify Installation</h3>
+                    <pre><code class="language-bash">raven --version
+# Should output: ravensone 0.1.0</code></pre>
+                </section>
+
+                <section id="first-app">
+                    <h2>Your First App</h2>
+                    <p>Let's create a simple counter application to understand the basics.</p>
+
+                    <h3>1. Initialize a New Project</h3>
+                    <pre><code class="language-bash">raven pkg init
+# Creates raven.toml in current directory</code></pre>
+
+                    <h3>2. Create the Counter Component</h3>
+                    <p>Create <code>src/main.raven</code>:</p>
+                    <pre><code class="language-rust">component Counter() {
+    let count = Signal::new(0);
+
+    &lt;div class="counter-app"&gt;
+        &lt;h1&gt;My First RavensOne App&lt;/h1&gt;
+        &lt;div class="counter"&gt;
+            &lt;h2&gt;Count: {count.get()}&lt;/h2&gt;
+            &lt;div class="buttons"&gt;
+                &lt;button onclick={move || count.update(|n| n - 1)}&gt;
+                    Decrement
+                &lt;/button&gt;
+                &lt;button onclick={move || count.update(|n| n + 1)}&gt;
+                    Increment
+                &lt;/button&gt;
+                &lt;button onclick={move || count.set(0)}&gt;
+                    Reset
+                &lt;/button&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+}</code></pre>
+
+                    <h3>3. Compile and Run</h3>
+                    <pre><code class="language-bash"># Compile to WebAssembly
+raven compile src/main.raven -o dist/app.wasm
+
+# Serve with development server
+raven dev</code></pre>
+
+                    <p>Open <code>http://localhost:3000</code> in your browser to see your app!</p>
+
+                    <div class="info-box">
+                        <h4>💡 What's Happening?</h4>
+                        <ul>
+                            <li><code>Signal::new(0)</code> creates a reactive state variable</li>
+                            <li><code>count.get()</code> reads the current value</li>
+                            <li><code>count.update()</code> modifies the value and triggers re-render</li>
+                            <li>The UI automatically updates when the signal changes</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section id="reactivity">
+                    <h2>Understanding Reactivity</h2>
+                    <p>RavensOne uses Signals for fine-grained reactivity. This means only the parts of the UI that depend on changed data will re-render.</p>
+
+                    <h3>Signals</h3>
+                    <p>Signals are reactive state containers:</p>
+                    <pre><code class="language-rust">let name = Signal::new("World");
+
+// Read
+let value = name.get();
+
+// Write
+name.set("RavensOne");
+
+// Update based on current value
+name.update(|current| format!("{} v2", current));</code></pre>
+
+                    <h3>Computed Values</h3>
+                    <p>Computed values derive from signals and update automatically:</p>
+                    <pre><code class="language-rust">let first_name = Signal::new("John");
+let last_name = Signal::new("Doe");
+
+let full_name = Computed::new(move || {
+    format!("{} {}", first_name.get(), last_name.get())
+});
+
+// full_name automatically updates when either signal changes
+&lt;h1&gt;Hello, {full_name.get()}&lt;/h1&gt;</code></pre>
+
+                    <h3>Effects</h3>
+                    <p>Run side effects when dependencies change:</p>
+                    <pre><code class="language-rust">let count = Signal::new(0);
+
+// This runs whenever count changes
+create_effect(move || {
+    console::log(&format!("Count changed to: {}", count.get()));
+
+    if count.get() > 10 {
+        console::log("Count is getting high!");
+    }
+});</code></pre>
+                </section>
+
+                <section id="components">
+                    <h2>Components</h2>
+                    <p>Components are reusable building blocks for your UI.</p>
+
+                    <h3>Basic Component</h3>
+                    <pre><code class="language-rust">component Greeting(name: String) {
+    &lt;div class="greeting"&gt;
+        &lt;h2&gt;Hello, {name}!&lt;/h2&gt;
+    &lt;/div&gt;
+}
+
+// Use it
+&lt;Greeting name="Alice" /&gt;</code></pre>
+
+                    <h3>Component with State</h3>
+                    <pre><code class="language-rust">component TodoItem(text: String) {
+    let completed = Signal::new(false);
+
+    &lt;div class="todo-item"&gt;
+        &lt;input
+            type="checkbox"
+            checked={completed.get()}
+            onchange={move || completed.update(|c| !c)}
+        /&gt;
+        &lt;span class={if completed.get() { "completed" } else { "" }}&gt;
+            {text}
+        &lt;/span&gt;
+    &lt;/div&gt;
+}</code></pre>
+
+                    <h3>Composing Components</h3>
+                    <pre><code class="language-rust">component TodoList() {
+    let todos = Signal::new(vec![
+        "Learn RavensOne".to_string(),
+        "Build an app".to_string(),
+        "Deploy to production".to_string(),
+    ]);
+
+    &lt;div class="todo-list"&gt;
+        &lt;h1&gt;My Todos&lt;/h1&gt;
+        &lt;ul&gt;
+            {todos.get().iter().map(|todo| {
+                &lt;TodoItem text={todo.clone()} /&gt;
+            }).collect()}
+        &lt;/ul&gt;
+    &lt;/div&gt;
+}</code></pre>
+                </section>
+
+                <section id="next-steps">
+                    <h2>Next Steps</h2>
+                    <p>Now that you've built your first app, here's what to explore next:</p>
+
+                    <div class="next-steps-grid">
+                        <div class="next-step-card">
+                            <h3>📚 Core Concepts</h3>
+                            <p>Deep dive into reactivity, component lifecycle, and event handling.</p>
+                            <a href="docs.html#core-concepts" class="btn btn-secondary">Learn More</a>
+                        </div>
+
+                        <div class="next-step-card">
+                            <h3>📦 Package Manager</h3>
+                            <p>Add UI components, routing, and state management from the registry.</p>
+                            <a href="packages.html" class="btn btn-secondary">Browse Packages</a>
+                        </div>
+
+                        <div class="next-step-card">
+                            <h3>🎨 UI Components</h3>
+                            <p>Use raven-ui for production-ready components with accessibility.</p>
+                            <a href="packages.html#raven-ui" class="btn btn-secondary">View Components</a>
+                        </div>
+
+                        <div class="next-step-card">
+                            <h3>🌐 Routing</h3>
+                            <p>Build multi-page applications with client-side routing.</p>
+                            <a href="docs.html#routing" class="btn btn-secondary">Routing Guide</a>
+                        </div>
+
+                        <div class="next-step-card">
+                            <h3>💾 State Management</h3>
+                            <p>Manage complex application state with raven-store.</p>
+                            <a href="docs.html#state-management" class="btn btn-secondary">State Guide</a>
+                        </div>
+
+                        <div class="next-step-card">
+                            <h3>🚀 Deployment</h3>
+                            <p>Deploy your app to production with optimized builds.</p>
+                            <a href="docs.html#deployment" class="btn btn-secondary">Deploy</a>
+                        </div>
+                    </div>
+
+                    <div class="help-box">
+                        <h3>Need Help?</h3>
+                        <p>Join our community for support and discussions:</p>
+                        <ul>
+                            <li><a href="https://discord.gg/ravensone">Discord Community</a></li>
+                            <li><a href="https://github.com/ravensone/ravensone/issues">GitHub Issues</a></li>
+                            <li><a href="https://github.com/ravensone/ravensone/discussions">GitHub Discussions</a></li>
+                        </ul>
+                    </div>
+                </section>
+            </article>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2025 RavensOne. Built with passion for the web.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/rust.min.js"></script>
+    <script src="../js/main.js"></script>
+</body>
+</html>

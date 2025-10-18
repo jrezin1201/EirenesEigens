@@ -1,0 +1,10 @@
+/Users/jordanhill/Documents/JRez-Soft-Projects/ravensone/examples/shopone/backend/target/release/deps/unicase-d9f7950450f8c71d.d: /Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/lib.rs /Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/ascii.rs /Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/mod.rs /Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/map.rs
+
+/Users/jordanhill/Documents/JRez-Soft-Projects/ravensone/examples/shopone/backend/target/release/deps/libunicase-d9f7950450f8c71d.rlib: /Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/lib.rs /Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/ascii.rs /Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/mod.rs /Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/map.rs
+
+/Users/jordanhill/Documents/JRez-Soft-Projects/ravensone/examples/shopone/backend/target/release/deps/libunicase-d9f7950450f8c71d.rmeta: /Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/lib.rs /Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/ascii.rs /Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/mod.rs /Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/map.rs
+
+/Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/lib.rs:
+/Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/ascii.rs:
+/Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/mod.rs:
+/Users/jordanhill/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicase-2.8.1/src/unicode/map.rs:
