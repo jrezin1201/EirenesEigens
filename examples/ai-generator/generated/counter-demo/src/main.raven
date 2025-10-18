@@ -1,0 +1,222 @@
+use raven::prelude::*;
+
+component App() {
+    // State: Counter value
+    let count = Signal::new(0);
+
+    // Event handlers
+    fn increment() {
+        count.set(count.get() + 1);
+    }
+
+    fn decrement() {
+        count.set(count.get() - 1);
+    }
+
+    fn reset() {
+        count.set(0);
+    }
+
+    // Keyboard shortcuts
+    Effect::new(|| {
+        let handle_keypress = |e: KeyboardEvent| {
+            match e.key.as_str() {
+                "ArrowUp" | "+" => increment(),
+                "ArrowDown" | "-" => decrement(),
+                "r" | "R" => reset(),
+                _ => {}
+            }
+        };
+
+        window::addEventListener("keydown", handle_keypress);
+    });
+
+    // Template
+    <div class="app">
+        <header class="header">
+            <h1>Counter App</h1>
+            <p class="subtitle">Use arrow keys, +/- or click buttons</p>
+        </header>
+
+        <main class="counter-container">
+            <div class="count-display">
+                <span class="count-value">{count.get()}</span>
+            </div>
+
+            <div class="button-group">
+                <button
+                    class="btn btn-decrement"
+                    onclick={decrement}
+                    aria-label="Decrement counter"
+                >
+                    <span class="btn-icon">−</span>
+                    <span class="btn-text">Decrement</span>
+                </button>
+
+                <button
+                    class="btn btn-reset"
+                    onclick={reset}
+                    aria-label="Reset counter"
+                >
+                    <span class="btn-icon">⟲</span>
+                    <span class="btn-text">Reset</span>
+                </button>
+
+                <button
+                    class="btn btn-increment"
+                    onclick={increment}
+                    aria-label="Increment counter"
+                >
+                    <span class="btn-icon">+</span>
+                    <span class="btn-text">Increment</span>
+                </button>
+            </div>
+
+            <div class="keyboard-hints">
+                <span class="hint">↑/+ Increment</span>
+                <span class="hint">↓/- Decrement</span>
+                <span class="hint">R Reset</span>
+            </div>
+        </main>
+
+        <style>
+            .app {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                color: white;
+            }
+
+            .header {
+                text-align: center;
+                margin-bottom: 3rem;
+            }
+
+            .header h1 {
+                font-size: 3rem;
+                margin: 0 0 0.5rem 0;
+                font-weight: 700;
+            }
+
+            .subtitle {
+                font-size: 1.1rem;
+                opacity: 0.9;
+                margin: 0;
+            }
+
+            .counter-container {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                border-radius: 20px;
+                padding: 3rem;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .count-display {
+                text-align: center;
+                margin-bottom: 2rem;
+            }
+
+            .count-value {
+                font-size: 6rem;
+                font-weight: 700;
+                display: inline-block;
+                min-width: 150px;
+                text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            }
+
+            .button-group {
+                display: flex;
+                gap: 1rem;
+                margin-bottom: 2rem;
+            }
+
+            .btn {
+                flex: 1;
+                padding: 1rem 1.5rem;
+                border: none;
+                border-radius: 12px;
+                font-size: 1rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 0.5rem;
+                background: white;
+                color: #667eea;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            }
+
+            .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            }
+
+            .btn:active {
+                transform: translateY(0);
+            }
+
+            .btn-icon {
+                font-size: 2rem;
+                font-weight: 300;
+            }
+
+            .btn-increment {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }
+
+            .btn-decrement {
+                background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                color: white;
+            }
+
+            .btn-reset {
+                background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+                color: white;
+            }
+
+            .keyboard-hints {
+                display: flex;
+                justify-content: center;
+                gap: 1.5rem;
+                padding-top: 1.5rem;
+                border-top: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .hint {
+                font-size: 0.9rem;
+                opacity: 0.8;
+                display: flex;
+                align-items: center;
+                gap: 0.3rem;
+            }
+
+            @media (max-width: 600px) {
+                .button-group {
+                    flex-direction: column;
+                }
+
+                .count-value {
+                    font-size: 4rem;
+                }
+
+                .header h1 {
+                    font-size: 2rem;
+                }
+
+                .keyboard-hints {
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+            }
+        </style>
+    </div>
+}

@@ -1,0 +1,23 @@
+let hawaiian_store = <div class="app">
+    <div class="header">
+        <h1>"Hawaiian Shirts Store"</h1>
+        <div class="cart">"Cart"</div>
+    </div>
+    <div class="product-grid">
+        <div class="product-card">
+            <h3>"Tropical Paradise"</h3>
+            <p class="price">"$34.99"</p>
+            <button class="add-to-cart">"Add to Cart"</button>
+        </div>
+        <div class="product-card">
+            <h3>"Ocean Breeze"</h3>
+            <p class="price">"$29.99"</p>
+            <button class="add-to-cart">"Add to Cart"</button>
+        </div>
+        <div class="product-card">
+            <h3>"Palm Tree Party"</h3>
+            <p class="price">"$39.99"</p>
+            <button class="add-to-cart">"Add to Cart"</button>
+        </div>
+    </div>
+</div>;

@@ -90,10 +90,22 @@ RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
     }]
   }")
 
+# Save the FULL raw API response for debugging
+echo "$RESPONSE" > "$OUTPUT_DIR/api_response.json"
+
+# Check if there was an error in the API response
+if echo "$RESPONSE" | jq -e '.error' > /dev/null 2>&1; then
+    echo "❌ API Error:"
+    echo "$RESPONSE" | jq -r '.error.message'
+    echo ""
+    echo "Full error details saved to: $OUTPUT_DIR/api_response.json"
+    exit 1
+fi
+
 # Extract the generated code from Claude's response
 GENERATED_JSON=$(echo "$RESPONSE" | jq -r '.content[0].text')
 
-# Save the raw response for debugging
+# Save the extracted content for debugging
 echo "$GENERATED_JSON" > "$OUTPUT_DIR/generated.json"
 
 # Extract and write each file
