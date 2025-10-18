@@ -1,0 +1,45 @@
+Create a beautiful social media feed application with the following features:
+
+**Design Requirements:**
+- Modern, Instagram/Twitter-inspired layout
+- Clean, minimal design with a blue/white color scheme
+- Responsive grid layout
+- Smooth hover effects and transitions
+
+**Core Features:**
+1. Navigation bar with logo and user profile
+2. Feed of 5-6 posts, each containing:
+   - User avatar (circular)
+   - Username and timestamp
+   - Post image (landscape)
+   - Post caption/text
+   - Like button with count
+   - Comment button with count
+   - Share button
+
+3. Each post card should have:
+   - White background
+   - Subtle shadow
+   - Rounded corners
+   - Hover effect (lift up slightly)
+
+4. Interactive elements:
+   - Like button that changes color when clicked (red heart)
+   - Comment count display
+   - Share button
+
+**Visual Details:**
+- Use placeholder images from Unsplash for post content
+- Use gradient avatar placeholders or colored circles
+- Show realistic engagement numbers (likes: 50-500, comments: 5-50)
+- Include varied post types (photos of nature, food, travel, tech)
+
+**Example Posts:**
+1. User: "Alex Chen" - Travel photo with beach sunset
+2. User: "Sarah Kim" - Food photography of gourmet dish
+3. User: "Mike Johnson" - Tech gadget showcase
+4. User: "Emma Davis" - Nature landscape
+5. User: "Chris Lee" - Street photography
+6. User: "Maya Patel" - Coffee art
+
+Make it visually stunning with proper spacing, typography, and modern UI patterns.

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="utf-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1" />
+ <title>Bluebird — Social Feed</title>
+ <link rel="stylesheet" href="./styles.css" />
+ <link rel="preconnect" href="https://images.unsplash.com" />
+</head>
+<body>
+ <header class="nav">
+ <div class="container nav-inner">
+ <div class="brand">
+ <div class="logo">🐦</div>
+ <span class="brand-name">Bluebird</span>
+ </div>
+ <div class="nav-actions">
+ <input class="search" type="search" placeholder="Search" aria-label="Search" />
+ <div class="profile">
+ <div class="avatar gradient-a" aria-hidden="true"></div>
+ <span class="username">you</span>
+ </div>
+ </div>
+ </div>
+ </header>
+
+ <main class="container">
+ <section class="feed" aria-label="Social feed">
+
+ <!-- 1. Alex Chen - Travel photo with beach sunset -->
+ <article class="card" tabindex="0">
+ <header class="card-head">
+ <div class="avatar gradient-b" aria-hidden="true"></div>
+ <div class="meta">
+ <div class="user">Alex Chen</div>
+ <time class="time" datetime="2025-10-15T18:24:00Z">2h ago</time>
+ </div>
+ </header>
+ <div class="card-media">
+ <img loading="lazy" alt="Golden beach sunset with calm waves" src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1600&auto=format&fit=crop" />
+ </div>
+ <div class="card-body">
+ <p class="caption">Chasing sunsets and salt air. 🌅 #travel #beach</p>
+ <div class="actions">
+ <button class="btn like-btn" aria-pressed="false" data-liked="false" data-count="312">
+ <svg viewBox="0 0 24 24" class="icon heart" aria-hidden="true"><path d="M12.1 8.64l-.1.1-.11-.11C10.14 6.9 7.1 7.24 5.6 9.1c-1.63 2.05-1.06 5.02 1.17 6.52L12 21l5.23-5.38c2.23-1.5 2.8-4.47 1.17-6.52-1.5-1.86-4.54-2.2-6.3-.46z"></path></svg>
+ <span class="count">312</span>
+ </button>
+ <button class="btn comment-btn" aria-label="Comments">
+ <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M20 2H4a2 2 0 00-2 2v14l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"></path></svg>
+ <span class="count">28</span>
+ </button>
+ <button class="btn share-btn" data-share-title="Alex Chen — Bluebird" data-share-url="#alex-chen-1">
+ <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M14 9l-1-1 5-5 1 1-5 5zm-4 6l1 1-5 5-1-1 5-5z"></path><path d="M5 14V9a4 4 0 014-4h5"></path><path d="M15 15h-5a4 4 0 01-4-4"></path></svg>
+ <span>Share</span>
+ </button>
+ </div>
+ </div>
+ </article>
+
+ <!-- 2. Sarah Kim - Food photography -->
+ <article class="card" tabindex="0">
+ <header class="card-head">
+ <div class="avatar gradient-c" aria-hidden="true"></div>
+ <div class="meta">
+ <div class="user">Sarah Kim</div>
+ <time class="time" datetime="2025-10-14T19:12:00Z">Yesterday</time>
+ </div>
+ </header>
+ <div class="card-media">
+ <img loading="lazy" alt="Gourmet dish plated with microgreens" src="https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1600&auto=format&fit=crop" />
+ </div>
+ <div class="card-body">
+ <p class="caption">New tasting menu drop. Crispy skin, cloud-light puree. 🍽️</p>
+ <div class="actions">
+ <button class="btn like-btn" aria-pressed="false" data-liked="false" data-count="468">
+ <svg viewBox="0 0 24 24" class="icon heart" aria-hidden="true"><path d="M12.1 8.64l-.1.1-.11-.11C10.14 6.9 7.1 7.24 5.6 9.1c-1.63 2.05-1.06 5.02 1.17 6.52L12 21l5.23-5.38c2.23-1.5 2.8-4.47 1.17-6.52-1.5-1.86-4.54-2.2-6.3-.46z"></path></svg>
+ <span class="count">468</span>
+ </button>
+ <button class="btn comment-btn" aria-label="Comments">
+ <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M20 2H4a2 2 0 00-2 2v14l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"></path></svg>
+ <span class="count">41</span>
+ </button>
+ <button class="btn share-btn" data-share-title="Sarah Kim — Bluebird" data-share-url="#sarah-kim-1">
+ <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M14 9l-1-1 5-5 1 1-5 5zm-4 6l1 1-5 5-1-1 5-5z"></path><path d="M5 14V9a4 4 0 014-4h5"></path><path d="M15 15h-5a4 4 0 01-4-4"></path></svg>
+ <span>Share</span>
+ </button>
+ </div>
+ </div>
+ </article>
+
+ <!-- 3. Mike Johnson - Tech gadget showcase -->
+ <article class="card" tabindex="0">
+ <header class="card-head">
+ <div class="avatar gradient-d" aria-hidden="true"></div>
+ <div class="meta">
+ <div class="user">Mike Johnson</div>
+ <time class="time" datetime="2025-10-13T16:10:00Z">2 days ago</time>
+ </div>
+ </header>
+ <div class="card-media">
+ <img loading="lazy" alt="Sleek tech gadget on a desk" src="https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=1600&auto=format&fit=crop" />
+ </div>
+ <div class="card-body">
+ <p class="caption">Prototype v2: brighter, thinner, smarter. ⚙️📱</p>
+ <div class="actions">
+ <button class="btn like-btn" aria-pressed="false" data-liked="false" data-count="221">
+ <svg viewBox="0 0 24 24" class="icon heart" aria-hidden="true"><path d="M12.1 8.64l-.1.1-.11-.11C10.14 6.9 7.1 7.24 5.6 9.1c-1.63 2.05-1.06 5.02 1.17 6.52L12 21l5.23-5.38c2.23-1.5 2.8-4.47 1.17-6.52-1.5-1.86-4.54-2.2-6.3-.46z"></path></svg>
+ <span class="count">221</span>
+ </button>
+ <button class="btn comment-btn" aria-label="Comments">
+ <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M20 2H4a2 2 0 00-2 2v14l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"></path></svg>
+ <span class="count">17</span>
+ </button>
+ <button class="btn share-btn" data-share-title="Mike Johnson — Bluebird" data-share-url="#mike-johnson-1">
+ <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M14 9l-1-1 5-5 1 1-5 5zm-4 6l1 1-5 5-1-1 5-5z"></path><path d="M5 14V9a4 4 0 014-4h5"></path><path d="M15 15h-5a4 4 0 01-4-4"></path></svg>
+ <span>Share</span>
+ </button>
+ </div>
+ </div>
+ </article>
+
+ <!-- 4. Emma Davis - Nature landscape -->
+ <article class="card" tabindex="0">
+ <header class="card-head">
+ <div class="avatar gradient-e" aria-hidden="true"></div>
+ <div class="meta">
+ <div class="user">Emma Davis</div>
+ <time class="time" datetime="2025-10-12T09:30:00Z">3 days ago</time>
+ </div>
+ </header>
+ <div class="card-media">
+ <img loading="lazy" alt="Snowy mountains and a tranquil lake" src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1600&auto=format&fit=crop" />
+ </div>
+ <div class="card-body">
+ <p class="caption">Morning light over the ridge. Nature resets everything. 🏔️</p>
+ <div class="actions">
+ <button class="btn like-btn" aria-pressed="false" data-liked="false" data-count="377">
+ <svg viewBox="0 0 24 24" class="icon heart" aria-hidden="true"><path d="M12.1 8.64l-.1.1-.11-.11C10.14 6.9 7.1 7.24 5.6 9.1c-1.63 2.05-1.06 5.02 1.17 6.52L12 21l5.23-5.38c2.23-1.5 2.8-4.47 1.17-6.52-1.5-1.86-4.54-2.2-6.3-.46z"></path></svg>
+ <span class="count">377</span>
+ </button>
+ <button class="btn comment-btn" aria-label="Comments">
+ <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M20 2H4a2 2 0 00-2 2v14l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"></path></svg>
+ <span class="count">33</span>
+ </button>
+ <button class="btn share-btn" data-share-title="Emma Davis — Bluebird" data-share-url="#emma-davis-1">
+ <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M14 9l-1-1 5-5 1 1-5 5zm-4 6l1 1-5 5-1-1 5-5z"></path><path d="M5 14V9a4 4 0 014-4h5"></path><path d="M15 15h-5a4 4 0 01-4-4"></path></svg>
+ <span>Share</span>
+ </button>
+ </div>
+ </div>
+ </article>
+
+ <!-- 5. Chris Lee - Street photography -->
+ <article class="card" tabindex="0">
+ <header class="card-head">
+ <div class="avatar gradient-f" aria-hidden="true"></div>
+ <div class="meta">
+ <div class="user">Chris Lee</div>
+ <time class="time" datetime="2025-10-11T22:00:00Z">4 days ago</time>
+ </div>
+ </header>
+ <div class="card-media">
+ <img loading="lazy" alt="Street scene with neon lights at night" src="https://images.unsplash.com/photo-1517999349371-c43520457b23?q=80&w=1600&auto=format&fit=crop" />
+ </div>
+ <div class="card-body">
+ <p class="caption">City hum + neon rain. 🎞️ #street</p>
+ <div class="actions">
+ <button class="btn like-btn" aria-pressed="false" data-liked="false" data-count="259">
+ <svg viewBox="0 0 24 24" class="icon heart" aria-hidden="true"><path d="M12.1 8.64l-.1.1-.11-.11C10.14 6.9 7.1 7.24 5.6 9.1c-1.63 2.05-1.06 5.02 1.17 6.52L12 21l5.23-5.38c2.23-1.5 2.8-4.47 1.17-6.52-1.5-1.86-4.54-2.2-6.3-.46z"></path></svg>
+ <span class="count">259</span>
+ </button>
+ <button class="btn comment-btn" aria-label="Comments">
+ <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M20 2H4a2 2 0 00-2 2v14l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"></path></svg>
+ <span class="count">22</span>
+ </button>
+ <button class="btn share-btn" data-share-title="Chris Lee — Bluebird" data-share-url="#chris-lee-1">
+ <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M14 9l-1-1 5-5 1 1-5 5zm-4 6l1 1-5 5-1-1 5-5z"></path><path d="M5 14V9a4 4 0 014-4h5"></path><path d="M15 15h-5a4 4 0 01-4-4"></path></svg>
+ <span>Share</span>
+ </button>
+ </div>
+ </div>
+ </article>
+
+ <!-- 6. Maya Patel - Coffee art -->
+ <article class="card" tabindex="0">
+ <header class="card-head">
+ <div class="avatar gradient-g" aria-hidden="true"></div>
+ <div class="meta">
+ <div class="user">Maya Patel</div>
+ <time class="time" datetime="2025-10-10T08:45:00Z">Last week</time>
+ </div>
+ </header>
+ <div class="card-media">
+ <img loading="lazy" alt="Latte art in a ceramic mug" src="https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?q=80&w=1600&auto=format&fit=crop" />
+ </div>
+ <div class="card-body">
+ <p class="caption">Pour-over mornings, latte-art wins. ☕️✨</p>
+ <div class="actions">
+ <button class="btn like-btn" aria-pressed="false" data-liked="false" data-count="198">
+ <svg viewBox="0 0 24 24" class="icon heart" aria-hidden="true"><path d="M12.1 8.64l-.1.1-.11-.11C10.14 6.9 7.1 7.24 5.6 9.1c-1.63 2.05-1.06 5.02 1.17 6.52L12 21l5.23-5.38c2.23-1.5 2.8-4.47 1.17-6.52-1.5-1.86-4.54-2.2-6.3-.46z"></path></svg>
+ <span class="count">198</span>
+ </button>
+ <button class="btn comment-btn" aria-label="Comments">
+ <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M20 2H4a2 2 0 00-2 2v14l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"></path></svg>
+ <span class="count">12</span>
+ </button>
+ <button class="btn share-btn" data-share-title="Maya Patel — Bluebird" data-share-url="#maya-patel-1">
+ <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><path d="M14 9l-1-1 5-5 1 1-5 5zm-4 6l1 1-5 5-1-1 5-5z"></path><path d="M5 14V9a4 4 0 014-4h5"></path><path d="M15 15h-5a4 4 0 01-4-4"></path></svg>
+ <span>Share</span>
+ </button>
+ </div>
+ </div>
+ </article>
+
+ </section>
+ </main>
+
+ <script>
+ // Like toggle logic
+ document.querySelectorAll('.like-btn').forEach(function(btn){
+ btn.addEventListener('click', function(){
+ var liked = this.getAttribute('data-liked') === 'true';
+ var countEl = this.querySelector('.count');
+ var icon = this.querySelector('.heart');
+ var count = parseInt(this.getAttribute('data-count'), 10);
+ if(!liked){
+ count += 1;
+ this.setAttribute('data-liked','true');
+ this.setAttribute('aria-pressed','true');
+ icon.classList.add('liked');
+ } else {
+ count = Math.max(0, count - 1);
+ this.setAttribute('data-liked','false');
+ this.setAttribute('aria-pressed','false');
+ icon.classList.remove('liked');
+ }
+ this.setAttribute('data-count', String(count));
+ countEl.textContent = count;
+ });
+ });
+
+ // Share button logic
+ document.querySelectorAll('.share-btn').forEach(function(btn){
+ btn.addEventListener('click', async function(){
+ var title = this.getAttribute('data-share-title') || 'Bluebird';
+ var url = location.origin + location.pathname + (this.getAttribute('data-share-url') || '');
+ try{
+ if(navigator.share){
+ await navigator.share({ title: title, url: url });
+ } else {
+ await navigator.clipboard.writeText(url);
+ this.classList.add('shared');
+ setTimeout(() => this.classList.remove('shared'), 1200);
+ alert('Link copied to clipboard');
+ }
+ } catch(e){ /* user canceled */ }
+ });
+ });
+ </script>
+</body>
+</html>
