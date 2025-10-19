@@ -5,6 +5,34 @@
 
 use std::collections::HashMap;
 
+/// HTTP error types
+#[derive(Debug, Clone)]
+pub enum HttpError {
+    NetworkError(String),
+    InvalidUrl(String),
+    TimeoutError,
+    JsonParseError(String),
+    StatusError { status: u16, body: String },
+    RequestBuildError(String),
+}
+
+impl std::fmt::Display for HttpError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HttpError::NetworkError(msg) => write!(f, "Network error: {}", msg),
+            HttpError::InvalidUrl(msg) => write!(f, "Invalid URL: {}", msg),
+            HttpError::TimeoutError => write!(f, "Request timed out"),
+            HttpError::JsonParseError(msg) => write!(f, "JSON parse error: {}", msg),
+            HttpError::StatusError { status, body } => {
+                write!(f, "HTTP error {}: {}", status, body)
+            }
+            HttpError::RequestBuildError(msg) => write!(f, "Request build error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for HttpError {}
+
 /// HTTP method types
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HttpMethod {
@@ -99,6 +127,124 @@ impl HttpRequest {
         self.body = Some(body);
         self
     }
+
+    /// Send the HTTP request (async version)
+    pub async fn send(self) -> Result<HttpResponse, HttpError> {
+        let client = reqwest::Client::new();
+
+        // Convert HttpMethod to reqwest::Method
+        let method = match self.method {
+            HttpMethod::Get => reqwest::Method::GET,
+            HttpMethod::Post => reqwest::Method::POST,
+            HttpMethod::Put => reqwest::Method::PUT,
+            HttpMethod::Delete => reqwest::Method::DELETE,
+            HttpMethod::Patch => reqwest::Method::PATCH,
+            HttpMethod::Head => reqwest::Method::HEAD,
+            HttpMethod::Options => reqwest::Method::OPTIONS,
+        };
+
+        // Build the request
+        let mut request_builder = client.request(method, &self.url);
+
+        // Add headers
+        for (key, value) in self.headers {
+            request_builder = request_builder.header(&key, &value);
+        }
+
+        // Add body if present
+        if let Some(body) = self.body {
+            request_builder = request_builder.body(body);
+        }
+
+        // Send the request
+        let response = request_builder
+            .send()
+            .await
+            .map_err(|e| HttpError::NetworkError(e.to_string()))?;
+
+        // Extract response data
+        let status = response.status().as_u16();
+        let status_text = response.status().to_string();
+
+        // Extract headers
+        let mut headers = HashMap::new();
+        for (key, value) in response.headers() {
+            if let Ok(value_str) = value.to_str() {
+                headers.insert(key.to_string(), value_str.to_string());
+            }
+        }
+
+        // Get body
+        let body = response
+            .text()
+            .await
+            .map_err(|e| HttpError::NetworkError(e.to_string()))?;
+
+        Ok(HttpResponse {
+            status,
+            status_text,
+            headers,
+            body,
+        })
+    }
+
+    /// Send the HTTP request (blocking version for non-async contexts)
+    pub fn send_blocking(self) -> Result<HttpResponse, HttpError> {
+        let client = reqwest::blocking::Client::new();
+
+        // Convert HttpMethod to reqwest::Method
+        let method = match self.method {
+            HttpMethod::Get => reqwest::Method::GET,
+            HttpMethod::Post => reqwest::Method::POST,
+            HttpMethod::Put => reqwest::Method::PUT,
+            HttpMethod::Delete => reqwest::Method::DELETE,
+            HttpMethod::Patch => reqwest::Method::PATCH,
+            HttpMethod::Head => reqwest::Method::HEAD,
+            HttpMethod::Options => reqwest::Method::OPTIONS,
+        };
+
+        // Build the request
+        let mut request_builder = client.request(method, &self.url);
+
+        // Add headers
+        for (key, value) in self.headers {
+            request_builder = request_builder.header(&key, &value);
+        }
+
+        // Add body if present
+        if let Some(body) = self.body {
+            request_builder = request_builder.body(body);
+        }
+
+        // Send the request
+        let response = request_builder
+            .send()
+            .map_err(|e| HttpError::NetworkError(e.to_string()))?;
+
+        // Extract response data
+        let status = response.status().as_u16();
+        let status_text = response.status().to_string();
+
+        // Extract headers
+        let mut headers = HashMap::new();
+        for (key, value) in response.headers() {
+            if let Ok(value_str) = value.to_str() {
+                headers.insert(key.to_string(), value_str.to_string());
+            }
+        }
+
+        // Get body
+        let body = response
+            .text()
+            .map_err(|e| HttpError::NetworkError(e.to_string()))?;
+
+        Ok(HttpResponse {
+            status,
+            status_text,
+            headers,
+            body,
+        })
+    }
 }
 
 /// HTTP response
@@ -136,10 +282,16 @@ impl HttpResponse {
         self.status >= 500 && self.status < 600
     }
 
-    /// Parse response as JSON
-    /// In a full implementation, this would deserialize to the given type
-    pub fn json(&self) -> String {
-        self.body.clone()
+    /// Parse response as JSON (returns serde_json::Value)
+    pub fn json(&self) -> Result<serde_json::Value, HttpError> {
+        serde_json::from_str(&self.body)
+            .map_err(|e| HttpError::JsonParseError(e.to_string()))
+    }
+
+    /// Parse response as JSON into a specific type
+    pub fn json_as<T: serde::de::DeserializeOwned>(&self) -> Result<T, HttpError> {
+        serde_json::from_str(&self.body)
+            .map_err(|e| HttpError::JsonParseError(e.to_string()))
     }
 
     /// Get response as text
@@ -219,6 +371,32 @@ impl Default for HttpClient {
     }
 }
 
+// Convenience functions for quick HTTP requests
+
+/// Make a simple GET request (async)
+pub async fn get(url: &str) -> Result<HttpResponse, HttpError> {
+    HttpRequest::get(url).send().await
+}
+
+/// Make a simple GET request (blocking)
+pub fn get_blocking(url: &str) -> Result<HttpResponse, HttpError> {
+    HttpRequest::get(url).send_blocking()
+}
+
+/// Make a simple POST request with JSON body (async)
+pub async fn post_json(url: &str, json: serde_json::Value) -> Result<HttpResponse, HttpError> {
+    let body = serde_json::to_string(&json)
+        .map_err(|e| HttpError::JsonParseError(e.to_string()))?;
+    HttpRequest::post(url).json(body).send().await
+}
+
+/// Make a simple POST request with JSON body (blocking)
+pub fn post_json_blocking(url: &str, json: serde_json::Value) -> Result<HttpResponse, HttpError> {
+    let body = serde_json::to_string(&json)
+        .map_err(|e| HttpError::JsonParseError(e.to_string()))?;
+    HttpRequest::post(url).json(body).send_blocking()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -254,5 +432,125 @@ mod tests {
         let req = client.get("/users");
         assert_eq!(req.url, "https://api.example.com/users");
         assert_eq!(req.headers.get("User-Agent").unwrap(), "RavensOne/1.0");
+    }
+
+    // Integration tests (require network access)
+    #[tokio::test]
+    async fn test_get_request() {
+        let resp = HttpRequest::get("https://httpbin.org/get")
+            .send()
+            .await
+            .expect("Failed to make GET request");
+
+        assert_eq!(resp.status, 200);
+        assert!(resp.is_ok());
+        assert!(!resp.body.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_post_json() {
+        let json_body = serde_json::json!({
+            "name": "RavensOne",
+            "version": "1.0"
+        });
+
+        let body_str = serde_json::to_string(&json_body).unwrap();
+
+        let resp = HttpRequest::post("https://httpbin.org/post")
+            .json(body_str)
+            .send()
+            .await
+            .expect("Failed to make POST request");
+
+        assert!(resp.is_ok());
+
+        // Parse response JSON
+        let response_json = resp.json().expect("Failed to parse JSON");
+        assert!(response_json["json"]["name"].as_str().unwrap() == "RavensOne");
+    }
+
+    #[tokio::test]
+    async fn test_custom_headers() {
+        let resp = HttpRequest::get("https://httpbin.org/headers")
+            .header("X-Custom-Header".to_string(), "RavensOne".to_string())
+            .send()
+            .await
+            .expect("Failed to make request with headers");
+
+        assert!(resp.is_ok());
+
+        let response_json = resp.json().expect("Failed to parse JSON");
+        assert!(response_json["headers"]["X-Custom-Header"]
+            .as_str()
+            .unwrap()
+            .contains("RavensOne"));
+    }
+
+    #[tokio::test]
+    async fn test_convenience_get() {
+        let resp = get("https://httpbin.org/get")
+            .await
+            .expect("Failed to make GET request");
+
+        assert!(resp.is_ok());
+    }
+
+    #[test]
+    fn test_blocking_get() {
+        let resp = get_blocking("https://httpbin.org/get")
+            .expect("Failed to make blocking GET request");
+
+        assert!(resp.is_ok());
+        assert_eq!(resp.status, 200);
+    }
+
+    #[test]
+    fn test_blocking_post_json() {
+        let json_data = serde_json::json!({
+            "test": "data"
+        });
+
+        let resp = post_json_blocking("https://httpbin.org/post", json_data)
+            .expect("Failed to make blocking POST request");
+
+        assert!(resp.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_http_client_with_base_url() {
+        let client = HttpClient::new()
+            .with_base_url("https://httpbin.org".to_string());
+
+        let resp = client.get("/get")
+            .send()
+            .await
+            .expect("Failed to make request");
+
+        assert!(resp.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_404_error() {
+        let resp = HttpRequest::get("https://httpbin.org/status/404")
+            .send()
+            .await
+            .expect("Failed to make request");
+
+        assert_eq!(resp.status, 404);
+        assert!(resp.is_client_error());
+        assert!(!resp.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_json_parsing() {
+        let resp = HttpRequest::get("https://httpbin.org/json")
+            .send()
+            .await
+            .expect("Failed to make request");
+
+        assert!(resp.is_ok());
+
+        let json = resp.json().expect("Failed to parse JSON");
+        assert!(json.is_object());
     }
 }

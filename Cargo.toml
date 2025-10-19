@@ -16,6 +16,10 @@ path = "src/main.rs"
 name = "error_examples"
 path = "examples/error_examples.rs"
 
+[[example]]
+name = "http_client_demo"
+path = "examples/http_client_demo.rs"
+
 [[bench]]
 name = "compiler_bench"
 path = "benches/compiler_bench.rs"
