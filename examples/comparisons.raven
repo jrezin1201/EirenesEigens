@@ -1,0 +1,54 @@
+// Test comparison operators
+
+fn test_equal() -> i32 {
+    if 5 == 5 {
+        return 1;
+    }
+    return 0;
+}
+
+fn test_not_equal() -> i32 {
+    if 5 != 10 {
+        return 1;
+    }
+    return 0;
+}
+
+fn test_less_than() -> i32 {
+    if 5 < 10 {
+        return 1;
+    }
+    return 0;
+}
+
+fn test_greater_than() -> i32 {
+    if 15 > 10 {
+        return 1;
+    }
+    return 0;
+}
+
+fn test_less_equal() -> i32 {
+    if 5 <= 10 {
+        return 1;
+    }
+    return 0;
+}
+
+fn test_greater_equal() -> i32 {
+    if 10 >= 10 {
+        return 1;
+    }
+    return 0;
+}
+
+fn main() -> i32 {
+    let eq = test_equal();           // 1
+    let ne = test_not_equal();       // 1
+    let lt = test_less_than();       // 1
+    let gt = test_greater_than();    // 1
+    let le = test_less_equal();      // 1
+    let ge = test_greater_equal();   // 1
+
+    return eq + ne + lt + gt + le + ge;  // Should be 6
+}

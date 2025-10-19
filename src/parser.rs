@@ -51,6 +51,7 @@ impl Parser {
             TokenKind::Use => self.parse_use_statement().map(Statement::Use),
             TokenKind::Struct => self.parse_struct_definition().map(Statement::Struct),
             TokenKind::Component => self.parse_component_definition().map(Statement::Component),
+            TokenKind::Fn | TokenKind::Server | TokenKind::Async => self.parse_function_definition().map(Statement::Function),
             TokenKind::Let => self.parse_let_statement().map(Statement::Let),
             TokenKind::Return => self.parse_return_statement().map(Statement::Return),
             TokenKind::If => self.parse_if_statement().map(Statement::If),
@@ -122,6 +123,56 @@ impl Parser {
             name,
             parameters,
             body: Box::new(body),
+        })
+    }
+
+    fn parse_function_definition(&mut self) -> Result<FunctionDefinition, CompileError> {
+        // Check for optional @server or async modifiers
+        let is_server = self.consume_if_matches(&TokenKind::Server);
+        let is_async = self.consume_if_matches(&TokenKind::Async);
+
+        // Expect fn keyword
+        self.expect_and_consume(&TokenKind::Fn)?;
+
+        // Parse function name
+        let name = self.parse_identifier()?;
+
+        // Parse parameter list
+        self.expect_and_consume(&TokenKind::LParen)?;
+        let mut parameters = Vec::new();
+        while self.current_token().kind != TokenKind::RParen {
+            let param_name = self.parse_identifier()?;
+            self.expect_and_consume(&TokenKind::Colon)?;
+            let param_type = self.parse_type_expression()?;
+            parameters.push(FunctionParameter {
+                name: param_name,
+                type_annotation: param_type,
+            });
+            if !self.consume_if_matches(&TokenKind::Comma) { break; }
+        }
+        self.expect_and_consume(&TokenKind::RParen)?;
+
+        // Parse optional return type (-> Type)
+        let _return_type = if self.consume_if_matches(&TokenKind::Arrow) {
+            Some(self.parse_type_expression()?)
+        } else {
+            None
+        };
+
+        // Parse function body (block statement)
+        self.expect_and_consume(&TokenKind::LBrace)?;
+        let mut statements = Vec::new();
+        while self.current_token().kind != TokenKind::RBrace {
+            statements.push(self.parse_statement()?);
+        }
+        self.expect_and_consume(&TokenKind::RBrace)?;
+
+        Ok(FunctionDefinition {
+            name,
+            parameters,
+            is_server,
+            is_async,
+            body: BlockStatement { statements },
         })
     }
 

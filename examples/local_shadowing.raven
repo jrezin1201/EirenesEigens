@@ -1,0 +1,17 @@
+// Test local variable shadowing and scopes
+
+fn test_shadowing() -> i32 {
+    let x = 10;
+
+    if x > 5 {
+        let x = 20;  // Shadow outer x
+        return x;    // Should return 20, not 10
+    }
+
+    return x;
+}
+
+fn main() -> i32 {
+    let result = test_shadowing();
+    return result;  // Should be 20
+}

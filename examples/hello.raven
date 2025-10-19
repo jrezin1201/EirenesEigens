@@ -1,0 +1,12 @@
+// Simple RavensOne program to test the compiler pipeline
+
+fn add(a: i32, b: i32)-> i32 {
+    return a + b;
+}
+
+fn main()-> i32 {
+    let x = 10;
+    let y = 20;
+    let result = add(x, y);
+    return result;
+}

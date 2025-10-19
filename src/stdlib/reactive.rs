@@ -16,6 +16,7 @@ thread_local! {
     static SIGNAL_COUNTER: RefCell<usize> = RefCell::new(0);
     static CURRENT_OBSERVER: RefCell<Option<SignalId>> = RefCell::new(None);
     static DEPENDENCIES: RefCell<Vec<(SignalId, HashSet<SignalId>)>> = RefCell::new(Vec::new());
+    static EFFECT_REGISTRY: RefCell<std::collections::HashMap<SignalId, Rc<dyn Fn()>>> = RefCell::new(std::collections::HashMap::new());
 }
 
 fn next_signal_id() -> SignalId {
@@ -83,9 +84,26 @@ impl<T: Clone> Signal<T> {
     fn notify_subscribers(&self) {
         let subscribers = self.subscribers.borrow().clone();
         for subscriber_id in subscribers {
-            // Trigger re-computation of subscriber
-            // TODO: Implement effect/computed re-execution
-            println!("[Reactive] Signal {} changed, notifying subscriber {}", self.id, subscriber_id);
+            // Trigger re-execution of effect/computed
+            EFFECT_REGISTRY.with(|registry| {
+                if let Some(effect) = registry.borrow().get(&subscriber_id) {
+                    // Clone the Rc to avoid borrow issues
+                    let effect_clone = effect.clone();
+
+                    // Set this as the current observer before running
+                    CURRENT_OBSERVER.with(|observer| {
+                        *observer.borrow_mut() = Some(subscriber_id);
+                    });
+
+                    // Run the effect
+                    effect_clone();
+
+                    // Clear current observer
+                    CURRENT_OBSERVER.with(|observer| {
+                        *observer.borrow_mut() = None;
+                    });
+                }
+            });
         }
     }
 }
@@ -105,16 +123,33 @@ pub struct Computed<T: Clone> {
     cached_value: Rc<RefCell<Option<T>>>,
 }
 
-impl<T: Clone> Computed<T> {
+impl<T: Clone + 'static> Computed<T> {
     /// Create a new computed value
     pub fn new<F>(compute: F) -> Self
     where
         F: Fn() -> T + 'static,
     {
+        let id = next_signal_id();
+        let compute_rc = Rc::new(compute);
+        let cached_value = Rc::new(RefCell::new(None));
+
+        // Create a wrapper that updates the cached value
+        let cached_value_clone = cached_value.clone();
+        let compute_clone = compute_rc.clone();
+        let recompute = move || {
+            let new_value = compute_clone();
+            *cached_value_clone.borrow_mut() = Some(new_value);
+        };
+
+        // Register in the global registry for automatic recomputation
+        EFFECT_REGISTRY.with(|registry| {
+            registry.borrow_mut().insert(id, Rc::new(recompute));
+        });
+
         Computed {
-            id: next_signal_id(),
-            compute: Rc::new(compute),
-            cached_value: Rc::new(RefCell::new(None)),
+            id,
+            compute: compute_rc,
+            cached_value,
         }
     }
 
@@ -161,6 +196,12 @@ impl Effect {
         F: Fn() + 'static,
     {
         let id = next_signal_id();
+        let effect_rc = Rc::new(effect);
+
+        // Register this effect in the global registry
+        EFFECT_REGISTRY.with(|registry| {
+            registry.borrow_mut().insert(id, effect_rc.clone());
+        });
 
         // Set this as the current observer
         CURRENT_OBSERVER.with(|observer| {
@@ -168,7 +209,7 @@ impl Effect {
         });
 
         // Run the effect once to track dependencies
-        effect();
+        effect_rc();
 
         // Clear current observer
         CURRENT_OBSERVER.with(|observer| {
@@ -177,7 +218,7 @@ impl Effect {
 
         Effect {
             id,
-            effect: Rc::new(effect),
+            effect: effect_rc,
         }
     }
 
@@ -228,5 +269,33 @@ mod tests {
 
         count.set(10);
         assert_eq!(doubled.get(), 20);
+    }
+
+    #[test]
+    fn effect_re_execution() {
+        use std::cell::RefCell;
+        use std::rc::Rc;
+
+        let count = Signal::new(0);
+        let execution_count = Rc::new(RefCell::new(0));
+
+        // Create an effect that tracks how many times it runs
+        let execution_count_clone = execution_count.clone();
+        let count_clone = count.clone();
+        let _effect = Effect::new(move || {
+            let _value = count_clone.get(); // Read the signal to create dependency
+            *execution_count_clone.borrow_mut() += 1;
+        });
+
+        // Effect should have run once on creation
+        assert_eq!(*execution_count.borrow(), 1);
+
+        // Changing the signal should trigger effect re-execution
+        count.set(1);
+        assert_eq!(*execution_count.borrow(), 2);
+
+        // Another change should trigger another re-execution
+        count.set(2);
+        assert_eq!(*execution_count.borrow(), 3);
     }
 }

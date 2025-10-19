@@ -1,0 +1,18 @@
+// Test operator precedence in expressions
+
+fn main() -> i32 {
+    // Test: 2 + 3 * 4 should be 14 (not 20)
+    let a = 2 + 3 * 4;
+
+    // Test: (2 + 3) * 4 should be 20
+    let b = 5 * 4;
+
+    // Test: 10 - 2 + 3 should be 11 (left-to-right)
+    let c = 10 - 2 + 3;
+
+    // Test complex expression: 2 * 3 + 4 * 5 should be 26
+    let d = 2 * 3 + 4 * 5;
+
+    // Return sum: 14 + 20 + 11 + 26 = 71
+    return a + b + c + d;
+}

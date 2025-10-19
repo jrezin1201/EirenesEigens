@@ -1,6 +1,6 @@
 // Type Checker with Hindley-Milner Type Inference
 
-use crate::ast::{Expression, Statement, InfixExpression};
+use crate::ast::{Expression, Statement, InfixExpression, TypeExpression};
 use crate::errors::CompileError;
 use crate::types::{Substitution, Type, TypeEnv};
 use std::collections::HashSet;
@@ -24,6 +24,32 @@ impl TypeChecker {
         }
     }
 
+    /// Convert TypeExpression from AST to Type
+    fn type_expr_to_type(&self, type_expr: &TypeExpression) -> Type {
+        match type_expr {
+            TypeExpression::Named(ident) => {
+                match ident.value.as_str() {
+                    "i32" | "i64" | "i8" | "i16" | "isize" => Type::Int,
+                    "f32" | "f64" => Type::Float,
+                    "bool" => Type::Bool,
+                    "str" | "String" => Type::String,
+                    _ => Type::Named(ident.value.clone()),
+                }
+            }
+            TypeExpression::Generic(ident, args) => {
+                match ident.value.as_str() {
+                    "Array" | "Vec" if args.len() == 1 => {
+                        Type::Array(Box::new(self.type_expr_to_type(&args[0])))
+                    }
+                    "Option" if args.len() == 1 => {
+                        Type::Option(Box::new(self.type_expr_to_type(&args[0])))
+                    }
+                    _ => Type::Named(ident.value.clone()),
+                }
+            }
+        }
+    }
+
     /// Type check a program (list of statements)
     pub fn check_program(&mut self, statements: &[Statement]) -> Result<(), CompileError> {
         for stmt in statements {
@@ -44,6 +70,14 @@ impl TypeChecker {
             Statement::Function(func_def) => {
                 self.env.push_scope();
 
+                // Bind parameters to scope with their actual types
+                let mut param_types = Vec::new();
+                for param in &func_def.parameters {
+                    let param_type = self.type_expr_to_type(&param.type_annotation);
+                    self.env.bind(param.name.value.clone(), param_type.clone());
+                    param_types.push(param_type);
+                }
+
                 // Check body
                 let mut body_type = Type::Void;
                 for stmt in &func_def.body.statements {
@@ -52,7 +86,7 @@ impl TypeChecker {
 
                 self.env.pop_scope();
 
-                let func_type = Type::function(vec![], body_type);
+                let func_type = Type::function(param_types, body_type);
                 self.env.bind(func_def.name.value.clone(), func_type.clone());
                 Ok(func_type)
             }
@@ -130,11 +164,48 @@ impl TypeChecker {
 
             Expression::FunctionCall(call) => {
                 // Infer function type
-                let _func_type = self.infer_expression(&call.function)?;
+                let func_type = self.infer_expression(&call.function)?;
 
-                // For now, return Any for function calls
-                // TODO: Implement proper function type checking
-                Ok(Type::Any)
+                // Check if it's actually a function
+                match &func_type {
+                    Type::Function { params, return_type } => {
+                        // Check argument count
+                        if call.arguments.len() != params.len() {
+                            return Err(CompileError::Generic(format!(
+                                "Function expects {} arguments, got {}",
+                                params.len(),
+                                call.arguments.len()
+                            )));
+                        }
+
+                        // Check argument types
+                        for (i, (arg, expected_type)) in call.arguments.iter().zip(params.iter()).enumerate() {
+                            let arg_type = self.infer_expression(arg)?;
+
+                            // Try to unify the argument type with expected type
+                            if let Err(e) = self.unify(&arg_type, expected_type) {
+                                return Err(CompileError::Generic(format!(
+                                    "Argument {} type mismatch: expected {}, got {}. {}",
+                                    i + 1, expected_type, arg_type, e
+                                )));
+                            }
+                        }
+
+                        // Return the return type
+                        Ok((**return_type).clone())
+                    }
+                    Type::Any => {
+                        // If function type is Any (e.g., from external functions), skip checking
+                        Ok(Type::Any)
+                    }
+                    _ => {
+                        // Not a function type
+                        Err(CompileError::Generic(format!(
+                            "Cannot call non-function type: {}",
+                            func_type
+                        )))
+                    }
+                }
             }
 
             Expression::JsxElement(_) => {

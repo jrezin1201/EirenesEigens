@@ -164,7 +164,10 @@ impl LanguageServer {
         // Add reactive primitives
         completions.extend(self.get_reactive_completions());
 
-        // TODO: Add local variables and functions from current scope
+        // Add local variables and functions from current scope
+        if let Some(doc) = self.documents.get(uri) {
+            completions.extend(self.get_scope_completions(&doc.content));
+        }
 
         completions
     }
@@ -318,6 +321,62 @@ impl LanguageServer {
             "Resource" => Some("**Resource** - Async data loading with automatic refetching.\n\n```raven\nlet data = Resource::new(async {\n    fetch_data().await\n});\n```".to_string()),
             _ => None,
         }
+    }
+
+    /// Get completions from current document scope
+    fn get_scope_completions(&self, content: &str) -> Vec<CompletionItem> {
+        use crate::ast::Statement;
+
+        let mut completions = Vec::new();
+
+        // Parse the document to extract local variables and functions
+        let mut lexer = Lexer::new(content.to_string());
+        let tokens = match lexer.collect_tokens() {
+            Ok(t) => t,
+            Err(_) => return completions, // Return empty on parse error
+        };
+
+        let mut parser = Parser::new(tokens);
+        let ast = match parser.parse_program() {
+            Ok(ast) => ast,
+            Err(_) => return completions,
+        };
+
+        // Extract function names
+        for statement in &ast.statements {
+            match statement {
+                Statement::Function(func_def) => {
+                    completions.push(CompletionItem {
+                        label: func_def.name.value.clone(),
+                        kind: CompletionItemKind::Function,
+                        detail: Some(format!("fn {}(...)", func_def.name.value)),
+                        documentation: Some("User-defined function".to_string()),
+                        insert_text: None,
+                    });
+                }
+                Statement::Let(let_stmt) => {
+                    completions.push(CompletionItem {
+                        label: let_stmt.name.value.clone(),
+                        kind: CompletionItemKind::Variable,
+                        detail: Some("Local variable".to_string()),
+                        documentation: None,
+                        insert_text: None,
+                    });
+                }
+                Statement::Component(comp_def) => {
+                    completions.push(CompletionItem {
+                        label: comp_def.name.value.clone(),
+                        kind: CompletionItemKind::Class,
+                        detail: Some(format!("component {}", comp_def.name.value)),
+                        documentation: Some("User-defined component".to_string()),
+                        insert_text: None,
+                    });
+                }
+                _ => {}
+            }
+        }
+
+        completions
     }
 }
 

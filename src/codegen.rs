@@ -65,7 +65,9 @@ impl CodeGenerator {
                 Statement::Function(func_def) => {
                     // All functions, server or client, get a type signature.
                     let type_index = types.len();
-                    types.function(vec![], vec![ValType::I32]);
+                    // Generate parameter types (for now, all i32)
+                    let param_types: Vec<ValType> = func_def.parameters.iter().map(|_| ValType::I32).collect();
+                    types.function(param_types, vec![ValType::I32]);
                     functions.function(type_index);
                     self.func_symbols.funcs.insert(func_def.name.value.clone(), func_index_counter);
 
@@ -133,6 +135,12 @@ impl CodeGenerator {
     fn generate_function(&mut self, func: &FunctionDefinition) -> Result<Function, CompileError> {
         self.local_symbol_table.clear();
         self.local_count = 0;
+
+        // Register function parameters as locals (they start at index 0)
+        for param in &func.parameters {
+            self.local_symbol_table.insert(param.name.value.clone(), self.local_count);
+            self.local_count += 1;
+        }
 
         let local_types: Vec<ValType> = func.body.statements.iter().filter_map(|s| {
             if let Statement::Let(_) = s { Some(ValType::I32) } else { None }

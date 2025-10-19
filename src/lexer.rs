@@ -30,6 +30,7 @@ impl Lexer {
            ':' => {
                 if self.peek() == ':' {
                     self.read_char();
+                    self.read_char();
                     return Token::new(TokenKind::DoubleColon, "::".to_string(), self.line, start_col);
                 } else {
                     Token::new(TokenKind::Colon, ":".to_string(), self.line, start_col)
@@ -38,8 +39,10 @@ impl Lexer {
             '=' => {
                 if self.peek() == '>' {
                     self.read_char();
+                    self.read_char();
                     return Token::new(TokenKind::FatArrow, "=>".to_string(), self.line, start_col);
                 } else if self.peek() == '=' {
+                    self.read_char();
                     self.read_char();
                     return Token::new(TokenKind::Eq, "==".to_string(), self.line, start_col);
                 } else {
@@ -47,13 +50,14 @@ impl Lexer {
                 }
             }
             ';' => Token::new(TokenKind::Semicolon, ";".to_string(), self.line, start_col),
-            '|' => Token::new(TokenKind::Pipe, "|".to_string(), self.line, start_col), // NEW
+            '|' => Token::new(TokenKind::Pipe, "|".to_string(), self.line, start_col),
             ',' => Token::new(TokenKind::Comma, ",".to_string(), self.line, start_col),
             '.' => Token::new(TokenKind::Dot, ".".to_string(), self.line, start_col),
             '+' => Token::new(TokenKind::Plus, "+".to_string(), self.line, start_col),
             '*' => Token::new(TokenKind::Star, "*".to_string(), self.line, start_col),
             '!' => {
                 if self.peek() == '=' {
+                    self.read_char();
                     self.read_char();
                     return Token::new(TokenKind::NotEq, "!=".to_string(), self.line, start_col);
                 } else {
@@ -69,6 +73,7 @@ impl Lexer {
             '<' => {
                 if self.peek() == '=' {
                     self.read_char();
+                    self.read_char();
                     return Token::new(TokenKind::LtEq, "<=".to_string(), self.line, start_col);
                 } else {
                     Token::new(TokenKind::LAngle, "<".to_string(), self.line, start_col)
@@ -76,6 +81,7 @@ impl Lexer {
             }
             '>' => {
                 if self.peek() == '=' {
+                    self.read_char();
                     self.read_char();
                     return Token::new(TokenKind::GtEq, ">=".to_string(), self.line, start_col);
                 } else {
@@ -85,6 +91,7 @@ impl Lexer {
             '/' => Token::new(TokenKind::Slash, "/".to_string(), self.line, start_col),
             '-' => {
                 if self.peek() == '>' {
+                    self.read_char();
                     self.read_char();
                     return Token::new(TokenKind::Arrow, "->".to_string(), self.line, start_col);
                 } else {
@@ -192,15 +199,134 @@ impl Lexer {
     }
     
     fn read_string(&mut self) -> Token {
-        let start_pos = self.position + 1;
         let start_col = self.column;
         self.read_char(); // Consume opening '"'
+
+        let mut result = String::new();
+
         while self.ch != '"' && self.ch != '\0' {
-            self.read_char();
+            if self.ch == '\\' {
+                // Handle escape sequences
+                self.read_char(); // consume backslash
+                match self.ch {
+                    'n' => result.push('\n'),   // newline
+                    't' => result.push('\t'),   // tab
+                    'r' => result.push('\r'),   // carriage return
+                    '\\' => result.push('\\'),  // backslash
+                    '"' => result.push('"'),    // quote
+                    '\'' => result.push('\''),  // single quote
+                    '0' => result.push('\0'),   // null
+                    _ => {
+                        // Unknown escape sequence - include backslash and char
+                        result.push('\\');
+                        result.push(self.ch);
+                    }
+                }
+                self.read_char();
+            } else {
+                result.push(self.ch);
+                self.read_char();
+            }
         }
-        let literal: String = self.input[start_pos..self.position].iter().collect();
-        let token = Token::new(TokenKind::String(literal.clone()), literal, self.line, start_col);
+
+        let token = Token::new(TokenKind::String(result.clone()), result, self.line, start_col);
         self.read_char(); // Consume closing '"'
         token
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_string_escape_sequences() {
+        let input = r#""Hello\nWorld""#.to_string();
+        let mut lexer = Lexer::new(input);
+        let token = lexer.next_token();
+
+        if let TokenKind::String(s) = token.kind {
+            assert_eq!(s, "Hello\nWorld");
+        } else {
+            panic!("Expected String token, got {:?}", token.kind);
+        }
+    }
+
+    #[test]
+    fn test_string_tab_escape() {
+        let input = r#""Tab\there""#.to_string();
+        let mut lexer = Lexer::new(input);
+        let token = lexer.next_token();
+
+        if let TokenKind::String(s) = token.kind {
+            assert_eq!(s, "Tab\there");
+        } else {
+            panic!("Expected String token, got {:?}", token.kind);
+        }
+    }
+
+    #[test]
+    fn test_string_quote_escape() {
+        let input = r#""Say \"Hello\"""#.to_string();
+        let mut lexer = Lexer::new(input);
+        let token = lexer.next_token();
+
+        if let TokenKind::String(s) = token.kind {
+            assert_eq!(s, "Say \"Hello\"");
+        } else {
+            panic!("Expected String token, got {:?}", token.kind);
+        }
+    }
+
+    #[test]
+    fn test_string_backslash_escape() {
+        let input = r#""Path\\to\\file""#.to_string();
+        let mut lexer = Lexer::new(input);
+        let token = lexer.next_token();
+
+        if let TokenKind::String(s) = token.kind {
+            assert_eq!(s, "Path\\to\\file");
+        } else {
+            panic!("Expected String token, got {:?}", token.kind);
+        }
+    }
+
+    #[test]
+    fn test_string_multiple_escapes() {
+        let input = r#""Line1\nLine2\tTabbed\\Backslash""#.to_string();
+        let mut lexer = Lexer::new(input);
+        let token = lexer.next_token();
+
+        if let TokenKind::String(s) = token.kind {
+            assert_eq!(s, "Line1\nLine2\tTabbed\\Backslash");
+        } else {
+            panic!("Expected String token, got {:?}", token.kind);
+        }
+    }
+
+    #[test]
+    fn test_multiline_string() {
+        let input = "\"Line 1\nLine 2\nLine 3\"".to_string();
+        let mut lexer = Lexer::new(input);
+        let token = lexer.next_token();
+
+        if let TokenKind::String(s) = token.kind {
+            assert_eq!(s, "Line 1\nLine 2\nLine 3");
+        } else {
+            panic!("Expected String token, got {:?}", token.kind);
+        }
+    }
+
+    #[test]
+    fn test_multiline_string_with_indentation() {
+        let input = "\"  Indented line 1\n    Indented line 2\n  End\"".to_string();
+        let mut lexer = Lexer::new(input);
+        let token = lexer.next_token();
+
+        if let TokenKind::String(s) = token.kind {
+            assert_eq!(s, "  Indented line 1\n    Indented line 2\n  End");
+        } else {
+            panic!("Expected String token, got {:?}", token.kind);
+        }
     }
 }

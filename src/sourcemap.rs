@@ -241,6 +241,134 @@ pub fn map_stack_trace(
     frames
 }
 
+/// Decode VLQ-encoded mappings string into structured mappings
+fn decode_mappings(mappings: &str) -> Option<Vec<Vec<Mapping>>> {
+    let mut result = Vec::new();
+    let mut prev_source = 0i32;
+    let mut prev_original_line = 0i32;
+    let mut prev_original_column = 0i32;
+    let mut prev_name = 0i32;
+
+    for line in mappings.split(';') {
+        let mut line_mappings = Vec::new();
+        let mut prev_generated_column = 0i32;
+
+        for segment in line.split(',') {
+            if segment.is_empty() {
+                continue;
+            }
+
+            let mut values = Vec::new();
+            let mut chars = segment.chars().peekable();
+
+            // Decode VLQ values
+            while chars.peek().is_some() {
+                if let Some(value) = decode_vlq_value(&mut chars) {
+                    values.push(value);
+                } else {
+                    return None;
+                }
+            }
+
+            // A segment must have at least 4 values (generated_column, source_index, original_line, original_column)
+            if values.len() < 4 {
+                continue;
+            }
+
+            // Decode relative values to absolute
+            let generated_column = prev_generated_column + values[0];
+            let source_index = prev_source + values[1];
+            let original_line = prev_original_line + values[2];
+            let original_column = prev_original_column + values[3];
+            let name_index = if values.len() >= 5 {
+                prev_name += values[4];
+                Some(prev_name as u32)
+            } else {
+                None
+            };
+
+            prev_generated_column = generated_column;
+            prev_source = source_index;
+            prev_original_line = original_line;
+            prev_original_column = original_column;
+
+            line_mappings.push(Mapping {
+                generated_column: generated_column as u32,
+                source_index: source_index as u32,
+                original_line: original_line as u32,
+                original_column: original_column as u32,
+                name_index,
+            });
+        }
+
+        result.push(line_mappings);
+    }
+
+    Some(result)
+}
+
+/// Decode a single VLQ value from a character iterator
+fn decode_vlq_value(chars: &mut std::iter::Peekable<std::str::Chars>) -> Option<i32> {
+    const VLQ_BASE: i32 = 32;
+    const VLQ_CONTINUATION_BIT: i32 = VLQ_BASE;
+
+    let mut result = 0;
+    let mut shift = 0;
+
+    loop {
+        let ch = chars.next()?;
+        let digit = decode_base64_char(ch)? as i32;
+
+        let continuation = (digit & VLQ_CONTINUATION_BIT) != 0;
+        let value = digit & (VLQ_BASE - 1);
+
+        result += value << shift;
+        shift += 5;
+
+        if !continuation {
+            break;
+        }
+    }
+
+    // Convert from variable-length quantity to signed integer
+    let is_negative = (result & 1) != 0;
+    result >>= 1;
+
+    Some(if is_negative { -result } else { result })
+}
+
+/// Decode a base64 character to its numeric value
+fn decode_base64_char(ch: char) -> Option<u8> {
+    match ch {
+        'A'..='Z' => Some((ch as u8) - b'A'),
+        'a'..='z' => Some((ch as u8) - b'a' + 26),
+        '0'..='9' => Some((ch as u8) - b'0' + 52),
+        '+' => Some(62),
+        '/' => Some(63),
+        _ => None,
+    }
+}
+
+/// Look up the mapping for a specific generated location
+fn lookup_mapping(mappings: &[Vec<Mapping>], line: u32, column: u32) -> Option<&Mapping> {
+    // Get the mappings for this line
+    let line_mappings = mappings.get(line as usize)?;
+
+    // Find the mapping that covers this column
+    // Mappings are sorted by generated_column, so we find the last one <= our column
+    let mut best_mapping: Option<&Mapping> = None;
+
+    for mapping in line_mappings {
+        if mapping.generated_column <= column {
+            best_mapping = Some(mapping);
+        } else {
+            break;
+        }
+    }
+
+    best_mapping
+}
+
 fn parse_stack_frame(line: &str, sourcemap: &SourceMap) -> Option<StackFrame> {
     // Simple parser for stack trace lines like:
     // "at functionName (file.wasm:line:column)"
@@ -259,18 +387,21 @@ fn parse_stack_frame(line: &str, sourcemap: &SourceMap) -> Option<StackFrame> {
     }
 
     let _file = location_parts[0];
-    let line: u32 = location_parts[1].parse().ok()?;
-    let column: u32 = location_parts[2].parse().ok()?;
+    let wasm_line: u32 = location_parts[1].parse().ok()?;
+    let wasm_column: u32 = location_parts[2].parse().ok()?;
 
-    // TODO: Implement actual source map lookup
-    // For now, just use the first source file
-    let source_file = sourcemap.sources.first()?.clone();
+    // Decode the source map and find the mapping for this location
+    let decoded_mappings = decode_mappings(&sourcemap.mappings)?;
+    let mapping = lookup_mapping(&decoded_mappings, wasm_line, wasm_column)?;
+
+    // Get the source file name
+    let source_file = sourcemap.sources.get(mapping.source_index as usize)?.clone();
 
     Some(StackFrame {
         function_name,
         file: source_file,
-        line,
-        column,
+        line: mapping.original_line,
+        column: mapping.original_column,
     })
 }
 
@@ -308,5 +439,73 @@ mod tests {
         output.clear();
         encode_vlq(-1, &mut output);
         assert_eq!(output, "D");
+    }
+
+    #[test]
+    fn test_vlq_decode() {
+        // Test decoding "A" -> 0
+        let mut chars = "A".chars().peekable();
+        let value = decode_vlq_value(&mut chars);
+        assert_eq!(value, Some(0));
+
+        // Test decoding "C" -> 1
+        let mut chars = "C".chars().peekable();
+        let value = decode_vlq_value(&mut chars);
+        assert_eq!(value, Some(1));
+
+        // Test decoding "D" -> -1
+        let mut chars = "D".chars().peekable();
+        let value = decode_vlq_value(&mut chars);
+        assert_eq!(value, Some(-1));
+    }
+
+    #[test]
+    fn test_mapping_decode_and_lookup() {
+        // Create a source map with known mappings
+        let mut builder = SourceMapBuilder::new("output.wasm".to_string());
+        let source_idx = builder.add_source("main.raven".to_string(), "fn main() {}".to_string());
+
+        // Add some mappings
+        // Line 0, column 0 maps to source line 0, column 0
+        builder.add_mapping(0, 0, source_idx, 0, 0, Some("main".to_string()));
+        // Line 0, column 10 maps to source line 0, column 3
+        builder.add_mapping(0, 10, source_idx, 0, 3, None);
+
+        let sourcemap = builder.build();
+
+        // Test that we can decode the mappings
+        let decoded = decode_mappings(&sourcemap.mappings).expect("Failed to decode mappings");
+        assert_eq!(decoded.len(), 1); // One line of mappings
+        assert_eq!(decoded[0].len(), 2); // Two segments on that line
+
+        // Test lookup
+        let mapping = lookup_mapping(&decoded, 0, 0).expect("Failed to find mapping");
+        assert_eq!(mapping.generated_column, 0);
+        assert_eq!(mapping.original_line, 0);
+        assert_eq!(mapping.original_column, 0);
+
+        let mapping = lookup_mapping(&decoded, 0, 15).expect("Failed to find mapping");
+        assert_eq!(mapping.generated_column, 10);
+        assert_eq!(mapping.original_line, 0);
+        assert_eq!(mapping.original_column, 3);
+    }
+
+    #[test]
+    fn test_stack_trace_mapping() {
+        // Create a source map
+        let mut builder = SourceMapBuilder::new("output.wasm".to_string());
+        let source_idx = builder.add_source("test.raven".to_string(), "fn foo() {}".to_string());
+        builder.add_mapping(5, 10, source_idx, 3, 4, Some("foo".to_string()));
+        let sourcemap = builder.build();
+
+        // Test parsing a stack frame
+        let stack_line = "at myFunction (output.wasm:5:10)";
+        let frames = map_stack_trace(stack_line, &sourcemap);
+
+        assert_eq!(frames.len(), 1);
+        assert_eq!(frames[0].function_name, "myFunction");
+        assert_eq!(frames[0].file, "test.raven");
+        assert_eq!(frames[0].line, 3);
+        assert_eq!(frames[0].column, 4);
     }
 }

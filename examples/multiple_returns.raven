@@ -1,0 +1,33 @@
+// Test multiple return points and control flow
+
+fn abs(n: i32) -> i32 {
+    if n < 0 {
+        return 0 - n;  // Use subtraction instead of unary minus
+    }
+    return n;
+}
+
+fn max(a: i32, b: i32) -> i32 {
+    if a > b {
+        return a;
+    }
+    return b;
+}
+
+fn classify(n: i32) -> i32 {
+    // Return different values based on input
+    if n < 0 {
+        return -1;  // negative
+    }
+    if n > 0 {
+        return 1;   // positive
+    }
+    return 0;       // zero
+}
+
+fn main() -> i32 {
+    let a = abs(-42);      // 42
+    let b = max(10, 20);   // 20
+    let c = classify(0);   // 0
+    return a + b + c;      // 42 + 20 + 0 = 62
+}

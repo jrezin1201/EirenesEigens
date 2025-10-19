@@ -58,6 +58,7 @@ pub struct StructDefinition {
 #[derive(Debug, Clone)]
 pub struct FunctionDefinition {
     pub name: Identifier,
+    pub parameters: Vec<FunctionParameter>,
     pub is_server: bool,
     pub is_async: bool,
     pub body: BlockStatement,
