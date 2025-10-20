@@ -1,4 +1,9 @@
 {
+  "name": "ravensone-monorepo",
+  "private": true,
+  "scripts": {
+    "docs:check": "node scripts/docs-check.mjs"
+  },
   "dependencies": {
     "ws": "^8.18.3",
     "express": "^4.18.2",
