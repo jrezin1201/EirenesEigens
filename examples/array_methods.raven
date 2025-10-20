@@ -1,0 +1,7 @@
+// Test array methods
+
+fn main() -> i32 {
+    let arr = [10, 20, 30, 40, 50];
+    let length = arr.len();  // Should be 5
+    return length;
+}

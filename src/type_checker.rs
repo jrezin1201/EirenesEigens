@@ -1,6 +1,6 @@
 // Type Checker with Hindley-Milner Type Inference
 
-use crate::ast::{Expression, Statement, InfixExpression, TypeExpression};
+use crate::ast::{Expression, Statement, InfixExpression, PrefixExpression, TypeExpression};
 use crate::errors::CompileError;
 use crate::types::{Substitution, Type, TypeEnv};
 use std::collections::HashSet;
@@ -47,6 +47,27 @@ impl TypeChecker {
                     _ => Type::Named(ident.value.clone()),
                 }
             }
+            TypeExpression::Tuple(types) => {
+                // Convert tuple type expression to Type::Tuple
+                let converted_types: Vec<Type> = types.iter()
+                    .map(|t| self.type_expr_to_type(t))
+                    .collect();
+                Type::Tuple(converted_types)
+            }
+            TypeExpression::Reference(_inner) => {
+                // For now, return Any for reference types
+                Type::Any
+            }
+            TypeExpression::MutableReference(_inner) => {
+                // For now, return Any for mutable reference types
+                Type::Any
+            }
+            TypeExpression::Slice(inner) => {
+                // Slices are array views - recursively process the inner type
+                // Return Type::Array with the inner type
+                let inner_type = self.type_expr_to_type(inner);
+                Type::Array(Box::new(inner_type))
+            }
         }
     }
 
@@ -65,6 +86,26 @@ impl TypeChecker {
                 let value_type = self.infer_expression(&let_stmt.value)?;
                 self.env.bind(let_stmt.name.value.clone(), value_type.clone());
                 Ok(value_type)
+            }
+
+            Statement::Assignment(assign_stmt) => {
+                // Check that variable exists and clone the type
+                let var_type = self.env.lookup(&assign_stmt.target.value)
+                    .ok_or_else(|| CompileError::Generic(format!(
+                        "Cannot assign to undefined variable '{}'",
+                        assign_stmt.target.value
+                    )))?.clone();
+
+                // Check that value type matches variable type
+                let value_type = self.infer_expression(&assign_stmt.value)?;
+                if let Err(e) = self.unify(&value_type, &var_type) {
+                    return Err(CompileError::Generic(format!(
+                        "Type mismatch in assignment to '{}': expected {}, got {}. {}",
+                        assign_stmt.target.value, var_type, value_type, e
+                    )));
+                }
+
+                Ok(Type::Void)
             }
 
             Statement::Function(func_def) => {
@@ -135,6 +176,78 @@ impl TypeChecker {
                 Ok(Type::Void)
             }
 
+            Statement::While(while_stmt) => {
+                let cond_type = self.infer_expression(&while_stmt.condition)?;
+                if cond_type != Type::Bool {
+                    return Err(CompileError::Generic(format!(
+                        "While condition must be bool, got {}",
+                        cond_type
+                    )));
+                }
+
+                for stmt in &while_stmt.body.statements {
+                    self.check_statement(stmt)?;
+                }
+
+                Ok(Type::Void)
+            }
+
+            Statement::For(for_stmt) => {
+                // Check init statement if present
+                if let Some(init) = &for_stmt.init {
+                    self.check_statement(init)?;
+                }
+
+                // Check condition
+                let cond_type = self.infer_expression(&for_stmt.condition)?;
+                if cond_type != Type::Bool {
+                    return Err(CompileError::Generic(format!(
+                        "For loop condition must be bool, got {}",
+                        cond_type
+                    )));
+                }
+
+                // Check update statement if present
+                if let Some(update) = &for_stmt.update {
+                    self.check_statement(update)?;
+                }
+
+                // Check body
+                for stmt in &for_stmt.body.statements {
+                    self.check_statement(stmt)?;
+                }
+
+                Ok(Type::Void)
+            }
+
+            Statement::ForIn(for_in_stmt) => {
+                // Infer the type of the iterator expression
+                let iterator_type = self.infer_expression(&for_in_stmt.iterator)?;
+
+                // Verify that the iterator is an iterable type (Array, Range, etc.)
+                match &iterator_type {
+                    Type::Array(_) => {
+                        // Valid array iterator
+                    }
+                    Type::Any => {
+                        // Accept Any type (may be a range or other iterable)
+                    }
+                    _ => {
+                        return Err(CompileError::Generic(format!(
+                            "Cannot iterate over non-iterable type: {}",
+                            iterator_type
+                        )));
+                    }
+                }
+
+                // Check body statements
+                for stmt in &for_in_stmt.body.statements {
+                    self.check_statement(stmt)?;
+                }
+
+                Ok(Type::Void)
+            }
+
             _ => Ok(Type::Void),
         }
     }
@@ -156,6 +269,10 @@ impl TypeChecker {
                         ident.value
                     )))
                 }
+            }
+
+            Expression::Prefix(prefix) => {
+                self.check_prefix_expression(prefix)
             }
 
             Expression::Infix(infix) => {
@@ -228,7 +345,137 @@ impl TypeChecker {
                 Ok(Type::function(vec![Type::Any; lambda.parameters.len()], body_type))
             }
 
-            _ => Ok(Type::Any),
+            Expression::ArrayLiteral(array_lit) => {
+                if array_lit.elements.is_empty() {
+                    // Empty array - unknown element type
+                    Ok(Type::Array(Box::new(Type::Any)))
+                } else {
+                    // Infer type from first element
+                    let first_type = self.infer_expression(&array_lit.elements[0])?;
+
+                    // Check all elements have compatible types
+                    for elem in &array_lit.elements[1..] {
+                        let elem_type = self.infer_expression(elem)?;
+                        self.unify(&elem_type, &first_type)?;
+                    }
+
+                    Ok(Type::Array(Box::new(first_type)))
+                }
+            }
+
+            Expression::TupleLiteral(tuple_lit) => {
+                // Infer type for each element
+                let mut element_types = Vec::new();
+                for elem in &tuple_lit.elements {
+                    let elem_type = self.infer_expression(elem)?;
+                    element_types.push(elem_type);
+                }
+                Ok(Type::Tuple(element_types))
+            }
+
+            Expression::StructLiteral(_) => {
+                // For now, return Any for struct literals
+                Ok(Type::Any)
+            }
+
+            Expression::FieldAccess(_) => {
+                // For now, return Any for field access
+                Ok(Type::Any)
+            }
+
+            Expression::IndexAccess(index_expr) => {
+                // Process array and index expressions
+                let array_type = self.infer_expression(&index_expr.array)?;
+                let index_type = self.infer_expression(&index_expr.index)?;
+
+                // Index must be an integer
+                if index_type != Type::Int && index_type != Type::Any {
+                    return Err(CompileError::Generic(format!(
+                        "Array index must be an integer, got {}",
+                        index_type
+                    )));
+                }
+
+                // If array type is Array<T>, return T
+                match array_type {
+                    Type::Array(elem_type) => Ok(*elem_type),
+                    Type::Any => Ok(Type::Any),
+                    _ => Err(CompileError::Generic(format!(
+                        "Cannot index into non-array type: {}",
+                        array_type
+                    ))),
+                }
+            }
+
+            Expression::Match(_) => {
+                // For now, return Any for match expressions
+                Ok(Type::Any)
+            }
+
+            Expression::Borrow(borrow_expr) => {
+                // Process the inner expression
+                self.infer_expression(&borrow_expr.expression)?;
+                // For now, return Any for borrow expressions
+                Ok(Type::Any)
+            }
+
+            Expression::MutableBorrow(borrow_expr) => {
+                // Process the inner expression
+                self.infer_expression(&borrow_expr.expression)?;
+                // For now, return Any for mutable borrow expressions
+                Ok(Type::Any)
+            }
+
+            Expression::Dereference(deref_expr) => {
+                // Process the inner expression
+                self.infer_expression(&deref_expr.expression)?;
+                // For now, return Any for dereference expressions
+                Ok(Type::Any)
+            }
+
+            Expression::Range(_) => {
+                // For now, return Any for range expressions
+                Ok(Type::Any)
+            }
+
+            Expression::TryOperator(try_expr) => {
+                // Process the inner expression recursively
+                // In a full implementation, we would verify that the inner expression
+                // returns a Result<T, E> type and extract the T type
+                self.infer_expression(&try_expr.expression)
+            }
+        }
+    }
+
+    fn check_prefix_expression(&mut self, prefix: &PrefixExpression) -> Result<Type, CompileError> {
+        let right_type = self.infer_expression(&prefix.right)?;
+        let op = &prefix.operator.lexeme;
+
+        match op.as_str() {
+            "-" => {
+                // Negation operator
+                if !right_type.is_numeric() {
+                    return Err(CompileError::Generic(format!(
+                        "Cannot negate non-numeric type: {}",
+                        right_type
+                    )));
+                }
+                Ok(right_type)
+            }
+            "!" => {
+                // Logical NOT operator
+                if right_type != Type::Bool {
+                    return Err(CompileError::Generic(format!(
+                        "Logical NOT expects bool, got {}",
+                        right_type
+                    )));
+                }
+                Ok(Type::Bool)
+            }
+            _ => Err(CompileError::Generic(format!(
+                "Unknown prefix operator: {}",
+                op
+            ))),
         }
     }
 

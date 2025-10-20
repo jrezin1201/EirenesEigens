@@ -52,9 +52,26 @@ impl Lexer {
             ';' => Token::new(TokenKind::Semicolon, ";".to_string(), self.line, start_col),
             '|' => Token::new(TokenKind::Pipe, "|".to_string(), self.line, start_col),
             ',' => Token::new(TokenKind::Comma, ",".to_string(), self.line, start_col),
-            '.' => Token::new(TokenKind::Dot, ".".to_string(), self.line, start_col),
+            '.' => {
+                // Check for .. or ..=
+                if self.peek() == '.' {
+                    self.read_char();
+                    self.read_char();
+                    // Check for ..=
+                    if self.ch == '=' {
+                        self.read_char();
+                        return Token::new(TokenKind::DotDotEq, "..=".to_string(), self.line, start_col);
+                    }
+                    // Just ..
+                    return Token::new(TokenKind::DotDot, "..".to_string(), self.line, start_col);
+                } else {
+                    Token::new(TokenKind::Dot, ".".to_string(), self.line, start_col)
+                }
+            }
             '+' => Token::new(TokenKind::Plus, "+".to_string(), self.line, start_col),
             '*' => Token::new(TokenKind::Star, "*".to_string(), self.line, start_col),
+            '&' => Token::new(TokenKind::Ampersand, "&".to_string(), self.line, start_col),
+            '?' => Token::new(TokenKind::Question, "?".to_string(), self.line, start_col),
             '!' => {
                 if self.peek() == '=' {
                     self.read_char();
@@ -100,6 +117,15 @@ impl Lexer {
             }
             '\0' => Token::new(TokenKind::Eof, "".to_string(), self.line, start_col),
             '"' => return self.read_string(),
+            '\'' => {
+                // Check if this is a lifetime (e.g., 'a, 'static)
+                if self.peek().is_alphabetic() || self.peek() == '_' {
+                    return self.read_lifetime();
+                } else {
+                    // For now, treat single quote without identifier as illegal
+                    Token::new(TokenKind::Illegal(self.ch), self.ch.to_string(), self.line, start_col)
+                }
+            }
             _ => {
                 if self.ch.is_alphabetic() || self.ch == '_' {
                     return self.read_identifier();
@@ -232,6 +258,24 @@ impl Lexer {
         let token = Token::new(TokenKind::String(result.clone()), result, self.line, start_col);
         self.read_char(); // Consume closing '"'
         token
+    }
+
+    fn read_lifetime(&mut self) -> Token {
+        let start_pos = self.position;
+        let start_col = self.column;
+
+        self.read_char(); // Consume the '
+
+        // Read the lifetime name (identifier after the ')
+        while self.ch.is_alphanumeric() || self.ch == '_' {
+            self.read_char();
+        }
+
+        let literal: String = self.input[start_pos..self.position].iter().collect();
+        // Extract the lifetime name without the leading quote
+        let lifetime_name = literal[1..].to_string();
+
+        Token::new(TokenKind::Lifetime(lifetime_name.clone()), literal, self.line, start_col)
     }
 }
 

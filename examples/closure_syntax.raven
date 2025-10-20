@@ -1,0 +1,166 @@
+// Test closure syntax and capture semantics
+// Demonstrates closures that capture variables from their environment
+
+// Simple closure that captures a variable
+fn make_adder(x: i32) -> fn(i32) -> i32 {
+    // This closure captures 'x' from the enclosing function
+    let adder = |y| x + y;
+    return adder;
+}
+
+// Closure that captures multiple variables
+fn make_multiplier_and_adder(mult: i32, add: i32) -> fn(i32) -> i32 {
+    // Captures both 'mult' and 'add'
+    let transform = |value| value * mult + add;
+    return transform;
+}
+
+// Closure with mutable capture
+fn make_counter(start: i32) -> fn() -> i32 {
+    let count = start;
+    // This closure captures 'count' mutably and increments it each time
+    let counter = || {
+        count = count + 1;
+        return count;
+    };
+    return counter;
+}
+
+// Using closures with higher-order functions
+fn apply_twice(f: fn(i32) -> i32, x: i32) -> i32 {
+    return f(f(x));
+}
+
+fn with_closures_example() -> i32 {
+    let multiplier = 3;
+
+    // Closure captures 'multiplier'
+    let triple = |n| n * multiplier;
+
+    // Use the closure
+    let result = apply_twice(triple, 5);  // (5 * 3) * 3 = 45
+
+    return result;
+}
+
+// Closure that captures by reference
+fn sum_with_base(base: i32, numbers: [i32]) -> i32 {
+    let total = base;
+
+    // Closure captures 'total' by mutable reference
+    let accumulate = |n| {
+        total = total + n;
+    };
+
+    // Would iterate and call accumulate for each number
+    // For now, just demonstrate the syntax
+    accumulate(10);
+    accumulate(20);
+
+    return total;
+}
+
+// Closure that moves captured variables
+fn create_string_processor(prefix: string) -> fn(string) -> string {
+    // 'move' keyword would indicate capture by value
+    // For now, just captures normally
+    let processor = |s| prefix + s;
+    return processor;
+}
+
+// Nested closures
+fn nested_closure_example() -> i32 {
+    let outer_var = 10;
+
+    let outer_closure = |x| {
+        let inner_var = 20;
+
+        // Inner closure captures from both scopes
+        let inner_closure = |y| {
+            return outer_var + inner_var + x + y;
+        };
+
+        return inner_closure(5);
+    };
+
+    return outer_closure(3);  // 10 + 20 + 3 + 5 = 38
+}
+
+// Closure in match expressions
+fn closure_in_match(opt: Option<i32>) -> i32 {
+    let multiplier = 2;
+
+    match opt {
+        Option::Some(value) => {
+            // Closure in match arm
+            let double = |x| x * multiplier;
+            return double(value);
+        },
+        Option::None => {
+            return 0;
+        },
+    }
+}
+
+// Closure with explicit types (hypothetical syntax)
+fn typed_closure_example() -> i32 {
+    let adder: fn(i32) -> i32 = |x| x + 10;
+    return adder(5);
+}
+
+// Main function demonstrating closure usage
+fn main() -> i32 {
+    // Create adder closure
+    let add_five = make_adder(5);
+    let result1 = add_five(10);  // 15
+
+    // Create multiplier/adder closure
+    let transform = make_multiplier_and_adder(3, 10);
+    let result2 = transform(5);  // 5 * 3 + 10 = 25
+
+    // Use closure with higher-order function
+    let result3 = with_closures_example();  // 45
+
+    // Nested closure
+    let result4 = nested_closure_example();  // 38
+
+    // Closure in match
+    let result5 = closure_in_match(Option::Some(10));  // 20
+
+    // Simple inline closure
+    let numbers = [1, 2, 3, 4, 5];
+    let sum = 0;
+
+    // Would use map/filter if we had iterators
+    // let doubled = numbers.map(|x| x * 2);
+    // let evens = numbers.filter(|x| x % 2 == 0);
+
+    return result1 + result2 + result3 + result4 + result5;
+}
+
+// Closure capturing demonstration
+fn demonstrate_capture_modes() -> i32 {
+    let immutable_var = 10;
+    let mutable_var = 20;
+
+    // Capture by reference (immutable)
+    let read_closure = || immutable_var;
+
+    // Capture by mutable reference
+    let modify_closure = || {
+        mutable_var = mutable_var + 1;
+        return mutable_var;
+    };
+
+    // Capture by value (move)
+    let move_closure = || {
+        // Would move immutable_var into the closure
+        return immutable_var * 2;
+    };
+
+    let r1 = read_closure();      // 10
+    let r2 = modify_closure();    // 21
+    let r3 = move_closure();      // 20
+
+    return r1 + r2 + r3;
+}

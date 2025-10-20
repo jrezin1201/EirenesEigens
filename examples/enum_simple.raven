@@ -1,0 +1,28 @@
+// Test enum definition parsing
+
+// Simple enum with no associated data
+enum Color {
+    Red,
+    Green,
+    Blue,
+}
+
+// Enum with tuple variants
+enum Option {
+    Some(i32),
+    None,
+}
+
+// Enum with struct variants
+enum Message {
+    Quit,
+    Move { x: i32, y: i32 },
+    Write { text: i32 },  // Simplified: using i32 instead of String
+    ChangeColor { r: i32, g: i32, b: i32 },
+}
+
+fn main() -> i32 {
+    // For now, we can't create enum instances
+    // But the parser can handle enum definition syntax
+    return 0;
+}

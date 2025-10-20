@@ -1,0 +1,9 @@
+// Test tuple literals
+
+fn main() -> i32 {
+    let pair = (10, 20);
+    let triple = (1, 2, 3);
+    let quad = (100, 200, 300, 400);
+
+    return 42;
+}

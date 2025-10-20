@@ -1,0 +1,9 @@
+// Test match expression with wildcard only
+
+fn main() -> i32 {
+    let x = 42;
+    let result = match x {
+        _ => 100,
+    };
+    return result;
+}

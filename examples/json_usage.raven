@@ -1,0 +1,471 @@
+// Test JSON parsing and serialization
+// Demonstrates std::json module usage
+
+// Basic JSON parsing
+fn parse_json_object() -> bool {
+    let json_str = "{\"name\": \"Alice\", \"age\": 30}";
+
+    match json::parse(json_str) {
+        Result::Ok(value) => {
+            // Check if it's an object
+            return value.is_object();
+        },
+        Result::Err(err) => {
+            return false;
+        },
+    }
+}
+
+// Parse JSON and extract values
+fn parse_and_extract() -> i32 {
+    let json_str = "{\"count\": 42, \"active\": true}";
+
+    match json::parse(json_str) {
+        Result::Ok(obj) => {
+            // Get the "count" field
+            match obj.get("count") {
+                Option::Some(count_value) => {
+                    match count_value.as_i32() {
+                        Result::Ok(count) => count,
+                        Result::Err(_) => 0,
+                    }
+                },
+                Option::None => 0,
+            }
+        },
+        Result::Err(_) => 0,
+    }
+}
+
+// Parse JSON array
+fn parse_json_array() -> i32 {
+    let json_str = "[1, 2, 3, 4, 5]";
+
+    match json::parse(json_str) {
+        Result::Ok(value) => {
+            match value.as_array() {
+                Result::Ok(arr) => arr.len(),
+                Result::Err(_) => 0,
+            }
+        },
+        Result::Err(_) => 0,
+    }
+}
+
+// Create JSON object manually
+fn create_json_object() -> bool {
+    let obj = json::object();
+
+    // Add fields
+    obj.set("name", json::string("Bob"));
+    obj.set("age", json::number_i32(25));
+    obj.set("active", json::bool(true));
+
+    return obj.is_object();
+}
+
+// Create JSON array manually
+fn create_json_array() -> i32 {
+    let arr = json::array();
+
+    // Add elements
+    arr.push(json::number_i32(10));
+    arr.push(json::number_i32(20));
+    arr.push(json::number_i32(30));
+
+    match arr.len() {
+        Result::Ok(len) => len,
+        Result::Err(_) => 0,
+    }
+}
+
+// Serialize JSON to string
+fn serialize_json_object() -> bool {
+    let obj = json::object();
+    obj.set("name", json::string("Charlie"));
+    obj.set("age", json::number_i32(35));
+
+    let json_str = json::stringify(&obj);
+
+    // Check that we got a non-empty string
+    return json_str.len() > 0;
+}
+
+// Pretty-print JSON
+fn pretty_print_json() -> bool {
+    let obj = json::object();
+    obj.set("name", json::string("David"));
+    obj.set("age", json::number_i32(40));
+
+    let pretty_json = json::stringify_pretty(&obj);
+
+    // Check that we got a non-empty string
+    return pretty_json.len() > 0;
+}
+
+// Nested JSON objects
+fn nested_json_objects() -> bool {
+    let person = json::object();
+    person.set("name", json::string("Eve"));
+    person.set("age", json::number_i32(28));
+
+    let address = json::object();
+    address.set("street", json::string("123 Main St"));
+    address.set("city", json::string("San Francisco"));
+
+    person.set("address", address);
+
+    // Check if person has the address field
+    return person.has_key("address");
+}
+
+// Array of objects
+fn array_of_objects() -> i32 {
+    let users = json::array();
+
+    let user1 = json::object();
+    user1.set("id", json::number_i32(1));
+    user1.set("name", json::string("Alice"));
+
+    let user2 = json::object();
+    user2.set("id", json::number_i32(2));
+    user2.set("name", json::string("Bob"));
+
+    let user3 = json::object();
+    user3.set("id", json::number_i32(3));
+    user3.set("name", json::string("Charlie"));
+
+    users.push(user1);
+    users.push(user2);
+    users.push(user3);
+
+    match users.len() {
+        Result::Ok(len) => len,
+        Result::Err(_) => 0,
+    }
+}
+
+// Check JSON value types
+fn check_value_types() -> i32 {
+    let json_str = "{\"null_val\": null, \"bool_val\": true, \"num_val\": 42, \"str_val\": \"hello\"}";
+
+    match json::parse(json_str) {
+        Result::Ok(obj) => {
+            let count = 0;
+
+            match obj.get("null_val") {
+                Option::Some(val) => {
+                    if val.is_null() {
+                        count = count + 1;
+                    }
+                },
+                Option::None => {},
+            }
+
+            match obj.get("bool_val") {
+                Option::Some(val) => {
+                    if val.is_bool() {
+                        count = count + 1;
+                    }
+                },
+                Option::None => {},
+            }
+
+            match obj.get("num_val") {
+                Option::Some(val) => {
+                    if val.is_number() {
+                        count = count + 1;
+                    }
+                },
+                Option::None => {},
+            }
+
+            match obj.get("str_val") {
+                Option::Some(val) => {
+                    if val.is_string() {
+                        count = count + 1;
+                    }
+                },
+                Option::None => {},
+            }
+
+            return count;  // Should be 4
+        },
+        Result::Err(_) => 0,
+    }
+}
+
+// Iterate over object keys
+fn iterate_object_keys() -> i32 {
+    let obj = json::object();
+    obj.set("a", json::number_i32(1));
+    obj.set("b", json::number_i32(2));
+    obj.set("c", json::number_i32(3));
+
+    match obj.keys() {
+        Result::Ok(keys) => keys.len(),
+        Result::Err(_) => 0,
+    }
+}
+
+// Iterate over object values
+fn iterate_object_values() -> i32 {
+    let obj = json::object();
+    obj.set("x", json::number_i32(10));
+    obj.set("y", json::number_i32(20));
+    obj.set("z", json::number_i32(30));
+
+    match obj.values() {
+        Result::Ok(values) => values.len(),
+        Result::Err(_) => 0,
+    }
+}
+
+// Remove fields from object
+fn remove_object_field() -> bool {
+    let obj = json::object();
+    obj.set("keep", json::number_i32(1));
+    obj.set("remove", json::number_i32(2));
+
+    match obj.remove("remove") {
+        Result::Ok(removed) => {
+            // Check that "remove" is gone
+            return !obj.has_key("remove");
+        },
+        Result::Err(_) => false,
+    }
+}
+
+// Clone JSON values
+fn clone_json_value() -> bool {
+    let original = json::object();
+    original.set("data", json::number_i32(42));
+
+    let cloned = original.clone();
+
+    // Both should be objects
+    return cloned.is_object();
+}
+
+// Working with API responses (conceptual)
+fn parse_api_response() -> i32 {
+    // Simulated API response
+    let response_body = "{\"users\": [{\"id\": 1, \"name\": \"Alice\"}, {\"id\": 2, \"name\": \"Bob\"}], \"total\": 2}";
+
+    match json::parse_response(response_body) {
+        Result::Ok(data) => {
+            match data.get("total") {
+                Option::Some(total_value) => {
+                    match total_value.as_i32() {
+                        Result::Ok(total) => total,
+                        Result::Err(_) => 0,
+                    }
+                },
+                Option::None => 0,
+            }
+        },
+        Result::Err(_) => 0,
+    }
+}
+
+// Creating API request body
+fn create_api_request() -> bool {
+    let request_data = json::object();
+    request_data.set("email", json::string("user@example.com"));
+    request_data.set("password", json::string("secret123"));
+
+    let request_body = json::create_request_body(request_data);
+
+    return request_body.len() > 0;
+}
+
+// Complex nested structure
+fn complex_nested_structure() -> bool {
+    let root = json::object();
+
+    // User object
+    let user = json::object();
+    user.set("id", json::number_i32(1));
+    user.set("name", json::string("Alice"));
+
+    // Profile object
+    let profile = json::object();
+    profile.set("bio", json::string("Software engineer"));
+    profile.set("avatar", json::string("https://example.com/avatar.jpg"));
+
+    user.set("profile", profile);
+
+    // Posts array
+    let posts = json::array();
+
+    let post1 = json::object();
+    post1.set("id", json::number_i32(101));
+    post1.set("title", json::string("First post"));
+    post1.set("likes", json::number_i32(42));
+
+    let post2 = json::object();
+    post2.set("id", json::number_i32(102));
+    post2.set("title", json::string("Second post"));
+    post2.set("likes", json::number_i32(73));
+
+    posts.push(post1);
+    posts.push(post2);
+
+    user.set("posts", posts);
+    root.set("user", user);
+
+    // Serialize to JSON string
+    let json_str = json::stringify_pretty(&root);
+
+    return json_str.len() > 0;
+}
+
+// Array indexing
+fn array_indexing() -> i32 {
+    let arr = json::array();
+    arr.push(json::number_i32(100));
+    arr.push(json::number_i32(200));
+    arr.push(json::number_i32(300));
+
+    match arr.get_index(1) {
+        Option::Some(value) => {
+            match value.as_i32() {
+                Result::Ok(num) => num,  // Should be 200
+                Result::Err(_) => 0,
+            }
+        },
+        Option::None => 0,
+    }
+}
+
+// Modifying array elements
+fn modify_array_element() -> bool {
+    let arr = json::array();
+    arr.push(json::number_i32(1));
+    arr.push(json::number_i32(2));
+    arr.push(json::number_i32(3));
+
+    match arr.set_index(1, json::number_i32(999)) {
+        Result::Ok(_) => true,
+        Result::Err(_) => false,
+    }
+}
+
+// Parse malformed JSON (error handling)
+fn parse_invalid_json() -> bool {
+    let bad_json = "{invalid json}";
+
+    match json::parse(bad_json) {
+        Result::Ok(_) => false,  // Shouldn't succeed
+        Result::Err(err) => true,  // Should get an error
+    }
+}
+
+// Type mismatch error handling
+fn type_mismatch_errors() -> bool {
+    let num_value = json::number_i32(42);
+
+    // Try to use number as string (should fail)
+    match num_value.as_string() {
+        Result::Ok(_) => false,
+        Result::Err(_) => true,  // Expected error
+    }
+}
+
+// Real-world example: User authentication response
+fn auth_response_example() -> bool {
+    let response = "{\"success\": true, \"token\": \"abc123\", \"user\": {\"id\": 1, \"email\": \"user@example.com\"}}";
+
+    match json::parse(response) {
+        Result::Ok(data) => {
+            // Check success
+            match data.get("success") {
+                Option::Some(success_val) => {
+                    match success_val.as_bool() {
+                        Result::Ok(success) => {
+                            if success {
+                                // Get token
+                                match data.get("token") {
+                                    Option::Some(token_val) => {
+                                        match token_val.as_string() {
+                                            Result::Ok(token) => {
+                                                return token.len() > 0;
+                                            },
+                                            Result::Err(_) => false,
+                                        }
+                                    },
+                                    Option::None => false,
+                                }
+                            } else {
+                                false
+                            }
+                        },
+                        Result::Err(_) => false,
+                    }
+                },
+                Option::None => false,
+            }
+        },
+        Result::Err(_) => false,
+    }
+}
+
+// Main function demonstrating JSON usage
+fn main() -> i32 {
+    let r1 = parse_json_object();        // true
+    let r2 = parse_and_extract();        // 42
+    let r3 = parse_json_array();         // 5
+    let r4 = create_json_object();       // true
+    let r5 = create_json_array();        // 3
+    let r6 = array_of_objects();         // 3
+    let r7 = check_value_types();        // 4
+    let r8 = iterate_object_keys();      // 3
+    let r9 = parse_api_response();       // 2
+    let r10 = array_indexing();          // 200
+
+    // Return sum of numeric results
+    return r2 + r3 + r5 + r6 + r7 + r8 + r9 + r10;
+    // 42 + 5 + 3 + 3 + 4 + 3 + 2 + 200 = 262
+}
+
+/*
+Common JSON Patterns:
+
+1. Parsing API responses:
+   match json::parse(response_body) {
+       Result::Ok(data) => { /* use data */ },
+       Result::Err(err) => { /* handle error */ },
+   }
+
+2. Building request payloads:
+   let payload = json::object();
+   payload.set("key", json::string("value"));
+   let body = json::stringify(&payload);
+
+3. Navigating nested structures:
+   match obj.get("field") {
+       Option::Some(value) => {
+           match value.get("nested") {
+               Option::Some(nested) => { /* use nested */ },
+               Option::None => {},
+           }
+       },
+       Option::None => {},
+   }
+
+4. Type-safe extraction:
+   match value.as_i32() {
+       Result::Ok(num) => { /* use num as i32 */ },
+       Result::Err(_) => { /* handle type mismatch */ },
+   }
+
+5. Array iteration:
+   match arr.as_array() {
+       Result::Ok(items) => {
+           for item in items {
+               // process each item
+           }
+       },
+       Result::Err(_) => {},
+   }
+*/

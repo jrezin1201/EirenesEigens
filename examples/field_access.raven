@@ -1,0 +1,50 @@
+// Test struct field access support
+
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+struct Person {
+    name: i32,  // Simplified: using i32 for now
+    age: i32,
+}
+
+fn test_point_fields() -> i32 {
+    let p = Point { x: 10, y: 20 };
+
+    // Access individual fields
+    let x_val = p.x;
+    let y_val = p.y;
+
+    // Return sum of coordinates
+    return x_val + y_val;  // Should be 30
+}
+
+fn test_person_fields() -> i32 {
+    let person = Person { name: 100, age: 25 };
+
+    // Access fields
+    let name_val = person.name;
+    let age_val = person.age;
+
+    // Return sum
+    return name_val + age_val;  // Should be 125
+}
+
+fn test_nested_field_access() -> i32 {
+    let p1 = Point { x: 5, y: 10 };
+    let p2 = Point { x: 3, y: 7 };
+
+    // Chained field access would look like: p1.x + p2.y
+    return p1.x + p2.y;  // Should be 12 (5 + 7)
+}
+
+fn main() -> i32 {
+    let r1 = test_point_fields();          // 30
+    let r2 = test_person_fields();         // 125
+    let r3 = test_nested_field_access();   // 12
+
+    // Return: 30 + 125 + 12 = 167
+    return r1 + r2 + r3;
+}

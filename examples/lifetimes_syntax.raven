@@ -1,0 +1,33 @@
+// Test lifetime annotation syntax
+// This file tests that the lexer can tokenize lifetime annotations like 'a, 'b, 'static
+
+// Struct with lifetime parameter
+struct Ref<'a> {
+    value: i32,
+}
+
+// Function with lifetime parameter
+fn get_value<'a>(r: Ref<'a>) -> i32 {
+    return 42;
+}
+
+// Multiple lifetime parameters
+struct Pair<'a, 'b> {
+    first: i32,
+    second: i32,
+}
+
+// Function with multiple lifetimes and type parameter
+fn combine<'a, 'b, T>(x: T, y: T) -> i32 {
+    return 0;
+}
+
+// Special 'static lifetime
+struct Static<'static> {
+    data: i32,
+}
+
+fn main() -> i32 {
+    let x = 42;
+    return x;
+}

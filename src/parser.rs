@@ -50,11 +50,32 @@ impl Parser {
         let stmt = match self.current_token().kind {
             TokenKind::Use => self.parse_use_statement().map(Statement::Use),
             TokenKind::Struct => self.parse_struct_definition().map(Statement::Struct),
+            TokenKind::Enum => self.parse_enum_definition().map(Statement::Enum),
+            TokenKind::Impl => self.parse_impl_block().map(Statement::ImplBlock),
+            TokenKind::Trait => self.parse_trait_definition().map(Statement::Trait),
             TokenKind::Component => self.parse_component_definition().map(Statement::Component),
             TokenKind::Fn | TokenKind::Server | TokenKind::Async => self.parse_function_definition().map(Statement::Function),
             TokenKind::Let => self.parse_let_statement().map(Statement::Let),
             TokenKind::Return => self.parse_return_statement().map(Statement::Return),
             TokenKind::If => self.parse_if_statement().map(Statement::If),
+            TokenKind::While => self.parse_while_statement().map(Statement::While),
+            TokenKind::For => {
+                // Look ahead to distinguish between for-in and C-style for loop
+                // for item in collection { } vs for (init; cond; update) { }
+                if self.peek_token().kind == TokenKind::LParen {
+                    self.parse_for_statement().map(Statement::For)
+                } else {
+                    self.parse_for_in_statement().map(Statement::ForIn)
+                }
+            },
+            TokenKind::Identifier => {
+                // Check if this is an assignment
+                if self.peek_token().kind == TokenKind::Assign {
+                    self.parse_assignment_statement().map(Statement::Assignment)
+                } else {
+                    self.parse_expression_statement().map(Statement::Expression)
+                }
+            }
             _ => self.parse_expression_statement().map(Statement::Expression),
         }?;
         if self.consume_if_matches(&TokenKind::Semicolon) {}
@@ -79,9 +100,26 @@ impl Parser {
         Ok(UseStatement { path, imports })
     }
     
+    fn parse_type_params(&mut self) -> Result<Vec<Identifier>, CompileError> {
+        if !self.consume_if_matches(&TokenKind::LAngle) {
+            return Ok(Vec::new());
+        }
+
+        let mut type_params = Vec::new();
+        while self.current_token().kind != TokenKind::RAngle {
+            type_params.push(self.parse_identifier()?);
+            if !self.consume_if_matches(&TokenKind::Comma) {
+                break;
+            }
+        }
+        self.expect_and_consume(&TokenKind::RAngle)?;
+        Ok(type_params)
+    }
+
     fn parse_struct_definition(&mut self) -> Result<StructDefinition, CompileError> {
         self.expect_and_consume(&TokenKind::Struct)?;
         let name = self.parse_identifier()?;
+        let type_params = self.parse_type_params()?;
         self.expect_and_consume(&TokenKind::LBrace)?;
         let mut fields = Vec::new();
         while self.current_token().kind != TokenKind::RBrace {
@@ -92,7 +130,197 @@ impl Parser {
             if !self.consume_if_matches(&TokenKind::Comma) { break; }
         }
         self.expect_and_consume(&TokenKind::RBrace)?;
-        Ok(StructDefinition { name, fields })
+        Ok(StructDefinition { name, lifetime_params: Vec::new(), type_params, fields })
+    }
+
+    fn parse_enum_definition(&mut self) -> Result<EnumDefinition, CompileError> {
+        self.expect_and_consume(&TokenKind::Enum)?;
+        let name = self.parse_identifier()?;
+        let type_params = self.parse_type_params()?;
+        self.expect_and_consume(&TokenKind::LBrace)?;
+
+        let mut variants = Vec::new();
+        while self.current_token().kind != TokenKind::RBrace {
+            let variant_name = self.parse_identifier()?;
+
+            // Check if this variant has associated data
+            let fields = if self.consume_if_matches(&TokenKind::LBrace) {
+                // Struct-style variant: Name { field1: Type, field2: Type }
+                let mut variant_fields = Vec::new();
+                while self.current_token().kind != TokenKind::RBrace {
+                    let field_name = self.parse_identifier()?;
+                    self.expect_and_consume(&TokenKind::Colon)?;
+                    let field_type = self.parse_type_expression()?;
+                    variant_fields.push((field_name, field_type));
+                    if !self.consume_if_matches(&TokenKind::Comma) { break; }
+                }
+                self.expect_and_consume(&TokenKind::RBrace)?;
+                Some(variant_fields)
+            } else if self.consume_if_matches(&TokenKind::LParen) {
+                // Tuple-style variant: Name(Type1, Type2)
+                let mut variant_fields = Vec::new();
+                let mut index = 0;
+                while self.current_token().kind != TokenKind::RParen {
+                    let field_type = self.parse_type_expression()?;
+                    // For tuple variants, use numeric field names
+                    variant_fields.push((
+                        Identifier { value: index.to_string() },
+                        field_type,
+                    ));
+                    index += 1;
+                    if !self.consume_if_matches(&TokenKind::Comma) { break; }
+                }
+                self.expect_and_consume(&TokenKind::RParen)?;
+                Some(variant_fields)
+            } else {
+                // Simple variant with no data: Name
+                None
+            };
+
+            variants.push(EnumVariant {
+                name: variant_name,
+                fields,
+            });
+
+            if !self.consume_if_matches(&TokenKind::Comma) { break; }
+        }
+        self.expect_and_consume(&TokenKind::RBrace)?;
+
+        Ok(EnumDefinition { name, lifetime_params: Vec::new(), type_params, variants })
+    }
+
+    fn parse_impl_block(&mut self) -> Result<ImplBlock, CompileError> {
+        // impl<T> TypeName { methods... } or impl<T> Trait for TypeName { methods... }
+        self.expect_and_consume(&TokenKind::Impl)?;
+
+        // Parse optional type parameters
+        let type_params = self.parse_type_params()?;
+
+        let first_name = self.parse_identifier()?;
+
+        // Skip optional type arguments on the first name (e.g., Box<T>)
+        // We store type_params separately, so we can ignore these for now
+        if self.current_token().kind == TokenKind::LAngle {
+            self.parse_type_params()?; // Consume and ignore type arguments
+        }
+
+        // Check if this is "impl Trait for Type" or just "impl Type"
+        let (trait_name, type_name) = if self.consume_if_matches(&TokenKind::For) {
+            // This is a trait implementation
+            let type_name = self.parse_identifier()?;
+
+            // Skip optional type arguments on the type name
+            if self.current_token().kind == TokenKind::LAngle {
+                self.parse_type_params()?; // Consume and ignore type arguments
+            }
+
+            (Some(first_name), type_name)
+        } else {
+            // This is an inherent implementation
+            (None, first_name)
+        };
+
+        self.expect_and_consume(&TokenKind::LBrace)?;
+
+        let mut methods = Vec::new();
+        while self.current_token().kind != TokenKind::RBrace {
+            // Parse method: fn method_name(...) -> ReturnType { body }
+            self.expect_and_consume(&TokenKind::Fn)?;
+            let method_name = self.parse_identifier()?;
+
+            // Parse parameter list
+            self.expect_and_consume(&TokenKind::LParen)?;
+            let mut parameters = Vec::new();
+            while self.current_token().kind != TokenKind::RParen {
+                let param_name = self.parse_identifier()?;
+                self.expect_and_consume(&TokenKind::Colon)?;
+                let param_type = self.parse_type_expression()?;
+                parameters.push(FunctionParameter {
+                    name: param_name,
+                    type_annotation: param_type,
+                });
+                if !self.consume_if_matches(&TokenKind::Comma) {
+                    break;
+                }
+            }
+            self.expect_and_consume(&TokenKind::RParen)?;
+
+            // Parse optional return type (-> Type)
+            let return_type = if self.consume_if_matches(&TokenKind::Arrow) {
+                Some(self.parse_type_expression()?)
+            } else {
+                None
+            };
+
+            // Parse method body (block statement)
+            self.expect_and_consume(&TokenKind::LBrace)?;
+            let mut statements = Vec::new();
+            while self.current_token().kind != TokenKind::RBrace {
+                statements.push(self.parse_statement()?);
+            }
+            self.expect_and_consume(&TokenKind::RBrace)?;
+
+            methods.push(ImplMethod {
+                name: method_name,
+                parameters,
+                return_type,
+                body: BlockStatement { statements },
+            });
+        }
+
+        self.expect_and_consume(&TokenKind::RBrace)?;
+        Ok(ImplBlock { trait_name, lifetime_params: Vec::new(), type_params, type_name, methods })
+    }
+
+    fn parse_trait_definition(&mut self) -> Result<TraitDefinition, CompileError> {
+        // trait TraitName<T> { method signatures... }
+        self.expect_and_consume(&TokenKind::Trait)?;
+        let name = self.parse_identifier()?;
+        let type_params = self.parse_type_params()?;
+        self.expect_and_consume(&TokenKind::LBrace)?;
+
+        let mut methods = Vec::new();
+        while self.current_token().kind != TokenKind::RBrace {
+            // Parse method signature: fn method_name(...) -> ReturnType;
+            self.expect_and_consume(&TokenKind::Fn)?;
+            let method_name = self.parse_identifier()?;
+
+            // Parse parameter list
+            self.expect_and_consume(&TokenKind::LParen)?;
+            let mut parameters = Vec::new();
+            while self.current_token().kind != TokenKind::RParen {
+                let param_name = self.parse_identifier()?;
+                self.expect_and_consume(&TokenKind::Colon)?;
+                let param_type = self.parse_type_expression()?;
+                parameters.push(FunctionParameter {
+                    name: param_name,
+                    type_annotation: param_type,
+                });
+                if !self.consume_if_matches(&TokenKind::Comma) {
+                    break;
+                }
+            }
+            self.expect_and_consume(&TokenKind::RParen)?;
+
+            // Parse optional return type (-> Type)
+            let return_type = if self.consume_if_matches(&TokenKind::Arrow) {
+                Some(self.parse_type_expression()?)
+            } else {
+                None
+            };
+
+            // Consume semicolon (trait methods are signatures only)
+            self.consume_if_matches(&TokenKind::Semicolon);
+
+            methods.push(TraitMethod {
+                name: method_name,
+                parameters,
+                return_type,
+            });
+        }
+
+        self.expect_and_consume(&TokenKind::RBrace)?;
+        Ok(TraitDefinition { name, lifetime_params: Vec::new(), type_params, methods })
     }
 
     fn parse_component_definition(&mut self) -> Result<ComponentDefinition, CompileError> {
@@ -137,6 +365,9 @@ impl Parser {
         // Parse function name
         let name = self.parse_identifier()?;
 
+        // Parse optional type parameters
+        let type_params = self.parse_type_params()?;
+
         // Parse parameter list
         self.expect_and_consume(&TokenKind::LParen)?;
         let mut parameters = Vec::new();
@@ -169,6 +400,8 @@ impl Parser {
 
         Ok(FunctionDefinition {
             name,
+            lifetime_params: Vec::new(),
+            type_params,
             parameters,
             is_server,
             is_async,
@@ -177,6 +410,25 @@ impl Parser {
     }
 
     fn parse_type_expression(&mut self) -> Result<TypeExpression, CompileError> {
+        // Check if this is a slice type [T]
+        if self.consume_if_matches(&TokenKind::LBracket) {
+            let inner_type = self.parse_type_expression()?;
+            self.expect_and_consume(&TokenKind::RBracket)?;
+            return Ok(TypeExpression::Slice(Box::new(inner_type)));
+        }
+
+        // Check if this is a reference type (&T or &mut T)
+        if self.consume_if_matches(&TokenKind::Ampersand) {
+            // Check for &mut T (mutable reference)
+            if self.consume_if_matches(&TokenKind::Mut) {
+                let inner_type = self.parse_type_expression()?;
+                return Ok(TypeExpression::MutableReference(Box::new(inner_type)));
+            }
+            // Otherwise it's &T (immutable reference)
+            let inner_type = self.parse_type_expression()?;
+            return Ok(TypeExpression::Reference(Box::new(inner_type)));
+        }
+
         let name = self.parse_identifier()?;
         if self.consume_if_matches(&TokenKind::LAngle) {
             let mut args = Vec::new();
@@ -246,6 +498,104 @@ impl Parser {
         })
     }
 
+    fn parse_while_statement(&mut self) -> Result<WhileStatement, CompileError> {
+        self.expect_and_consume(&TokenKind::While)?;
+        let condition = self.parse_expression(Precedence::Lowest)?;
+        self.expect_and_consume(&TokenKind::LBrace)?;
+
+        // Parse loop body
+        let mut body_statements = Vec::new();
+        while self.current_token().kind != TokenKind::RBrace {
+            body_statements.push(self.parse_statement()?);
+        }
+        self.expect_and_consume(&TokenKind::RBrace)?;
+
+        Ok(WhileStatement {
+            condition,
+            body: BlockStatement { statements: body_statements },
+        })
+    }
+
+    fn parse_for_statement(&mut self) -> Result<ForStatement, CompileError> {
+        self.expect_and_consume(&TokenKind::For)?;
+        self.expect_and_consume(&TokenKind::LParen)?;
+
+        // Parse init (optional)
+        let init = if self.current_token().kind == TokenKind::Semicolon {
+            None
+        } else {
+            Some(Box::new(self.parse_statement()?))
+        };
+
+        // Consume semicolon after init (if there was one, or standalone)
+        if !self.consume_if_matches(&TokenKind::Semicolon) {
+            // parse_statement might have consumed it already
+        }
+
+        // Parse condition
+        let condition = self.parse_expression(Precedence::Lowest)?;
+        self.expect_and_consume(&TokenKind::Semicolon)?;
+
+        // Parse update (optional)
+        let update = if self.current_token().kind == TokenKind::RParen {
+            None
+        } else {
+            Some(Box::new(self.parse_statement()?))
+        };
+
+        self.expect_and_consume(&TokenKind::RParen)?;
+        self.expect_and_consume(&TokenKind::LBrace)?;
+
+        // Parse loop body
+        let mut body_statements = Vec::new();
+        while self.current_token().kind != TokenKind::RBrace {
+            body_statements.push(self.parse_statement()?);
+        }
+        self.expect_and_consume(&TokenKind::RBrace)?;
+
+        Ok(ForStatement {
+            init,
+            condition,
+            update,
+            body: BlockStatement { statements: body_statements },
+        })
+    }
+
+    fn parse_for_in_statement(&mut self) -> Result<ForInStatement, CompileError> {
+        // Parse: for item in collection { body }
+        self.expect_and_consume(&TokenKind::For)?;
+
+        // Parse loop variable
+        let variable = self.parse_identifier()?;
+
+        // Expect 'in' keyword
+        self.expect_and_consume(&TokenKind::In)?;
+
+        // Parse iterator expression
+        let iterator = self.parse_expression(Precedence::Lowest)?;
+
+        // Parse loop body
+        self.expect_and_consume(&TokenKind::LBrace)?;
+        let mut body_statements = Vec::new();
+        while self.current_token().kind != TokenKind::RBrace {
+            body_statements.push(self.parse_statement()?);
+        }
+        self.expect_and_consume(&TokenKind::RBrace)?;
+
+        Ok(ForInStatement {
+            variable,
+            iterator,
+            body: BlockStatement { statements: body_statements },
+        })
+    }
+
+    fn parse_assignment_statement(&mut self) -> Result<AssignmentStatement, CompileError> {
+        let target = self.parse_identifier()?;
+        self.expect_and_consume(&TokenKind::Assign)?;
+        let value = self.parse_expression(Precedence::Lowest)?;
+        Ok(AssignmentStatement { target, value })
+    }
+
     fn parse_expression_statement(&mut self) -> Result<Expression, CompileError> {
         self.parse_expression(Precedence::Lowest)
     }
@@ -289,20 +639,94 @@ impl Parser {
         match &token.kind {
             TokenKind::Identifier => {
                 self.next_token();
-                let ident_expr = Expression::Identifier(Identifier { value: token.lexeme });
-                // Check for function call
-                if self.current_token().kind == TokenKind::LParen {
-                    return self.parse_function_call(ident_expr);
+                let ident = Identifier { value: token.lexeme };
+
+                // Check if this is a struct literal (Identifier { field: value, ... })
+                if self.current_token().kind == TokenKind::LBrace {
+                    return self.parse_struct_literal(ident);
                 }
-                Ok(ident_expr)
+
+                let mut expr = Expression::Identifier(ident);
+
+                // Check for postfix operations (function call, field access, array indexing, or try operator)
+                loop {
+                    match self.current_token().kind {
+                        TokenKind::LParen => {
+                            expr = self.parse_function_call(expr)?;
+                        }
+                        TokenKind::Dot => {
+                            self.next_token(); // consume the dot
+                            let field = self.parse_identifier()?;
+                            expr = Expression::FieldAccess(FieldAccessExpression {
+                                object: Box::new(expr),
+                                field,
+                            });
+                        }
+                        TokenKind::LBracket => {
+                            self.next_token(); // consume the [
+                            let index = self.parse_expression(Precedence::Lowest)?;
+                            self.expect_and_consume(&TokenKind::RBracket)?;
+                            expr = Expression::IndexAccess(IndexExpression {
+                                array: Box::new(expr),
+                                index: Box::new(index),
+                            });
+                        }
+                        TokenKind::Question => {
+                            self.next_token(); // consume the ?
+                            expr = Expression::TryOperator(TryOperatorExpression {
+                                expression: Box::new(expr),
+                            });
+                        }
+                        _ => break,
+                    }
+                }
+
+                Ok(expr)
             },
             TokenKind::Integer(val) => { self.next_token(); Ok(Expression::IntegerLiteral(*val)) },
             TokenKind::Float(val) => { self.next_token(); Ok(Expression::FloatLiteral(val.clone())) },
             TokenKind::String(val) => { self.next_token(); Ok(Expression::StringLiteral(val.clone())) },
             TokenKind::Bool(val) => { self.next_token(); Ok(Expression::BoolLiteral(*val)) },
+            TokenKind::Minus | TokenKind::Bang => {
+                // Parse prefix expressions: -x or !x
+                let operator = token.clone();
+                self.next_token();
+                let right = self.parse_expression(Precedence::Product)?; // High precedence for prefix ops
+                Ok(Expression::Prefix(PrefixExpression {
+                    operator,
+                    right: Box::new(right),
+                }))
+            },
+            TokenKind::Ampersand => {
+                // Parse borrow expression: &x or &mut x
+                self.next_token();
+                // Check for &mut x (mutable borrow)
+                if self.consume_if_matches(&TokenKind::Mut) {
+                    let expression = self.parse_expression(Precedence::Product)?;
+                    Ok(Expression::MutableBorrow(MutableBorrowExpression {
+                        expression: Box::new(expression),
+                    }))
+                } else {
+                    // Otherwise it's &x (immutable borrow)
+                    let expression = self.parse_expression(Precedence::Product)?;
+                    Ok(Expression::Borrow(BorrowExpression {
+                        expression: Box::new(expression),
+                    }))
+                }
+            },
+            TokenKind::Star => {
+                // Parse dereference expression: *x
+                self.next_token();
+                let expression = self.parse_expression(Precedence::Product)?; // High precedence for prefix ops
+                Ok(Expression::Dereference(DereferenceExpression {
+                    expression: Box::new(expression),
+                }))
+            },
             TokenKind::LParen => self.parse_lambda_or_grouped(),
             TokenKind::LAngle => self.parse_jsx_element(),
             TokenKind::Pipe => self.parse_lambda_with_pipes(),
+            TokenKind::LBracket => self.parse_array_literal(),
+            TokenKind::Match => self.parse_match_expression(),
             _ => Err(self.error(&format!("No prefix parse function for {:?}", token.kind))),
         }
     }
@@ -324,8 +748,7 @@ impl Parser {
     fn parse_lambda_or_grouped(&mut self) -> Result<Expression, CompileError> {
         self.expect_and_consume(&TokenKind::LParen)?;
 
-        // Try to determine if this is a lambda or grouped expression
-        // For simplicity, if we see identifier followed by ), => it's a lambda
+        // Try to determine if this is a lambda, tuple, or grouped expression
         if self.current_token().kind == TokenKind::RParen {
             // Empty parameter list for lambda: () =>
             self.expect_and_consume(&TokenKind::RParen)?;
@@ -334,28 +757,50 @@ impl Parser {
                 return Ok(Expression::Lambda(LambdaExpression {
                     parameters: vec![],
                     body: Box::new(body),
+                    captures: vec![],  // Will be analyzed later
                 }));
             }
-            // Just empty parens, not lambda
+            // Just empty parens, not lambda - error
             return Err(self.error("Unexpected empty parentheses"));
         }
 
-        // For now, just treat as grouped expression
-        let expr = self.parse_expression(Precedence::Lowest)?;
+        // Parse first expression
+        let first_expr = self.parse_expression(Precedence::Lowest)?;
+
+        // Check if this is a tuple (has comma after first element)
+        if self.consume_if_matches(&TokenKind::Comma) {
+            // This is a tuple: (expr, ...)
+            let mut elements = vec![first_expr];
+
+            // Parse remaining elements
+            while self.current_token().kind != TokenKind::RParen {
+                elements.push(self.parse_expression(Precedence::Lowest)?);
+                if !self.consume_if_matches(&TokenKind::Comma) {
+                    break;
+                }
+            }
+
+            self.expect_and_consume(&TokenKind::RParen)?;
+            return Ok(Expression::TupleLiteral(TupleLiteral { elements }));
+        }
+
+        // No comma, so it's either grouped expression or lambda
         self.expect_and_consume(&TokenKind::RParen)?;
 
         // Check if this is actually a lambda with single param: (x) => body
         if self.consume_if_matches(&TokenKind::FatArrow) {
-            if let Expression::Identifier(param) = expr {
+            if let Expression::Identifier(param) = first_expr {
                 let body = self.parse_expression(Precedence::Lowest)?;
                 return Ok(Expression::Lambda(LambdaExpression {
                     parameters: vec![param],
                     body: Box::new(body),
+                    captures: vec![],  // Will be analyzed later
                 }));
             }
         }
 
-        Ok(expr)
+        // Just a grouped expression
+        Ok(first_expr)
     }
 
     fn parse_lambda_with_pipes(&mut self) -> Result<Expression, CompileError> {
@@ -374,9 +819,138 @@ impl Parser {
         Ok(Expression::Lambda(LambdaExpression {
             parameters,
             body: Box::new(body),
+            captures: vec![],  // Will be analyzed later
         }))
     }
-    
+
+    fn parse_array_literal(&mut self) -> Result<Expression, CompileError> {
+        self.expect_and_consume(&TokenKind::LBracket)?;
+        let mut elements = Vec::new();
+
+        // Handle empty array []
+        if self.current_token().kind == TokenKind::RBracket {
+            self.expect_and_consume(&TokenKind::RBracket)?;
+            return Ok(Expression::ArrayLiteral(ArrayLiteral { elements }));
+        }
+
+        // Parse comma-separated elements
+        while self.current_token().kind != TokenKind::RBracket {
+            elements.push(self.parse_expression(Precedence::Lowest)?);
+            if !self.consume_if_matches(&TokenKind::Comma) {
+                break;
+            }
+        }
+
+        self.expect_and_consume(&TokenKind::RBracket)?;
+        Ok(Expression::ArrayLiteral(ArrayLiteral { elements }))
+    }
+
+    fn parse_struct_literal(&mut self, name: Identifier) -> Result<Expression, CompileError> {
+        self.expect_and_consume(&TokenKind::LBrace)?;
+        let mut fields = Vec::new();
+
+        // Handle empty struct literal {}
+        if self.current_token().kind == TokenKind::RBrace {
+            self.expect_and_consume(&TokenKind::RBrace)?;
+            return Ok(Expression::StructLiteral(StructLiteral { name, fields }));
+        }
+
+        // Parse comma-separated field: value pairs
+        while self.current_token().kind != TokenKind::RBrace {
+            let field_name = self.parse_identifier()?;
+            self.expect_and_consume(&TokenKind::Colon)?;
+            let field_value = self.parse_expression(Precedence::Lowest)?;
+            fields.push((field_name, field_value));
+
+            if !self.consume_if_matches(&TokenKind::Comma) {
+                break;
+            }
+        }
+
+        self.expect_and_consume(&TokenKind::RBrace)?;
+        Ok(Expression::StructLiteral(StructLiteral { name, fields }))
+    }
+
+    fn parse_match_expression(&mut self) -> Result<Expression, CompileError> {
+        self.expect_and_consume(&TokenKind::Match)?;
+
+        // Parse the scrutinee (the value being matched)
+        let scrutinee = Box::new(self.parse_expression(Precedence::Lowest)?);
+
+        self.expect_and_consume(&TokenKind::LBrace)?;
+
+        // Parse match arms
+        let mut arms = Vec::new();
+        while self.current_token().kind != TokenKind::RBrace {
+            let pattern = self.parse_pattern()?;
+            self.expect_and_consume(&TokenKind::FatArrow)?;
+            let body = Box::new(self.parse_expression(Precedence::Lowest)?);
+
+            arms.push(MatchArm { pattern, body });
+
+            // Optionally consume comma between arms
+            self.consume_if_matches(&TokenKind::Comma);
+        }
+
+        self.expect_and_consume(&TokenKind::RBrace)?;
+
+        Ok(Expression::Match(MatchExpression { scrutinee, arms }))
+    }
+
+    fn parse_pattern(&mut self) -> Result<Pattern, CompileError> {
+        let token = self.current_token().clone();
+
+        match &token.kind {
+            // Wildcard pattern: _
+            TokenKind::Identifier if token.lexeme == "_" => {
+                self.next_token();
+                Ok(Pattern::Wildcard)
+            }
+            // Identifier (variable binding or enum variant)
+            TokenKind::Identifier => {
+                let first_ident = self.parse_identifier()?;
+
+                // Check for :: (enum variant)
+                if self.consume_if_matches(&TokenKind::DoubleColon) {
+                    let variant_name = self.parse_identifier()?;
+
+                    // Check for associated fields
+                    let fields = if self.consume_if_matches(&TokenKind::LParen) {
+                        let mut field_patterns = Vec::new();
+                        while self.current_token().kind != TokenKind::RParen {
+                            field_patterns.push(self.parse_pattern()?);
+                            if !self.consume_if_matches(&TokenKind::Comma) { break; }
+                        }
+                        self.expect_and_consume(&TokenKind::RParen)?;
+                        Some(field_patterns)
+                    } else {
+                        None
+                    };
+
+                    // Combine enum name and variant name
+                    let full_name = Identifier {
+                        value: format!("{}::{}", first_ident.value, variant_name.value)
+                    };
+
+                    Ok(Pattern::EnumVariant {
+                        name: full_name,
+                        fields,
+                    })
+                } else {
+                    // Simple identifier binding
+                    Ok(Pattern::Identifier(first_ident))
+                }
+            }
+            // Literal patterns
+            TokenKind::Integer(_) | TokenKind::Float(_) | TokenKind::String(_) |
+            TokenKind::Bool(_) | TokenKind::True | TokenKind::False => {
+                let literal_expr = self.parse_expression(Precedence::Lowest)?;
+                Ok(Pattern::Literal(literal_expr))
+            }
+            _ => Err(self.error(&format!("Expected pattern, found {:?}", token.kind)))
+        }
+    }
+
     fn parse_infix(&mut self, left: Expression) -> Result<Expression, CompileError> {
         let operator = self.current_token().clone();
         let precedence = self.current_precedence();

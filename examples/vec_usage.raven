@@ -1,0 +1,390 @@
+// Test Vec<T> (growable array) usage
+// Demonstrates dynamic array operations
+
+// Create and use a Vec
+fn basic_vec_usage() -> i32 {
+    // Create a new empty Vec
+    let numbers = Vec::new();
+
+    // Push elements
+    numbers.push(1);
+    numbers.push(2);
+    numbers.push(3);
+    numbers.push(4);
+    numbers.push(5);
+
+    // Get the length
+    let len = numbers.len();  // Should be 5
+
+    return len;
+}
+
+// Vec with initial capacity
+fn vec_with_capacity_example() -> i32 {
+    // Create Vec with preallocated space
+    let vec = Vec::with_capacity(10);
+
+    let i = 0;
+    for i in 0..10 {
+        vec.push(i * 2);
+    }
+
+    return vec.len();  // 10
+}
+
+// Pop elements from Vec
+fn vec_pop_example() -> i32 {
+    let vec = Vec::new();
+    vec.push(10);
+    vec.push(20);
+    vec.push(30);
+
+    // Pop returns Option<T>
+    match vec.pop() {
+        Option::Some(value) => {
+            // value should be 30
+            return value;
+        },
+        Option::None => {
+            return 0;
+        },
+    }
+}
+
+// Access elements by index
+fn vec_indexing_example() -> i32 {
+    let vec = Vec::new();
+    vec.push(100);
+    vec.push(200);
+    vec.push(300);
+
+    // Get element at index 1
+    match vec.get(1) {
+        Option::Some(value) => {
+            // Should be 200
+            return value;
+        },
+        Option::None => {
+            return 0;
+        },
+    }
+}
+
+// Insert and remove elements
+fn vec_insert_remove_example() -> i32 {
+    let vec = Vec::new();
+    vec.push(1);
+    vec.push(2);
+    vec.push(4);  // Missing 3
+
+    // Insert 3 at index 2
+    vec.insert(2, 3);  // Now [1, 2, 3, 4]
+
+    // Remove element at index 0
+    match vec.remove(0) {
+        Option::Some(value) => {
+            // value is 1, vec is now [2, 3, 4]
+            return vec.len();  // Should be 3
+        },
+        Option::None => {
+            return 0;
+        },
+    }
+}
+
+// Clear and check empty
+fn vec_clear_example() -> bool {
+    let vec = Vec::new();
+    vec.push(1);
+    vec.push(2);
+    vec.push(3);
+
+    vec.clear();
+
+    return vec.is_empty();  // true
+}
+
+// First and last elements
+fn vec_first_last_example() -> i32 {
+    let vec = Vec::new();
+    vec.push(10);
+    vec.push(20);
+    vec.push(30);
+
+    let first = match vec.first() {
+        Option::Some(value) => value,
+        Option::None => 0,
+    };
+
+    let last = match vec.last() {
+        Option::Some(value) => value,
+        Option::None => 0,
+    };
+
+    return first + last;  // 10 + 30 = 40
+}
+
+// Iterate over Vec
+fn vec_iteration_example() -> i32 {
+    let vec = Vec::new();
+    vec.push(1);
+    vec.push(2);
+    vec.push(3);
+    vec.push(4);
+    vec.push(5);
+
+    let sum = 0;
+    for num in vec {
+        sum = sum + num;
+    }
+
+    return sum;  // 15
+}
+
+// Vec of strings
+fn vec_string_example() -> i32 {
+    let names = Vec::new();
+    names.push("Alice");
+    names.push("Bob");
+    names.push("Charlie");
+
+    return names.len();  // 3
+}
+
+// Vec of custom types
+fn vec_custom_type_example() -> i32 {
+    // Conceptual example with struct
+    /*
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+
+    let points = Vec::new();
+    points.push(Point { x: 0, y: 0 });
+    points.push(Point { x: 1, y: 1 });
+    points.push(Point { x: 2, y: 2 });
+
+    return points.len();  // 3
+    */
+    return 0;
+}
+
+// Swap elements
+fn vec_swap_example() -> i32 {
+    let vec = Vec::new();
+    vec.push(10);
+    vec.push(20);
+    vec.push(30);
+
+    // Swap indices 0 and 2
+    vec.swap(0, 2);  // Now [30, 20, 10]
+
+    match vec.get(0) {
+        Option::Some(value) => value,  // Should be 30
+        Option::None => 0,
+    }
+}
+
+// Reverse Vec
+fn vec_reverse_example() -> i32 {
+    let vec = Vec::new();
+    vec.push(1);
+    vec.push(2);
+    vec.push(3);
+
+    vec.reverse();  // Now [3, 2, 1]
+
+    match vec.get(0) {
+        Option::Some(value) => value,  // Should be 3
+        Option::None => 0,
+    }
+}
+
+// Contains and index_of
+fn vec_search_example() -> bool {
+    let vec = Vec::new();
+    vec.push(10);
+    vec.push(20);
+    vec.push(30);
+
+    // Check if vec contains 20
+    let has_20 = vec.contains(&20);  // true
+
+    // Find index of 20
+    match vec.index_of(&20) {
+        Option::Some(index) => {
+            // index should be 1
+            return has_20;
+        },
+        Option::None => {
+            return false;
+        },
+    }
+}
+
+// Append two Vecs
+fn vec_append_example() -> i32 {
+    let vec1 = Vec::new();
+    vec1.push(1);
+    vec1.push(2);
+
+    let vec2 = Vec::new();
+    vec2.push(3);
+    vec2.push(4);
+
+    // Append vec2 to vec1
+    vec1.append(&mut vec2);
+    // vec1 is now [1, 2, 3, 4]
+    // vec2 is now empty
+
+    return vec1.len();  // 4
+}
+
+// Split off part of Vec
+fn vec_split_example() -> i32 {
+    let vec = Vec::new();
+    vec.push(1);
+    vec.push(2);
+    vec.push(3);
+    vec.push(4);
+    vec.push(5);
+
+    // Split off elements from index 3 onward
+    let vec2 = vec.split_off(3);
+    // vec is now [1, 2, 3]
+    // vec2 is [4, 5]
+
+    return vec.len() + vec2.len();  // 3 + 2 = 5
+}
+
+// Resize Vec
+fn vec_resize_example() -> i32 {
+    let vec = Vec::new();
+    vec.push(1);
+    vec.push(2);
+
+    // Resize to 5 elements, filling with 0
+    vec.resize(5, 0);
+    // vec is now [1, 2, 0, 0, 0]
+
+    return vec.len();  // 5
+}
+
+// Truncate Vec
+fn vec_truncate_example() -> i32 {
+    let vec = Vec::new();
+    vec.push(1);
+    vec.push(2);
+    vec.push(3);
+    vec.push(4);
+    vec.push(5);
+
+    // Keep only first 3 elements
+    vec.truncate(3);
+    // vec is now [1, 2, 3]
+
+    return vec.len();  // 3
+}
+
+// Retain elements matching predicate
+fn vec_retain_example() -> i32 {
+    let vec = Vec::new();
+    vec.push(1);
+    vec.push(2);
+    vec.push(3);
+    vec.push(4);
+    vec.push(5);
+
+    // Keep only even numbers
+    vec.retain(|x| x % 2 == 0);
+    // vec is now [2, 4]
+
+    return vec.len();  // 2
+}
+
+// Convert Vec to array
+fn vec_to_array_example() -> i32 {
+    let vec = Vec::new();
+    vec.push(1);
+    vec.push(2);
+    vec.push(3);
+
+    let arr = vec.to_array();
+    // arr is [1, 2, 3]
+
+    return 3;
+}
+
+// Create Vec from array
+fn vec_from_array_example() -> i32 {
+    let arr = [1, 2, 3, 4, 5];
+    let vec = Vec::from_array(arr);
+
+    return vec.len();  // 5
+}
+
+// Nested Vecs (Vec of Vecs)
+fn nested_vec_example() -> i32 {
+    // Vec of Vec<i32>
+    let matrix = Vec::new();
+
+    let row1 = Vec::new();
+    row1.push(1);
+    row1.push(2);
+    row1.push(3);
+
+    let row2 = Vec::new();
+    row2.push(4);
+    row2.push(5);
+    row2.push(6);
+
+    matrix.push(row1);
+    matrix.push(row2);
+
+    return matrix.len();  // 2 rows
+}
+
+// Main function demonstrating Vec usage
+fn main() -> i32 {
+    let r1 = basic_vec_usage();        // 5
+    let r2 = vec_with_capacity_example();  // 10
+    let r3 = vec_pop_example();         // 30
+    let r4 = vec_indexing_example();    // 200
+    let r5 = vec_insert_remove_example();  // 3
+    let r6 = vec_first_last_example();  // 40
+    let r7 = vec_iteration_example();   // 15
+    let r8 = vec_string_example();      // 3
+
+    // Return sum of some results
+    return r1 + r2 + r5 + r7 + r8;  // 5 + 10 + 3 + 15 + 3 = 36
+}
+
+/*
+Common Vec Patterns:
+
+1. Building a Vec from a loop:
+   let vec = Vec::new();
+   for i in 0..10 {
+       vec.push(i * 2);
+   }
+
+2. Collecting from an iterator:
+   let vec = (0..10).map(|x| x * 2).collect();
+
+3. Filtering a Vec:
+   vec.retain(|x| x % 2 == 0);
+
+4. Mapping over a Vec:
+   for x in &vec {
+       // process x
+   }
+
+5. Growing a Vec dynamically:
+   loop {
+       if should_stop {
+           break;
+       }
+       vec.push(next_value);
+   }
+*/

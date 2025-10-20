@@ -1,0 +1,35 @@
+// Test reference types and borrowing syntax
+// This file demonstrates the &T syntax for reference types
+
+// Function that takes a reference to an integer
+fn read_value(x: &i32) -> i32 {
+    // Dereference to get the value
+    return *x;
+}
+
+// Function that takes a value and returns a reference-type result
+fn get_reference(x: i32) -> &i32 {
+    return &x;
+}
+
+// Struct with reference fields
+struct Container<'a> {
+    data: &i32,
+    name: &string,
+}
+
+// Function demonstrating borrow and dereference
+fn main() -> i32 {
+    let value = 42;
+
+    // Create a borrow (reference) to value
+    let ref_value = &value;
+
+    // Dereference to get the actual value
+    let actual = *ref_value;
+
+    // Pass reference to function
+    let result = read_value(&value);
+
+    return result;
+}

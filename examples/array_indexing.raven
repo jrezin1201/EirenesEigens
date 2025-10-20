@@ -1,0 +1,11 @@
+// Test array indexing syntax
+
+fn main() -> i32 {
+    let arr = [10, 20, 30, 40, 50];
+
+    let first = arr[0];   // Should be 10
+    let third = arr[2];   // Should be 30
+    let last = arr[4];    // Should be 50
+
+    return third;  // Return 30
+}

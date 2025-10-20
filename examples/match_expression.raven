@@ -1,0 +1,18 @@
+// Test match expression with literal patterns
+
+fn test_match(x: i32) -> i32 {
+    match x {
+        1 => 100,
+        2 => 200,
+        3 => 300,
+        _ => 999,
+    }
+}
+
+fn main() -> i32 {
+    let result1 = test_match(1);  // Should return 100
+    let result2 = test_match(2);  // Should return 200
+    let result3 = test_match(5);  // Should return 999 (wildcard)
+
+    return result1;  // Return 100
+}

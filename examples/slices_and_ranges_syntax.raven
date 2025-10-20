@@ -1,0 +1,69 @@
+// Test slice types and range syntax
+// This file demonstrates [T] slice types and range expressions
+
+// Function that takes a slice of integers
+fn sum_slice(numbers: [i32]) -> i32 {
+    let total = 0;
+    // In a full implementation, we'd iterate over the slice
+    return total;
+}
+
+// Function that takes a slice and returns a slice
+fn get_first_half(data: [i32]) -> [i32] {
+    // Return the first half of the slice
+    return data;
+}
+
+// Function demonstrating range syntax
+fn create_range() -> i32 {
+    // Exclusive range: 0..10 (0 to 9)
+    let range1 = 0..10;
+
+    // Inclusive range: 0..=10 (0 to 10)
+    let range2 = 0..=10;
+
+    // Open-ended ranges
+    let range3 = 5..;     // From 5 to infinity
+    let range4 = ..10;    // From start to 9
+    let range5 = ..=10;   // From start to 10
+
+    return 42;
+}
+
+// Function using ranges for array slicing
+fn slice_array(arr: [i32]) -> [i32] {
+    // Slice from index 0 to 5 (exclusive)
+    let slice1 = arr[0..5];
+
+    // Slice from index 2 to 8 (inclusive)
+    let slice2 = arr[2..=8];
+
+    // Slice from index 3 to end
+    let slice3 = arr[3..];
+
+    // Slice from start to index 10
+    let slice4 = arr[..10];
+
+    return slice1;
+}
+
+// Struct with slice fields
+struct DataView<'a> {
+    data: [i32],
+    name: [string],
+}
+
+fn main() -> i32 {
+    let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+    // Create a slice from the array
+    let slice = numbers[2..7];  // Elements 3-7
+
+    // Call function with slice
+    let sum = sum_slice(slice);
+
+    // Use inclusive range
+    let full_range = numbers[0..=9];  // All elements
+
+    return sum;
+}

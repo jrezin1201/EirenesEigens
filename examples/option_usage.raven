@@ -1,0 +1,100 @@
+// Test Option<T> type usage
+// Demonstrates the standard library Option type for handling nullable values
+
+// Function that returns an optional value
+fn find_user(id: i32) -> Option<string> {
+    if id == 1 {
+        return Option::Some("Alice");
+    } else if id == 2 {
+        return Option::Some("Bob");
+    } else {
+        return Option::None;
+    }
+}
+
+// Function that divides two numbers safely
+fn safe_divide(numerator: i32, denominator: i32) -> Option<i32> {
+    if denominator == 0 {
+        return Option::None;
+    } else {
+        return Option::Some(numerator / denominator);
+    }
+}
+
+// Function demonstrating Option methods
+fn option_methods() -> i32 {
+    // Create some options
+    let some_value = Option::Some(42);
+    let no_value = Option::None;
+
+    // is_some and is_none
+    let has_value = some_value.is_some();  // true
+    let is_empty = no_value.is_none();     // true
+
+    // unwrap_or - provide a default value
+    let result1 = some_value.unwrap_or(0);  // Returns 42
+    let result2 = no_value.unwrap_or(0);    // Returns 0
+
+    // map - transform the contained value
+    let doubled = some_value.map(|x| x * 2);  // Some(84)
+    let mapped_none = no_value.map(|x| x * 2);  // None
+
+    // and_then - chain optional operations
+    let chained = some_value.and_then(|x| {
+        if x > 40 {
+            Option::Some(x + 10)
+        } else {
+            Option::None
+        }
+    });
+
+    // or - provide an alternative option
+    let value1 = some_value.or(Option::Some(100));  // Some(42)
+    let value2 = no_value.or(Option::Some(100));    // Some(100)
+
+    // xor - exclusive or
+    let xor1 = some_value.xor(no_value);      // Some(42)
+    let xor2 = some_value.xor(Option::Some(10));  // None (both are Some)
+
+    return result1;
+}
+
+// Function demonstrating pattern matching with Option
+fn pattern_match_option(opt: Option<i32>) -> i32 {
+    match opt {
+        Option::Some(value) => {
+            return value * 2;
+        },
+        Option::None => {
+            return 0;
+        },
+    }
+}
+
+// Main function demonstrating various Option use cases
+fn main() -> i32 {
+    // Test find_user
+    let user1 = find_user(1);
+    let name1 = user1.unwrap_or("Unknown");  // "Alice"
+
+    let user3 = find_user(3);
+    let name3 = user3.unwrap_or("Unknown");  // "Unknown"
+
+    // Test safe_divide
+    let div_result1 = safe_divide(10, 2);  // Some(5)
+    let div_result2 = safe_divide(10, 0);  // None
+
+    // Use pattern matching
+    let matched1 = pattern_match_option(Option::Some(21));  // 42
+    let matched2 = pattern_match_option(Option::None);      // 0
+
+    // Use Option methods
+    let method_result = option_methods();
+
+    // Nested Options
+    let outer = Option::Some(Option::Some(42));
+    let flattened = outer.and_then(|inner| inner);  // Some(42)
+
+    // Return a value
+    return div_result1.unwrap_or(0);
+}

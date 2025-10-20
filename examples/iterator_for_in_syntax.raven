@@ -1,0 +1,323 @@
+// Test iterator trait and for-in loop syntax
+// Demonstrates iteration over collections using the for-in syntax
+
+// Simple for-in loop over an array
+fn iterate_array() -> i32 {
+    let numbers = [1, 2, 3, 4, 5];
+    let sum = 0;
+
+    // Basic for-in loop
+    for num in numbers {
+        sum = sum + num;
+    }
+
+    return sum;  // Should return 15
+}
+
+// For-in loop over a range
+fn iterate_range() -> i32 {
+    let sum = 0;
+
+    // Iterate from 0 to 9 (exclusive)
+    for i in 0..10 {
+        sum = sum + i;
+    }
+
+    return sum;  // Should return 45 (0+1+2+...+9)
+}
+
+// For-in loop over inclusive range
+fn iterate_inclusive_range() -> i32 {
+    let sum = 0;
+
+    // Iterate from 1 to 10 (inclusive)
+    for i in 1..=10 {
+        sum = sum + i;
+    }
+
+    return sum;  // Should return 55 (1+2+3+...+10)
+}
+
+// Nested for-in loops
+fn nested_iteration() -> i32 {
+    let result = 0;
+
+    for i in 1..=3 {
+        for j in 1..=3 {
+            result = result + (i * j);
+        }
+    }
+
+    return result;  // Sum of multiplication table
+}
+
+// For-in with array of strings
+fn iterate_strings() -> i32 {
+    let names = ["Alice", "Bob", "Charlie"];
+    let count = 0;
+
+    for name in names {
+        count = count + 1;
+    }
+
+    return count;  // Should return 3
+}
+
+// Using iterator combinators with for-in
+fn iterator_combinators_example() -> i32 {
+    let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+    // Map: transform each element
+    // let doubled = numbers.iter().map(|x| x * 2);
+
+    // Filter: only keep even numbers
+    // let evens = numbers.iter().filter(|x| x % 2 == 0);
+
+    // Take: get first 5 elements
+    // let first_five = numbers.iter().take(5);
+
+    // For now, just iterate directly
+    let sum = 0;
+    for num in numbers {
+        if num % 2 == 0 {
+            sum = sum + num;
+        }
+    }
+
+    return sum;  // Sum of even numbers: 2+4+6+8+10 = 30
+}
+
+// For-in loop with Option (iterates 0 or 1 times)
+fn iterate_option() -> i32 {
+    let some_value = Option::Some(42);
+    let result = 0;
+
+    // This loop runs once
+    for value in some_value {
+        result = value;
+    }
+
+    let none_value = Option::None;
+    let count = 0;
+
+    // This loop doesn't run at all
+    for value in none_value {
+        count = count + 1;
+    }
+
+    return result;  // Should return 42
+}
+
+// Complex iteration with pattern matching
+fn iterate_with_patterns() -> i32 {
+    let pairs = [(1, 2), (3, 4), (5, 6)];
+    let sum = 0;
+
+    for pair in pairs {
+        // In a full implementation, we could destructure:
+        // let (a, b) = pair;
+        // For now, we access tuple elements differently
+        sum = sum + pair.0 + pair.1;
+    }
+
+    return sum;  // Should return 21 (1+2+3+4+5+6)
+}
+
+// Iterator chaining (conceptual example)
+fn iterator_chain_example() -> i32 {
+    let numbers = [1, 2, 3, 4, 5];
+
+    // Conceptual: numbers.iter().map(|x| x * 2).filter(|x| x > 5).sum()
+    // For now, we do it manually
+    let sum = 0;
+    for num in numbers {
+        let doubled = num * 2;
+        if doubled > 5 {
+            sum = sum + doubled;
+        }
+    }
+
+    return sum;  // 6 + 8 + 10 = 24
+}
+
+// Using for-in with custom iterator (conceptual)
+fn custom_iterator_example() -> i32 {
+    // In a full implementation, we could create custom iterators
+    // For now, demonstrate the syntax
+
+    let result = 0;
+
+    // Iterate over a range
+    for i in 0..5 {
+        result = result + i;
+    }
+
+    return result;  // 0+1+2+3+4 = 10
+}
+
+// Demonstrating break and continue (if implemented)
+fn iterate_with_control_flow() -> i32 {
+    let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    let sum = 0;
+
+    for num in numbers {
+        // Skip odd numbers
+        if num % 2 == 1 {
+            // continue; // Skip to next iteration
+        } else {
+            sum = sum + num;
+        }
+
+        // Stop at 8
+        if num == 8 {
+            // break; // Exit the loop
+        }
+    }
+
+    return sum;
+}
+
+// Collecting from an iterator
+fn collect_example() -> i32 {
+    let numbers = [1, 2, 3, 4, 5];
+
+    // Conceptual: let doubled: [i32] = numbers.iter().map(|x| x * 2).collect();
+    // Manual implementation
+    let doubled = [];
+    for num in numbers {
+        // Would append num * 2 to doubled
+    }
+
+    return 0;
+}
+
+// Finding elements
+fn find_example() -> i32 {
+    let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+    // Conceptual: let found = numbers.iter().find(|x| x > 5);
+    // Manual implementation
+    let found = Option::None;
+    for num in numbers {
+        if num > 5 {
+            found = Option::Some(num);
+            // break; // Would exit early
+        }
+    }
+
+    match found {
+        Option::Some(value) => value,
+        Option::None => 0,
+    }
+}
+
+// Any/All predicates
+fn any_all_example() -> bool {
+    let numbers = [1, 2, 3, 4, 5];
+
+    // Check if any number is even
+    let has_even = false;
+    for num in numbers {
+        if num % 2 == 0 {
+            has_even = true;
+        }
+    }
+
+    // Check if all numbers are positive
+    let all_positive = true;
+    for num in numbers {
+        if num <= 0 {
+            all_positive = false;
+        }
+    }
+
+    return has_even;  // true
+}
+
+// Fold/Reduce operation
+fn fold_example() -> i32 {
+    let numbers = [1, 2, 3, 4, 5];
+
+    // Conceptual: numbers.iter().fold(0, |acc, x| acc + x)
+    // Manual implementation
+    let acc = 0;
+    for num in numbers {
+        acc = acc + num;
+    }
+
+    return acc;  // 15
+}
+
+// Zip two iterators (conceptual)
+fn zip_example() -> i32 {
+    let numbers = [1, 2, 3];
+    let letters = ["a", "b", "c"];
+
+    // Conceptual: for (num, letter) in numbers.iter().zip(letters.iter())
+    // For now, use index-based approach
+    let sum = 0;
+    for i in 0..3 {
+        let num = numbers[i];
+        let letter = letters[i];
+        sum = sum + num;
+    }
+
+    return sum;  // 6
+}
+
+// Enumerate (get index and value)
+fn enumerate_example() -> i32 {
+    let fruits = ["apple", "banana", "cherry"];
+
+    // Conceptual: for (index, fruit) in fruits.iter().enumerate()
+    // Manual approach
+    let index = 0;
+    for fruit in fruits {
+        index = index + 1;
+    }
+
+    return index;  // 3
+}
+
+// Main function demonstrating all iterator patterns
+fn main() -> i32 {
+    let r1 = iterate_array();           // 15
+    let r2 = iterate_range();            // 45
+    let r3 = iterate_inclusive_range();  // 55
+    let r4 = nested_iteration();         // Sum of 3x3 multiplication table
+    let r5 = iterate_strings();          // 3
+    let r6 = iterator_combinators_example();  // 30
+    let r7 = iterate_option();           // 42
+    let r8 = custom_iterator_example();  // 10
+
+    // Return sum of some results
+    return r1 + r2 + r3 + r5 + r7 + r8;  // 15 + 45 + 55 + 3 + 42 + 10 = 170
+}
+
+// Demonstrating Iterator trait implementation (conceptual)
+// This shows what the stdlib Iterator trait looks like
+
+/*
+trait Iterator {
+    type Item;  // Associated type for the element type
+    fn next(self: &mut Self) -> Option<Self::Item>;
+}
+
+trait IntoIterator {
+    type Item;
+    type IntoIter: Iterator;
+    fn into_iter(self: Self) -> Self::IntoIter;
+}
+
+// When you write: for item in collection { }
+// The compiler transforms it to:
+// {
+//     let mut iter = collection.into_iter();
+//     loop {
+//         match iter.next() {
+//             Option::Some(item) => { /* loop body */ },
+//             Option::None => break,
+//         }
+//     }
+// }
+*/

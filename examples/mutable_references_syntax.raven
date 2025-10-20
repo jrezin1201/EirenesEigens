@@ -1,0 +1,41 @@
+// Test mutable reference types and borrowing syntax
+// This file demonstrates the &mut T syntax for mutable reference types
+
+// Function that takes a mutable reference to an integer
+fn increment(x: &mut i32) -> i32 {
+    // Dereference and increment the value
+    let current = *x;
+    *x = current + 1;
+    return *x;
+}
+
+// Function that takes both immutable and mutable references
+fn swap_if_greater(a: &mut i32, b: &i32) -> i32 {
+    if *a < *b {
+        *a = *b;
+    }
+    return *a;
+}
+
+// Struct with mutable reference fields
+struct MutContainer<'a> {
+    data: &mut i32,
+    name: &string,
+}
+
+// Function demonstrating mutable borrow
+fn main() -> i32 {
+    let value = 42;
+
+    // Create a mutable borrow (mutable reference) to value
+    let mut_ref = &mut value;
+
+    // Increment via mutable reference
+    let result = increment(&mut value);
+
+    // Mix immutable and mutable borrows
+    let other_value = 100;
+    let final_value = swap_if_greater(&mut value, &other_value);
+
+    return final_value;
+}

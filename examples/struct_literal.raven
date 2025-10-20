@@ -1,0 +1,30 @@
+// Test struct literal instantiation
+
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+struct Person {
+    name: i32,  // String placeholder
+    age: i32,
+}
+
+fn main() -> i32 {
+    // Create a Point using struct literal syntax
+    let p = Point {
+        x: 10,
+        y: 20,
+    };
+
+    // Access field
+    let x_value = p.x;
+
+    // Create another struct
+    let person = Person {
+        name: 0,  // Placeholder for string
+        age: 25,
+    };
+
+    return x_value;
+}

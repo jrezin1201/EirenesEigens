@@ -1,0 +1,40 @@
+// Test unary operators
+
+fn test_negation() -> i32 {
+    let x = 42;
+    let y = -x;   // Should be -42
+    return y;
+}
+
+fn test_double_negation() -> i32 {
+    let x = 10;
+    return --x;   // Should be 10
+}
+
+fn test_logical_not() -> i32 {
+    let a = true;
+    let b = !a;    // Should be false (0)
+    if b {
+        return 0;
+    }
+    return 1;
+}
+
+fn test_not_equals() -> i32 {
+    let x = 5;
+    let y = 10;
+    if !(x == y) {  // Should be true
+        return 1;
+    }
+    return 0;
+}
+
+fn main() -> i32 {
+    let neg = test_negation();          // -42
+    let dbl_neg = test_double_negation(); // 10
+    let not_test = test_logical_not();  // 1
+    let ne_test = test_not_equals();    // 1
+
+    // Return sum: -42 + 10 + 1 + 1 = -30
+    return neg + dbl_neg + not_test + ne_test;
+}

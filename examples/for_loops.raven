@@ -1,0 +1,53 @@
+// Test for loop support
+
+fn test_basic_for_loop() -> i32 {
+    let sum = 0;
+
+    for (let i = 1; i <= 10; i = i + 1) {
+        sum = sum + i;
+    }
+
+    return sum;  // Should be 55
+}
+
+fn test_for_with_product() -> i32 {
+    let product = 1;
+
+    for (let i = 1; i <= 5; i = i + 1) {
+        product = product * i;
+    }
+
+    return product;  // Should be 120 (5!)
+}
+
+fn test_nested_for_loops() -> i32 {
+    let total = 0;
+
+    for (let i = 1; i <= 3; i = i + 1) {
+        for (let j = 1; j <= 3; j = j + 1) {
+            total = total + 1;
+        }
+    }
+
+    return total;  // Should be 9
+}
+
+fn test_for_countdown() -> i32 {
+    let result = 0;
+
+    for (let i = 5; i > 0; i = i - 1) {
+        result = result + i;
+    }
+
+    return result;  // Should be 15 (5+4+3+2+1)
+}
+
+fn main() -> i32 {
+    let basic = test_basic_for_loop();     // 55
+    let factorial = test_for_with_product(); // 120
+    let nested = test_nested_for_loops();   // 9
+    let countdown = test_for_countdown();   // 15
+
+    // Return: 55 + 9 + 15 = 79
+    return basic + nested + countdown;
+}

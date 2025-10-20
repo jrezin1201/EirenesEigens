@@ -1,0 +1,33 @@
+// Test array literal support
+
+fn test_empty_array() -> i32 {
+    let empty = [];
+    return 0;  // Successfully created empty array
+}
+
+fn test_int_array() -> i32 {
+    let numbers = [1, 2, 3, 4, 5];
+    return 1;  // Successfully created int array
+}
+
+fn test_nested_arrays() -> i32 {
+    let matrix = [[1, 2], [3, 4]];
+    return 2;  // Successfully created nested array
+}
+
+fn test_array_with_expressions() -> i32 {
+    let a = 10;
+    let b = 20;
+    let computed = [a, b, a + b];
+    return 3;  // Successfully created array with expressions
+}
+
+fn main() -> i32 {
+    let r1 = test_empty_array();        // 0
+    let r2 = test_int_array();          // 1
+    let r3 = test_nested_arrays();      // 2
+    let r4 = test_array_with_expressions();  // 3
+
+    // Return sum: 0 + 1 + 2 + 3 = 6
+    return r1 + r2 + r3 + r4;
+}

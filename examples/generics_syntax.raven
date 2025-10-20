@@ -1,0 +1,54 @@
+// Test that the parser accepts generic type parameter syntax
+// This file tests syntax only, not semantic analysis
+
+// Generic struct with type parameter T
+struct Box<T> {
+    value: T,
+}
+
+// Generic enum with type parameter T
+enum Option<T> {
+    Some(T),
+    None,
+}
+
+// Generic enum with multiple type parameters
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+// Generic function with type parameter T
+fn identity<T>(x: T) -> T {
+    return x;
+}
+
+// Generic function with multiple type parameters
+fn pair<A, B>(first: A, second: B) -> i32 {
+    return 0;
+}
+
+// Inherent impl block for generic struct
+impl<T> Box<T> {
+    fn new(val: T) -> Box<T> {
+        return Box { value: val };
+    }
+}
+
+// Generic trait with type parameter T
+trait Container<T> {
+    fn contains(self: Box<T>, item: T) -> bool;
+}
+
+// Implement generic trait for generic struct
+impl<T> Container<T> for Box<T> {
+    fn contains(self: Box<T>, item: T) -> bool {
+        return true;
+    }
+}
+
+// Simple non-generic main function to avoid semantic errors
+fn main() -> i32 {
+    let x = 42;
+    return x;
+}

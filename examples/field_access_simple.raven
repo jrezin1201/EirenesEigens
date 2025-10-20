@@ -1,0 +1,25 @@
+// Test simple field access parsing
+// Note: Struct instantiation not yet implemented, so this demonstrates parsing only
+
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+fn get_x(p: Point) -> i32 {
+    // Field access: p.x
+    return p.x;
+}
+
+fn get_sum(p: Point) -> i32 {
+    // Multiple field accesses
+    let x_val = p.x;
+    let y_val = p.y;
+    return x_val + y_val;
+}
+
+fn main() -> i32 {
+    // For now, we can't create Point instances
+    // But the parser can handle field access syntax
+    return 0;
+}

@@ -1,0 +1,416 @@
+// Test time and date handling
+// Demonstrates std::time module usage
+
+// Create and use durations
+fn duration_basics() -> i64 {
+    let five_seconds = time::seconds(5);
+    let two_minutes = time::minutes(2);
+    let one_hour = time::hours(1);
+
+    // Convert to common unit
+    let total_seconds = five_seconds.as_seconds() +
+                        two_minutes.as_seconds() +
+                        one_hour.as_seconds();
+
+    return total_seconds;  // 5 + 120 + 3600 = 3725
+}
+
+// Duration arithmetic
+fn duration_arithmetic() -> i64 {
+    let d1 = time::seconds(100);
+    let d2 = time::seconds(50);
+
+    let sum = d1.add(&d2);      // 150 seconds
+    let diff = d1.sub(&d2);     // 50 seconds
+    let doubled = d1.mul(2);     // 200 seconds
+    let halved = d1.div(2);      // 50 seconds
+
+    return sum.as_seconds();  // 150
+}
+
+// Duration comparisons
+fn duration_comparisons() -> bool {
+    let short = time::minutes(1);
+    let long = time::minutes(5);
+
+    let equal = short.eq(&short);  // true
+    let less = short.lt(&long);    // true
+    let greater = long.gt(&short); // true
+
+    return less;
+}
+
+// Working with DateTime
+fn datetime_basics() -> i64 {
+    let now = time::now();
+    let timestamp = now.timestamp_millis();
+
+    return timestamp;
+}
+
+// Create DateTime from timestamp
+fn datetime_from_timestamp() -> i64 {
+    let ts = 1704067200000;  // Jan 1, 2024 00:00:00 UTC
+    let dt = DateTime::from_timestamp(ts);
+
+    return dt.timestamp_millis();
+}
+
+// Create DateTime from components
+fn datetime_from_components() -> i32 {
+    let dt = DateTime::from_components(2024, 1, 15, 14, 30, 0);
+
+    let year = dt.year();
+    let month = dt.month();
+    let day = dt.day();
+
+    return year;  // 2024
+}
+
+// Extract date/time components
+fn extract_components() -> i32 {
+    let now = time::now();
+
+    let year = now.year();
+    let month = now.month();
+    let day = now.day();
+    let hour = now.hour();
+    let minute = now.minute();
+    let second = now.second();
+
+    return month;  // Current month
+}
+
+// DateTime arithmetic
+fn datetime_arithmetic() -> i64 {
+    let now = time::now();
+
+    // Add durations
+    let tomorrow = now.add_duration(&time::days(1));
+    let next_week = now.add_duration(&time::days(7));
+    let in_2_hours = now.add_duration(&time::hours(2));
+
+    // Subtract durations
+    let yesterday = now.sub_duration(&time::days(1));
+
+    return tomorrow.timestamp_millis();
+}
+
+// Calculate duration between DateTimes
+fn duration_between_datetimes() -> i64 {
+    let start = DateTime::from_timestamp(1000000);
+    let end = DateTime::from_timestamp(2000000);
+
+    let duration = end.duration_since(&start);
+
+    return duration.as_millis();  // 1000000
+}
+
+// Compare DateTimes
+fn compare_datetimes() -> bool {
+    let dt1 = DateTime::from_timestamp(1000000);
+    let dt2 = DateTime::from_timestamp(2000000);
+
+    let equal = dt1.eq(&dt1);
+    let before = dt1.is_before(&dt2);
+    let after = dt2.is_after(&dt1);
+
+    return before;  // true
+}
+
+// Parse ISO date string
+fn parse_iso_string() -> bool {
+    let date_str = "2024-01-15T14:30:00Z";
+
+    match DateTime::parse(date_str) {
+        Result::Ok(dt) => {
+            return dt.year() == 2024;
+        },
+        Result::Err(_) => false,
+    }
+}
+
+// Format DateTime as ISO string
+fn format_iso_string() -> bool {
+    let dt = DateTime::from_components(2024, 1, 15, 14, 30, 0);
+    let iso_str = dt.to_iso_string();
+
+    return iso_str.len() > 0;
+}
+
+// Custom formatting
+fn custom_format() -> bool {
+    let dt = DateTime::from_components(2024, 1, 15, 14, 30, 0);
+
+    // Format as "2024-01-15 14:30:00"
+    let formatted = dt.format("%Y-%m-%d %H:%M:%S");
+
+    return formatted.len() > 0;
+}
+
+// Working with timezones
+fn timezone_basics() -> bool {
+    let utc_now = time::now_utc();
+    let local_now = time::now_local();
+
+    // Convert between timezones
+    let converted_to_utc = local_now.to_utc();
+    let converted_to_local = utc_now.to_local();
+
+    return true;
+}
+
+// Using Timer for measurements
+fn timer_example() -> i64 {
+    let timer = time::timer();
+
+    // Do some work...
+    let x = 0;
+    for i in 0..1000 {
+        x = x + i;
+    }
+
+    let elapsed = timer.elapsed();
+    return elapsed.as_millis();
+}
+
+// Using Stopwatch for lap timing
+fn stopwatch_example() -> i32 {
+    let sw = time::stopwatch();
+
+    sw.start();
+
+    // First lap
+    let x = 0;
+    for i in 0..100 {
+        x = x + i;
+    }
+    let lap1 = sw.lap();
+
+    // Second lap
+    let y = 0;
+    for j in 0..200 {
+        y = y + j;
+    }
+    let lap2 = sw.lap();
+
+    sw.stop();
+
+    // Get all lap times
+    let laps = sw.get_laps();
+
+    return laps.len();  // 2
+}
+
+// Sleep for a duration (async)
+fn sleep_example() {
+    // Sleep for 100 milliseconds
+    time::sleep(time::Duration::from_millis(100));
+
+    // Sleep for 2 seconds
+    time::sleep(time::seconds(2));
+}
+
+// Day of week calculations
+fn day_of_week_example() -> i32 {
+    let dt = DateTime::from_components(2024, 1, 15, 0, 0, 0);
+    let dow = dt.day_of_week();
+
+    // 0 = Sunday, 1 = Monday, etc.
+    return dow;
+}
+
+// Calculate age from birthday
+fn calculate_age() -> i64 {
+    let birthday = DateTime::from_components(1990, 5, 15, 0, 0, 0);
+    let now = time::now();
+
+    let age_duration = now.duration_since(&birthday);
+    let age_days = age_duration.as_days();
+    let age_years = age_days / 365;
+
+    return age_years;
+}
+
+// Check if date is in the future
+fn is_future_date() -> bool {
+    let now = time::now();
+    let future = now.add_duration(&time::days(1));
+
+    return future.is_after(&now);
+}
+
+// Calculate deadline countdown
+fn deadline_countdown() -> i64 {
+    let now = time::now();
+    let deadline = now.add_duration(&time::days(7));
+
+    let time_remaining = deadline.duration_since(&now);
+
+    return time_remaining.as_hours();  // Hours until deadline
+}
+
+// Working with milliseconds precision
+fn millisecond_precision() -> i32 {
+    let now = time::now();
+    let ms = now.millisecond();
+
+    return ms;  // 0-999
+}
+
+// Duration from different units
+fn duration_from_units() -> i64 {
+    let from_millis = Duration::from_millis(5000);
+    let from_secs = Duration::from_seconds(5);
+    let from_mins = Duration::from_minutes(1);
+    let from_hours = Duration::from_hours(1);
+    let from_days = Duration::from_days(1);
+
+    // Convert all to seconds
+    let total = from_millis.as_seconds() +
+                from_secs.as_seconds() +
+                from_mins.as_seconds();
+
+    return total;  // 5 + 5 + 60 = 70
+}
+
+// Measuring function execution time
+fn measure_execution_time() -> i64 {
+    let timer = Timer::start();
+
+    // Simulate some work
+    let result = 0;
+    for i in 0..10000 {
+        result = result + i;
+    }
+
+    let elapsed = timer.elapsed();
+    return elapsed.as_millis();
+}
+
+// Create timestamp for API call
+fn create_api_timestamp() -> i64 {
+    let now = time::now();
+    return now.timestamp_seconds();  // Unix timestamp
+}
+
+// Parse duration from string
+fn parse_duration_string() -> i64 {
+    match time::parse_duration("5m") {
+        Result::Ok(duration) => duration.as_seconds(),
+        Result::Err(_) => 0,
+    }
+}
+
+// Schedule event in future
+fn schedule_future_event() -> i64 {
+    let now = time::now();
+    let event_time = now.add_duration(&time::hours(2));
+
+    return event_time.timestamp_millis();
+}
+
+// Calculate business days (Mon-Fri)
+fn is_business_day() -> bool {
+    let dt = time::now();
+    let dow = dt.day_of_week();
+
+    // 1-5 are Monday-Friday
+    return dow >= 1 && dow <= 5;
+}
+
+// Time until next occurrence
+fn time_until_next_hour() -> i64 {
+    let now = time::now();
+    let current_minute = now.minute();
+    let current_second = now.second();
+
+    let seconds_elapsed = (current_minute * 60) + current_second;
+    let seconds_until_hour = 3600 - seconds_elapsed;
+
+    return seconds_until_hour as i64;
+}
+
+// Recurring event scheduling
+fn next_daily_occurrence() -> i64 {
+    let now = time::now();
+    let target_hour = 9;  // 9 AM
+
+    let current_hour = now.hour();
+
+    if current_hour < target_hour {
+        // Today at 9 AM
+        let hours_until = target_hour - current_hour;
+        let until = time::hours(hours_until as i64);
+        let next_occurrence = now.add_duration(&until);
+        return next_occurrence.timestamp_millis();
+    } else {
+        // Tomorrow at 9 AM
+        let tomorrow = now.add_duration(&time::days(1));
+        return tomorrow.timestamp_millis();
+    }
+}
+
+// Rate limiting with time windows
+fn check_rate_limit() -> bool {
+    let last_request = DateTime::from_timestamp(1000000);
+    let now = DateTime::from_timestamp(1001000);
+
+    let time_since_last = now.duration_since(&last_request);
+    let min_interval = time::seconds(1);
+
+    // Check if enough time has passed
+    return time_since_last.gt(&min_interval);
+}
+
+// Main function demonstrating time usage
+fn main() -> i64 {
+    let r1 = duration_basics();           // 3725
+    let r2 = duration_arithmetic();       // 150
+    let r3 = datetime_from_components();  // 2024
+    let r4 = duration_between_datetimes(); // 1000000
+    let r5 = duration_from_units();       // 70
+
+    // Return sum of results
+    return r2 + r3 + r5;  // 150 + 2024 + 70 = 2244
+}
+
+/*
+Common Time Patterns:
+
+1. Getting current time:
+   let now = time::now();
+   let utc_now = time::now_utc();
+   let local_now = time::now_local();
+
+2. Creating durations:
+   let d1 = time::seconds(30);
+   let d2 = time::minutes(5);
+   let d3 = time::hours(2);
+   let d4 = time::days(7);
+
+3. DateTime arithmetic:
+   let tomorrow = now.add_duration(&time::days(1));
+   let yesterday = now.sub_duration(&time::days(1));
+   let in_2_hours = now.add_duration(&time::hours(2));
+
+4. Comparing times:
+   if event_time.is_after(&now) {
+       // Event is in the future
+   }
+
+5. Measuring elapsed time:
+   let timer = time::timer();
+   // do work...
+   let elapsed = timer.elapsed();
+
+6. Formatting dates:
+   let iso = dt.to_iso_string();
+   let custom = dt.format("%Y-%m-%d %H:%M:%S");
+
+7. Parsing dates:
+   match DateTime::parse("2024-01-15T14:30:00Z") {
+       Result::Ok(dt) => { /* use dt */ },
+       Result::Err(_) => { /* handle error */ },
+   }
+*/

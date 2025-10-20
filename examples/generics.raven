@@ -1,0 +1,74 @@
+// Test generic type parameters for structs, enums, functions, traits, and impl blocks
+
+// Generic struct with type parameter T
+struct Box<T> {
+    value: T,
+}
+
+// Generic enum with type parameter T (Option-like)
+enum Option<T> {
+    Some(T),
+    None,
+}
+
+// Generic enum with multiple type parameters
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+// Generic function with type parameter T
+fn identity<T>(x: T) -> T {
+    return x;
+}
+
+// Generic function with multiple type parameters
+fn pair<A, B>(first: A, second: B) -> i32 {
+    // For now, just return a dummy value
+    return 0;
+}
+
+// Inherent impl block for generic struct
+impl<T> Box<T> {
+    fn new(val: T) -> Box<T> {
+        return Box { value: val };
+    }
+
+    fn get(self: Box<T>) -> T {
+        return self.value;
+    }
+}
+
+// Generic trait with type parameter T
+trait Container<T> {
+    fn contains(self: Box<T>, item: T) -> bool;
+    fn add(self: Box<T>, item: T) -> Box<T>;
+}
+
+// Implement generic trait for generic struct
+impl<T> Container<T> for Box<T> {
+    fn contains(self: Box<T>, item: T) -> bool {
+        // Simplified implementation
+        return true;
+    }
+
+    fn add(self: Box<T>, item: T) -> Box<T> {
+        return Box { value: item };
+    }
+}
+
+fn main() -> i32 {
+    // Test generic struct instantiation
+    let int_box = Box { value: 42 };
+    let str_box = Box { value: 100 };
+
+    // Test generic function calls
+    let x = identity(10);
+    let y = identity(20);
+
+    // Test generic enum
+    // We can't actually construct these yet without proper syntax,
+    // but the parser should accept the definitions
+
+    return x + y;  // Should return 30
+}

@@ -1,0 +1,49 @@
+// Test assignment and while loops together
+
+fn sum_to_n(n: i32) -> i32 {
+    let sum = 0;
+    let i = 1;
+
+    while i <= n {
+        sum = sum + i;
+        i = i + 1;
+    }
+
+    return sum;
+}
+
+fn countdown_product(start: i32) -> i32 {
+    let product = 1;
+    let counter = start;
+
+    while counter > 0 {
+        product = product * counter;
+        counter = counter - 1;
+    }
+
+    return product;
+}
+
+fn nested_while_loops() -> i32 {
+    let outer = 1;
+    let total = 0;
+
+    while outer <= 3 {
+        let inner = 1;
+        while inner <= 3 {
+            total = total + 1;
+            inner = inner + 1;
+        }
+        outer = outer + 1;
+    }
+
+    return total;
+}
+
+fn main() -> i32 {
+    let sum = sum_to_n(10);          // Sum 1 to 10 = 55
+    let factorial = countdown_product(5);  // 5! = 120
+    let nested = nested_while_loops();    // 3*3 = 9
+
+    return sum + nested;  // 55 + 9 = 64
+}

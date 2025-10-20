@@ -1,0 +1,44 @@
+// Test match expression parsing
+
+enum Color {
+    Red,
+    Green,
+    Blue,
+}
+
+enum Option {
+    Some(i32),
+    None,
+}
+
+fn color_to_number(c: i32) -> i32 {
+    // Match on a simple value
+    match c {
+        0 => 1,
+        1 => 2,
+        2 => 3,
+        _ => 0,
+    }
+}
+
+fn option_to_value(opt: i32) -> i32 {
+    // Match with enum-style patterns
+    match opt {
+        Option::Some(x) => x,
+        Option::None => 0,
+        _ => -1,
+    }
+}
+
+fn main() -> i32 {
+    // Simple match test
+    let x = 1;
+    let result = match x {
+        0 => 10,
+        1 => 20,
+        2 => 30,
+        _ => 40,
+    };
+
+    return result;  // Should return 20
+}

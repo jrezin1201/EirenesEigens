@@ -1,0 +1,38 @@
+// Test while loop support (without assignment - just testing loop structure)
+
+fn test_while_true_with_early_return() -> i32 {
+    let count = 0;
+
+    while count < 5 {
+        if count == 3 {
+            return count;
+        }
+        // In a real implementation we'd increment count here
+        // For now, this demonstrates while syntax parsing
+        return count + 1;
+    }
+
+    return 0;
+}
+
+fn test_nested_while() -> i32 {
+    let x = 1;
+
+    while x < 3 {
+        let y = 1;
+        while y < 2 {
+            return x + y;  // Returns 2
+        }
+    }
+
+    return 0;
+}
+
+fn main() -> i32 {
+    // Test that while loops compile
+    // These won't loop indefinitely because we have returns
+    let test1 = test_while_true_with_early_return();  // Should return 1
+    let test2 = test_nested_while();                  // Should return 2
+
+    return test1 + test2;  // 1 + 2 = 3
+}

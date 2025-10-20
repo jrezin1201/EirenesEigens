@@ -1,0 +1,121 @@
+// Test error propagation operator (?) syntax
+// Demonstrates the ? operator for automatic error propagation
+
+enum ParseError {
+    InvalidFormat,
+    OutOfRange,
+    Empty,
+}
+
+enum FileError {
+    NotFound,
+    PermissionDenied,
+}
+
+// Function that returns a Result
+fn parse_number(s: string) -> Result<i32, ParseError> {
+    if s == "" {
+        return Result::Err(ParseError::Empty);
+    } else if s == "42" {
+        return Result::Ok(42);
+    } else {
+        return Result::Err(ParseError::InvalidFormat);
+    }
+}
+
+// Function that reads a file (simulated)
+fn read_file(filename: string) -> Result<string, FileError> {
+    if filename == "data.txt" {
+        return Result::Ok("42");
+    } else {
+        return Result::Err(FileError::NotFound);
+    }
+}
+
+// Function using the ? operator to propagate errors
+fn read_and_parse(filename: string) -> Result<i32, FileError> {
+    // The ? operator automatically returns the error if read_file fails
+    let contents = read_file(filename)?;
+
+    // Note: In a real implementation, we'd need error type conversion here
+    // For now, this demonstrates the syntax
+    let number = parse_number(contents)?;
+
+    return Result::Ok(number);
+}
+
+// Chaining multiple ? operators
+fn complex_operation(filename: string) -> Result<i32, FileError> {
+    let contents = read_file(filename)?;
+    let number = parse_number(contents)?;
+    let doubled = number * 2;
+
+    return Result::Ok(doubled);
+}
+
+// Using ? operator with method calls
+fn method_chain_example() -> Result<i32, ParseError> {
+    let result = parse_number("42")?;
+    let doubled = result * 2;
+
+    return Result::Ok(doubled);
+}
+
+// Using ? operator in expressions
+fn expression_example() -> Result<i32, ParseError> {
+    // The ? operator can be used directly in expressions
+    let sum = parse_number("10")? + parse_number("32")?;
+
+    return Result::Ok(sum);
+}
+
+// Using ? with field access and method calls
+fn field_access_example() -> Result<i32, ParseError> {
+    let value = parse_number("42")?;
+
+    // Can chain ? with other operations
+    let result = value;
+
+    return Result::Ok(result);
+}
+
+// Main function demonstrating various uses of ?
+fn main() -> Result<i32, FileError> {
+    // Simple use of ?
+    let num1 = read_and_parse("data.txt")?;
+
+    // Chained use of ?
+    let num2 = complex_operation("data.txt")?;
+
+    // The ? operator propagates errors up to the calling function
+    // If any operation fails, the function returns early with the error
+
+    return Result::Ok(num1 + num2);
+}
+
+// Without ? operator (manual error handling)
+fn manual_error_handling(filename: string) -> Result<i32, FileError> {
+    match read_file(filename) {
+        Result::Ok(contents) => {
+            match parse_number(contents) {
+                Result::Ok(number) => {
+                    return Result::Ok(number);
+                },
+                Result::Err(_) => {
+                    // Would need error conversion here
+                    return Result::Err(FileError::NotFound);
+                },
+            }
+        },
+        Result::Err(err) => {
+            return Result::Err(err);
+        },
+    }
+}
+
+// With ? operator (concise)
+fn with_try_operator(filename: string) -> Result<i32, FileError> {
+    let contents = read_file(filename)?;
+    let number = parse_number(contents)?;
+    return Result::Ok(number);
+}

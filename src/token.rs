@@ -17,10 +17,11 @@ impl Token {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TokenKind {
     // Keywords
-    Let, Fn, Struct, Component, Extern, Return, Server, Async, Await, Use, True, False, If, Else,
+    Let, Fn, Struct, Enum, Impl, Trait, Component, Extern, Return, Server, Async, Await, Use, True, False, If, Else, While, For, In, Match, Mut,
 
     // Identifiers & Literals
     Identifier,
+    Lifetime(String),  // Lifetime like 'a, 'b, 'static
     Integer(i64),
     Float(String), // Store as string to preserve precision during parsing
     String(String),
@@ -32,10 +33,14 @@ pub enum TokenKind {
     Colon,       // :
     Comma,       // ,
     Dot,         // .
+    DotDot,      // .. (range)
+    DotDotEq,    // ..= (inclusive range)
     Plus,        // +
     Minus,       // -
     Star,        // *
     Bang,        // !
+    Question,    // ?
+    Ampersand,   // &
     Pipe,        // | NEW: For closures
     Arrow,       // ->
     FatArrow,    // => NEW: For lambda expressions
@@ -71,6 +76,9 @@ lazy_static::lazy_static! {
         map.insert("let", TokenKind::Let);
         map.insert("fn", TokenKind::Fn);
         map.insert("struct", TokenKind::Struct);
+        map.insert("enum", TokenKind::Enum);
+        map.insert("impl", TokenKind::Impl);
+        map.insert("trait", TokenKind::Trait);
         map.insert("component", TokenKind::Component);
         map.insert("extern", TokenKind::Extern);
         map.insert("return", TokenKind::Return);
@@ -82,6 +90,11 @@ lazy_static::lazy_static! {
         map.insert("false", TokenKind::False);
         map.insert("if", TokenKind::If);
         map.insert("else", TokenKind::Else);
+        map.insert("while", TokenKind::While);
+        map.insert("for", TokenKind::For);
+        map.insert("in", TokenKind::In);
+        map.insert("match", TokenKind::Match);
+        map.insert("mut", TokenKind::Mut);
         map
     };
 }

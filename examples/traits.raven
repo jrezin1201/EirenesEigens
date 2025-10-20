@@ -1,0 +1,58 @@
+// Test trait definitions and impl blocks
+
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+struct Circle {
+    x: i32,
+    y: i32,
+    radius: i32,
+}
+
+// Define a trait for drawable shapes
+trait Draw {
+    fn draw(self: Point) -> i32;
+    fn area(self: Point) -> i32;
+}
+
+// Implement the Draw trait for Point
+impl Draw for Point {
+    fn draw(self: Point) -> i32 {
+        return self.x + self.y;
+    }
+
+    fn area(self: Point) -> i32 {
+        return 0;
+    }
+}
+
+// Implement the Draw trait for Circle
+impl Draw for Circle {
+    fn draw(self: Circle) -> i32 {
+        return self.x + self.y + self.radius;
+    }
+
+    fn area(self: Circle) -> i32 {
+        return self.radius * self.radius * 3;
+    }
+}
+
+// Inherent implementation (not a trait impl)
+impl Point {
+    fn new(x: i32, y: i32) -> Point {
+        return Point { x: x, y: y };
+    }
+
+    fn distance(self: Point) -> i32 {
+        return self.x + self.y;
+    }
+}
+
+fn main() -> i32 {
+    let p = Point { x: 10, y: 20 };
+    let c = Circle { x: 5, y: 5, radius: 10 };
+
+    return p.x + c.radius;  // Should return 20
+}
