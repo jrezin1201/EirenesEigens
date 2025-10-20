@@ -1,0 +1,70 @@
+body {
+  margin: 0;
+  font-family: "JetBrains Mono", "Inter", system-ui;
+  background: radial-gradient(circle at top left, #0ea5e9, #1d4ed8 70%);
+  color: white;
+}
+
+.chat-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  height: 100vh;
+}
+
+.sidebar {
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(24px);
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.message-pane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 23, 42, 0.24);
+  backdrop-filter: blur(20px);
+}
+
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.message {
+  background: rgba(15, 23, 42, 0.48);
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: 0 14px 42px rgba(15, 23, 42, 0.35);
+}
+
+.composer {
+  padding: 20px 32px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.composer input {
+  flex: 1;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.composer button {
+  background: #38bdf8;
+  color: #0f172a;
+  border-radius: 14px;
+  padding: 12px 18px;
+  border: none;
+  font-weight: 600;
+}

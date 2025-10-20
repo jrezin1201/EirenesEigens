@@ -1,0 +1,31 @@
+<div class="storefront">
+  <section>
+    <header>
+      <h1>Aloha Supply</h1>
+      <input id="search" placeholder="Search the catalog" />
+    </header>
+    <div id="catalog" class="catalog-grid"></div>
+  </section>
+  <aside class="cart-panel">
+    <h2>Your Cart</h2>
+    <div id="cart-lines" class="cart-lines"></div>
+    <div class="checkout-summary">
+      <div class="summary-row"><span>Subtotal</span><span id="subtotal"></span></div>
+      <div class="summary-row"><span>Tax</span><span id="tax"></span></div>
+      <div class="summary-row"><strong>Total</strong><strong id="total"></strong></div>
+    </div>
+    <form class="shipping-form">
+      <input id="ship-name" placeholder="Full name" />
+      <input id="ship-street" placeholder="Street" />
+      <input id="ship-city" placeholder="City" />
+      <input id="ship-region" placeholder="State / Region" />
+      <input id="ship-postal" placeholder="Postal code" />
+      <input id="ship-country" placeholder="Country" />
+    </form>
+    <button id="checkout">Checkout</button>
+    <section>
+      <h3>Orders</h3>
+      <div id="orders"></div>
+    </section>
+  </aside>
+</div>

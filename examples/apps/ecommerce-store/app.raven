@@ -1,0 +1,387 @@
+// =============================================================================
+// RavensOne E-commerce Store Example
+// =============================================================================
+// Includes:
+//   • Product catalog with filters and search
+//   • Shopping cart + checkout flow
+//   • Stripe payment intents via @server functions
+//   • Order history and transactional emails
+// =============================================================================
+
+struct Product {
+    id: i32,
+    slug: String,
+    name: String,
+    description: String,
+    price_cents: i32,
+    image_url: String,
+    inventory: i32,
+    tags: Vec<String>,
+}
+
+struct CartLine {
+    product: Product,
+    quantity: i32,
+}
+
+struct CartSnapshot {
+    lines: Vec<CartLine>,
+    subtotal_cents: i32,
+    tax_cents: i32,
+    total_cents: i32,
+}
+
+struct ShippingAddress {
+    name: String,
+    street: String,
+    city: String,
+    region: String,
+    postal_code: String,
+    country: String,
+}
+
+struct CheckoutSession {
+    id: String,
+    client_secret: String,
+    cart: CartSnapshot,
+}
+
+struct Order {
+    id: String,
+    cart: CartSnapshot,
+    payment_status: String,
+    created_at: i64,
+}
+
+// Shared helpers ---------------------------------------------------------------
+
+fn money(value: i32) -> String {
+    return format!("${:.2}", value as f64 / 100.0);
+}
+
+fn compute_tax(subtotal: i32) -> i32 {
+    return (subtotal as f64 * 0.0825).round() as i32;
+}
+
+fn now() -> i64 {
+    return 1_698_040_000;
+}
+
+// Server state -----------------------------------------------------------------
+
+struct StoreState {
+    catalog: Vec<Product>,
+    orders: Vec<Order>,
+}
+
+impl StoreState {
+    fn new() -> Self {
+        return Self {
+            catalog: vec![
+                Product {
+                    id: 1,
+                    slug: "aloha-shirt".to_string(),
+                    name: "Aloha Shirt".to_string(),
+                    description: "Hand printed in Honolulu.".to_string(),
+                    price_cents: 7800,
+                    image_url: "https://cdn.ravensone.dev/products/aloha-shirt.jpg".to_string(),
+                    inventory: 42,
+                    tags: vec!["apparel".to_string(), "summer".to_string()],
+                },
+                Product {
+                    id: 2,
+                    slug: "surf-board".to_string(),
+                    name: "Carbon Surfboard".to_string(),
+                    description: "Feather-light shortboard built for speed.".to_string(),
+                    price_cents: 120_000,
+                    image_url: "https://cdn.ravensone.dev/products/surfboard.jpg".to_string(),
+                    inventory: 12,
+                    tags: vec!["surf".to_string(), "premium".to_string()],
+                },
+            ],
+            orders: vec![],
+        };
+    }
+}
+
+@server
+static mut STORE: Option<StoreState> = None;
+
+@server
+fn store_mut() -> &'static mut StoreState {
+    unsafe {
+        if STORE.is_none() {
+            STORE = Some(StoreState::new());
+        }
+        return STORE.as_mut().unwrap();
+    }
+}
+
+@server
+fn list_products(filter_tag: Option<String>) -> Vec<Product> {
+    let store = store_mut();
+    match filter_tag {
+        Some(tag) => store
+            .catalog
+            .iter()
+            .filter(|product| product.tags.contains(&tag))
+            .cloned()
+            .collect(),
+        None => store.catalog.clone(),
+    }
+}
+
+@server
+fn find_product(slug: String) -> Option<Product> {
+    let store = store_mut();
+    return store.catalog.iter().find(|p| p.slug == slug).cloned();
+}
+
+@server
+fn begin_checkout(lines: Vec<(String, i32)>, shipping: ShippingAddress) -> Result<CheckoutSession, String> {
+    let store = store_mut();
+    let mut cart_lines: Vec<CartLine> = vec![];
+    let mut subtotal = 0;
+    for (slug, qty) in lines {
+        if qty <= 0 { continue; }
+        match store.catalog.iter().find(|p| p.slug == slug) {
+            None => return Err(format!("Unknown product {}", slug)),
+            Some(product) => {
+                if product.inventory < qty {
+                    return Err(format!("Not enough inventory for {}", product.name));
+                }
+                subtotal += product.price_cents * qty;
+                cart_lines.push(CartLine { product: product.clone(), quantity: qty });
+            }
+        }
+    }
+    if cart_lines.len() == 0 {
+        return Err("Cart is empty".to_string());
+    }
+    let tax = compute_tax(subtotal);
+    let total = subtotal + tax + 1500; // flat rate shipping
+    let intent = create_stripe_payment_intent(total)?;
+    let snapshot = CartSnapshot { lines: cart_lines, subtotal_cents: subtotal, tax_cents: tax, total_cents: total };
+    let session = CheckoutSession { id: intent.id.clone(), client_secret: intent.client_secret, cart: snapshot.clone() };
+    store.orders.push(Order { id: intent.id, cart: snapshot, payment_status: "pending".to_string(), created_at: now() });
+    send_checkout_email(shipping, &session);
+    return Ok(session);
+}
+
+@server
+struct PaymentIntent {
+    id: String,
+    client_secret: String,
+}
+
+@server
+fn create_stripe_payment_intent(amount_cents: i32) -> Result<PaymentIntent, String> {
+    // Replace with actual Stripe SDK integration
+    return Ok(PaymentIntent { id: format!("pi_{}", now()), client_secret: format!("secret_{}", amount_cents) });
+}
+
+@server
+fn capture_payment(intent_id: String) -> Result<Order, String> {
+    let store = store_mut();
+    let order = store.orders.iter_mut().find(|order| order.id == intent_id);
+    match order {
+        Some(order) => {
+            order.payment_status = "succeeded".to_string();
+            Ok(order.clone())
+        },
+        None => Err("Order not found".to_string()),
+    }
+}
+
+@server
+fn send_checkout_email(address: ShippingAddress, session: &CheckoutSession) {
+    let line_summary = session
+        .cart
+        .lines
+        .iter()
+        .map(|line| format!("{} × {}", line.quantity, line.product.name))
+        .join(", ");
+    mailer::send(
+        address.name.clone(),
+        format!("Thanks for your order! {}", line_summary),
+        format!("We will ship to {} {} {}", address.street, address.city, address.postal_code),
+    );
+}
+
+@server
+fn order_history() -> Vec<Order> {
+    let store = store_mut();
+    return store.orders.clone();
+}
+
+// Client-side ------------------------------------------------------------------
+
+@client
+struct ClientCart {
+    lines: Vec<CartLine>,
+}
+
+@client
+static mut CART: ClientCart = ClientCart { lines: vec![] };
+
+@client
+fn cart_mut() -> &'static mut ClientCart {
+    unsafe { return &mut CART; }
+}
+
+@client
+fn init_storefront() {
+    mount_storefront();
+    render_catalog(None);
+    render_cart();
+}
+
+@client
+fn mount_storefront() {
+    document::body().set_inner_html(include_html!("./storefront.html"));
+    document::on("#search", "input", |event| {
+        let query = event.target_value();
+        if query.length() < 2 {
+            render_catalog(None);
+        } else {
+            let matches = list_products(None)
+                .into_iter()
+                .filter(|product| product.name.to_lowercase().contains(&query.to_lowercase()))
+                .collect();
+            render_product_grid(matches);
+        }
+    });
+}
+
+@client
+fn render_catalog(filter_tag: Option<String>) {
+    let products = list_products(filter_tag);
+    render_product_grid(products);
+}
+
+@client
+fn render_product_grid(products: Vec<Product>) {
+    document::render_list("#catalog", products, |node, product| {
+        node.img(product.image_url.clone());
+        node.h3(product.name.clone());
+        node.p(product.description.clone());
+        node.strong(money(product.price_cents));
+        node.button("Add to cart", || add_to_cart(product.slug.clone()));
+    });
+}
+
+@client
+fn add_to_cart(slug: String) {
+    match find_product(slug.clone()) {
+        None => toast::error("Item unavailable".to_string()),
+        Some(product) => {
+            let cart = cart_mut();
+            match cart.lines.iter_mut().find(|line| line.product.slug == slug) {
+                Some(line) => line.quantity += 1,
+                None => cart.lines.push(CartLine { product, quantity: 1 }),
+            }
+            render_cart();
+        }
+    }
+}
+
+@client
+fn render_cart() {
+    let cart = cart_mut();
+    let subtotal = cart.lines.iter().map(|line| line.product.price_cents * line.quantity).sum();
+    let tax = compute_tax(subtotal);
+    let total = subtotal + tax + 1500;
+    document::render_list("#cart-lines", cart.lines.clone(), |node, line| {
+        node.span(line.product.name.clone());
+        node.span(format!("× {}", line.quantity));
+        node.span(money(line.product.price_cents * line.quantity));
+        node.button("-", || decrement_item(line.product.slug.clone()));
+        node.button("+", || add_to_cart(line.product.slug.clone()));
+    });
+    document::set_text("#subtotal", money(subtotal));
+    document::set_text("#tax", money(tax));
+    document::set_text("#total", money(total));
+}
+
+@client
+fn decrement_item(slug: String) {
+    let cart = cart_mut();
+    cart.lines.retain_mut(|line| {
+        if line.product.slug != slug {
+            return true;
+        }
+        line.quantity -= 1;
+        if line.quantity <= 0 {
+            return false;
+        }
+        true
+    });
+    render_cart();
+}
+
+@client
+async fn handle_checkout() {
+    let cart = cart_mut();
+    if cart.lines.len() == 0 {
+        toast::error("Cart is empty".to_string());
+        return;
+    }
+    let shipping = ShippingAddress {
+        name: document::get_input_value("ship-name"),
+        street: document::get_input_value("ship-street"),
+        city: document::get_input_value("ship-city"),
+        region: document::get_input_value("ship-region"),
+        postal_code: document::get_input_value("ship-postal"),
+        country: document::get_input_value("ship-country"),
+    };
+    let lines: Vec<(String, i32)> = cart.lines.iter().map(|line| (line.product.slug.clone(), line.quantity)).collect();
+    match begin_checkout(lines, shipping) {
+        Ok(session) => {
+            show_checkout_modal(session.client_secret.clone(), session.cart.total_cents);
+            cart.lines.clear();
+            render_cart();
+        },
+        Err(message) => toast::error(message),
+    }
+}
+
+@client
+fn show_checkout_modal(client_secret: String, total: i32) {
+    modal::open(|modal| {
+        modal.h3("Confirm Payment");
+        modal.p(format!("Total due {}", money(total)));
+        modal.button("Pay", || confirm_payment(client_secret.clone()));
+    });
+}
+
+@client
+async fn confirm_payment(client_secret: String) {
+    match stripe::confirm(client_secret.clone()) {
+        Ok(intent_id) => {
+            match capture_payment(intent_id.clone()) {
+                Ok(order) => {
+                    modal::close();
+                    toast::success("Payment complete".to_string());
+                    render_order_history();
+                },
+                Err(message) => toast::error(message),
+            }
+        },
+        Err(message) => toast::error(message),
+    }
+}
+
+@client
+fn render_order_history() {
+    let orders = order_history();
+    document::render_list("#orders", orders, |node, order| {
+        node.h4(format!("Order {}", order.id));
+        node.p(format!("Status: {}", order.payment_status));
+        node.p(format!("Total: {}", money(order.cart.total_cents)));
+    });
+}
+
+@client
+fn main() {
+    init_storefront();
+}

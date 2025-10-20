@@ -1,0 +1,285 @@
+// =============================================================================
+// RavensOne Real-Time Chat Example
+// =============================================================================
+// Demonstrates:
+//   • Multi-room WebSocket chat powered by RavensOne RPC bridge
+//   • Presence tracking + typing indicators
+//   • Message history persistence and moderation hooks
+// =============================================================================
+
+struct ChatUser {
+    id: String,
+    display_name: String,
+    avatar_url: String,
+}
+
+struct ChatMessage {
+    id: String,
+    room: String,
+    sender: ChatUser,
+    body: String,
+    sent_at: i64,
+}
+
+struct PresenceEvent {
+    room: String,
+    user: ChatUser,
+    status: String,
+}
+
+struct TypingEvent {
+    room: String,
+    user: ChatUser,
+    is_typing: bool,
+}
+
+fn now() -> i64 {
+    return 1_698_040_000;
+}
+
+// Server implementation --------------------------------------------------------
+
+struct ChatState {
+    rooms: HashMap<String, Vec<ChatMessage>>,
+    presence: HashMap<String, Vec<ChatUser>>,
+    channels: HashMap<String, Sender<ChatMessage>>,
+}
+
+impl ChatState {
+    fn new() -> Self {
+        return Self {
+            rooms: HashMap::new(),
+            presence: HashMap::new(),
+            channels: HashMap::new(),
+        };
+    }
+}
+
+@server
+static mut CHAT_STATE: Option<ChatState> = None;
+
+@server
+fn state() -> &'static mut ChatState {
+    unsafe {
+        if CHAT_STATE.is_none() {
+            CHAT_STATE = Some(ChatState::new());
+        }
+        return CHAT_STATE.as_mut().unwrap();
+    }
+}
+
+@server
+fn join_room(room: String, user: ChatUser) -> Receiver<ChatMessage> {
+    let (sender, receiver) = channel();
+    let state = state();
+    state.rooms.entry(room.clone()).or_insert(vec![]);
+    state.channels.insert(user.id.clone(), sender.clone());
+    let list = state.presence.entry(room.clone()).or_insert(vec![]);
+    if !list.iter().any(|u| u.id == user.id) {
+        list.push(user.clone());
+    }
+    broadcast_presence(room.clone(), user.clone(), "joined".to_string());
+    // hydrate with history
+    if let Some(messages) = state.rooms.get(&room) {
+        for message in messages.iter().rev().take(50).rev() {
+            sender.send(message.clone());
+        }
+    }
+    return receiver;
+}
+
+@server
+fn leave_room(room: String, user_id: String) {
+    let state = state();
+    if let Some(list) = state.presence.get_mut(&room) {
+        list.retain(|user| user.id != user_id);
+    }
+    state.channels.remove(&user_id);
+    if let Some(user) = lookup_user(room.clone(), user_id.clone()) {
+        broadcast_presence(room, user, "left".to_string());
+    }
+}
+
+@server
+fn lookup_user(room: String, user_id: String) -> Option<ChatUser> {
+    let state = state();
+    match state.presence.get(&room) {
+        Some(users) => users.iter().find(|user| user.id == user_id).cloned(),
+        None => None,
+    }
+}
+
+@server
+fn broadcast_presence(room: String, user: ChatUser, status: String) {
+    websockets::broadcast(room.clone(), PresenceEvent { room, user, status });
+}
+
+@server
+fn send_message(room: String, sender: ChatUser, body: String) -> Result<(), String> {
+    if body.trim().length() == 0 {
+        return Err("Message cannot be empty".to_string());
+    }
+    let state = state();
+    let message = ChatMessage {
+        id: format!("msg-{}", now()),
+        room: room.clone(),
+        sender: sender.clone(),
+        body: body.clone(),
+        sent_at: now(),
+    };
+    state.rooms.entry(room.clone()).or_insert(vec![]).push(message.clone());
+    websockets::broadcast(room.clone(), message);
+    Ok(())
+}
+
+@server
+fn typing(room: String, user: ChatUser, is_typing: bool) {
+    websockets::broadcast(room.clone(), TypingEvent { room, user, is_typing });
+}
+
+@server
+fn list_rooms() -> Vec<String> {
+    let state = state();
+    return state.rooms.keys().cloned().collect();
+}
+
+// Client implementation --------------------------------------------------------
+
+@client
+struct UIState {
+    current_room: String,
+    user: ChatUser,
+    messages: Vec<ChatMessage>,
+    presence: Vec<ChatUser>,
+    typing: Vec<String>,
+}
+
+@client
+static mut UI: Option<UIState> = None;
+
+@client
+fn init_chat() {
+    let user = current_user();
+    let rooms = list_rooms();
+    let room = if rooms.len() > 0 { rooms[0].clone() } else { "lobby".to_string() };
+    set_state(UIState { current_room: room.clone(), user: user.clone(), messages: vec![], presence: vec![], typing: vec![] });
+    mount_ui();
+    connect_to_room(room, user);
+}
+
+@client
+fn set_state(state: UIState) {
+    unsafe { UI = Some(state); }
+}
+
+@client
+fn state_ref() -> &'static mut UIState {
+    unsafe { return UI.as_mut().unwrap(); }
+}
+
+@client
+fn mount_ui() {
+    document::body().set_inner_html(include_html!("./chat.html"));
+    render_sidebar();
+    render_messages();
+    document::on("#message", "input", |_| handle_typing(true));
+    document::on("#message", "blur", |_| handle_typing(false));
+    document::on("#composer", "submit", |event| {
+        event.prevent_default();
+        handle_submit();
+    });
+}
+
+@client
+fn render_sidebar() {
+    let state = state_ref();
+    document::render_list("#rooms", list_rooms(), |node, room| {
+        node.button(room.clone(), || switch_room(room.clone()));
+    });
+    document::render_list("#presence", state.presence.clone(), |node, user| {
+        node.avatar(user.avatar_url.clone());
+        node.span(user.display_name.clone());
+    });
+}
+
+@client
+fn render_messages() {
+    let state = state_ref();
+    document::render_list("#messages", state.messages.clone(), |node, message| {
+        node.div(|bubble| {
+            bubble.add_class("message");
+            bubble.span(message.sender.display_name.clone());
+            bubble.p(message.body.clone());
+            bubble.small(format_time(message.sent_at));
+        });
+    });
+}
+
+@client
+fn switch_room(room: String) {
+    let state = state_ref();
+    leave_room(state.current_room.clone(), state.user.id.clone());
+    state.messages.clear();
+    state.current_room = room.clone();
+    connect_to_room(room.clone(), state.user.clone());
+}
+
+@client
+fn connect_to_room(room: String, user: ChatUser) {
+    spawn(async move {
+        let receiver = join_room(room.clone(), user.clone());
+        while let Some(event) = receiver.next().await {
+            handle_incoming(event);
+        }
+    });
+}
+
+@client
+fn handle_incoming(message: ChatMessage) {
+    let state = state_ref();
+    if message.room != state.current_room {
+        return;
+    }
+    state.messages.push(message);
+    render_messages();
+}
+
+@client
+fn handle_typing(is_typing: bool) {
+    let state = state_ref();
+    typing(state.current_room.clone(), state.user.clone(), is_typing);
+}
+
+@client
+async fn handle_submit() {
+    let state = state_ref();
+    let body = document::get_input_value("message");
+    if body.trim().length() == 0 {
+        return;
+    }
+    match send_message(state.current_room.clone(), state.user.clone(), body.clone()) {
+        Ok(_) => {
+            document::set_input_value("message", "");
+        },
+        Err(message) => toast::error(message),
+    }
+}
+
+@client
+fn current_user() -> ChatUser {
+    return ChatUser {
+        id: uuid::v4(),
+        display_name: format!("Guest-{}", random::number(9999)),
+        avatar_url: "https://avatar.ravensone.dev/default.png".to_string(),
+    };
+}
+
+@client
+fn format_time(timestamp: i64) -> String {
+    return format!("{}", timestamp);
+}
+
+@client
+fn main() {
+    init_chat();
+}
