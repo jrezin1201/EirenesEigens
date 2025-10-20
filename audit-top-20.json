@@ -1,0 +1,303 @@
+[
+  {
+    "id": "A01",
+    "title": "Align CLI compile pipeline with real code generation",
+    "category": "compiler",
+    "severity": "high",
+    "effort": "L",
+    "rationale": "`raven compile` promises TS/JS bundles and WASM output but the code generator and WASM runtime paths are largely stubs, leading to broken outputs and blocking any demo.",
+    "files_touched": ["src/main.rs", "src/codegen.rs", "src/js_emitter.rs", "src/js_minifier.rs", "src/wasm_runtime.rs"],
+    "proposed_fix": "Audit the end-to-end compile pipeline, implement the missing codegen pieces for client/server bundles, and gate WASM emission until the pipeline is stable.",
+    "acceptance_criteria": [
+      "`raven compile examples/hello.raven` produces deterministic server/client bundles",
+      "Generated bundles execute without runtime panics in node/browser smoke tests",
+      "CLI output no longer advertises WASM unless the file is emitted"
+    ],
+    "links": []
+  },
+  {
+    "id": "A02",
+    "title": "Implement Pratt parser expression coverage",
+    "category": "compiler",
+    "severity": "high",
+    "effort": "M",
+    "rationale": "The parser skeleton handles statements but expression parsing is incomplete, so many tokens lead to parse errors. This blocks writing even simple showcase programs.",
+    "files_touched": ["src/parser.rs", "src/token.rs", "tests/parser"],
+    "proposed_fix": "Finish Pratt precedence handling for infix/postfix operators and add regression tests for literals, calls, conditionals, and component syntax.",
+    "acceptance_criteria": [
+      "Parser handles arithmetic, comparisons, calls, and JSX-like nodes",
+      "Unit tests cover success/error cases for expression parsing"
+    ],
+    "links": []
+  },
+  {
+    "id": "A03",
+    "title": "Stabilize lexer token definitions",
+    "category": "compiler",
+    "severity": "high",
+    "effort": "M",
+    "rationale": "Lexer token kinds include many variants that lack matching grammar rules, while core tokens (string interpolation, component tags) behave inconsistently, producing frequent illegal tokens.",
+    "files_touched": ["src/lexer.rs", "src/token.rs", "tests/lexer"],
+    "proposed_fix": "Trim unused token variants, fix string literal and JSX lexing, and create golden token snapshot tests for showcase examples.",
+    "acceptance_criteria": [
+      "Lexer tokenizes sample showcase files without illegal tokens",
+      "Tests verify tokens for components, annotations, and expressions"
+    ],
+    "links": []
+  },
+  {
+    "id": "A04",
+    "title": "Expose compiler errors through public API",
+    "category": "compiler",
+    "severity": "medium",
+    "effort": "S",
+    "rationale": "`CompileError` and related diagnostics are internal, preventing CLI/tests from matching error kinds, reducing UX and testability.",
+    "files_touched": ["src/errors.rs", "src/lib.rs", "src/diagnostics.rs"],
+    "proposed_fix": "Make error enums public, add Display/thiserror implementations, and standardize diagnostic messages for IDE integration.",
+    "acceptance_criteria": [
+      "Public error types with Display",
+      "Integration test asserts on structured error codes"
+    ],
+    "links": []
+  },
+  {
+    "id": "A05",
+    "title": "Implement CLI init/new templates",
+    "category": "cli",
+    "severity": "high",
+    "effort": "M",
+    "rationale": "`raven init` and `raven new` currently emit placeholder files lacking runnable build config and examples, blocking newcomers.",
+    "files_touched": ["src/main.rs", "templates"],
+    "proposed_fix": "Provide template assets (raven.toml, main.raven, tsconfig) and ensure commands copy them with docs reference.",
+    "acceptance_criteria": [
+      "`raven new demo` creates runnable project",
+      "Templates documented in quickstart"
+    ],
+    "links": []
+  },
+  {
+    "id": "A06",
+    "title": "Implement dev server and watcher",
+    "category": "devexp",
+    "severity": "high",
+    "effort": "L",
+    "rationale": "`raven dev` currently shells out to python and fake HMR scripts without ensuring files exist; watchers busy-loop without debounce, hurting UX.",
+    "files_touched": ["src/main.rs", "serve.py", "scripts/hmr-server.js"],
+    "proposed_fix": "Replace placeholder dev server with Rust-based HTTP + websocket server, integrate notify-based watcher, and document port config.",
+    "acceptance_criteria": [
+      "`raven dev` serves compiled output and reloads on change",
+      "Unit/integration test covers watcher trigger"
+    ],
+    "links": []
+  },
+  {
+    "id": "A07",
+    "title": "Provide VS Code grammar stub",
+    "category": "devexp",
+    "severity": "medium",
+    "effort": "M",
+    "rationale": "The `vscode-raven` package lacks a syntactic grammar aligned with current tokens, preventing syntax highlighting demos.",
+    "files_touched": ["vscode-raven/package.json", "vscode-raven/syntaxes"],
+    "proposed_fix": "Author a minimal TextMate grammar covering components, annotations, keywords, and ensure it ships in extension.",
+    "acceptance_criteria": [
+      "VSCode extension highlights .raven showcase files",
+      "Grammar documented in reference"
+    ],
+    "links": []
+  },
+  {
+    "id": "A08",
+    "title": "Document realistic feature scope",
+    "category": "docs",
+    "severity": "high",
+    "effort": "S",
+    "rationale": "Current README claims production-ready ORM, auth, etc., which do not exist, undermining trust and confusing demo audiences.",
+    "files_touched": ["README.md", "docs/guide", "docs/reference"],
+    "proposed_fix": "Rewrite messaging to reflect compiler MVP status, link to roadmap, and highlight planned features transparently.",
+    "acceptance_criteria": [
+      "README quickstart matches actual commands",
+      "Guide explains experimental features with disclaimers"
+    ],
+    "links": []
+  },
+  {
+    "id": "A09",
+    "title": "Create regression test suite for lexer/parser",
+    "category": "tests",
+    "severity": "medium",
+    "effort": "M",
+    "rationale": "Repository lacks automated tests; only sample .raven files exist with no assertions, leading to frequent regressions.",
+    "files_touched": ["tests", "Cargo.toml"],
+    "proposed_fix": "Add unit tests for lexer/parser/codegen outputs with assert snapshots and integrate into CI.",
+    "acceptance_criteria": [
+      "`cargo test` exercises lexer and parser cases",
+      "CI step runs tests and fails on regression"
+    ],
+    "links": []
+  },
+  {
+    "id": "A10",
+    "title": "Set up GitHub Actions CI",
+    "category": "infra",
+    "severity": "medium",
+    "effort": "S",
+    "rationale": "No CI pipeline exists; pushes go unverified, leaving examples broken.",
+    "files_touched": [".github/workflows/ci.yml", "package.json"],
+    "proposed_fix": "Add workflow running cargo fmt --check, clippy, tests, and docs check, plus npm lint for VSCode grammar.",
+    "acceptance_criteria": [
+      "CI workflow passes on main",
+      "Status badge added to README"
+    ],
+    "links": []
+  },
+  {
+    "id": "A11",
+    "title": "Implement AST to TSX/HTML emitter",
+    "category": "compiler",
+    "severity": "high",
+    "effort": "L",
+    "rationale": "`js_emitter` claims to produce server/client bundles but lacks component/render logic, blocking React/HTML showcases.",
+    "files_touched": ["src/js_emitter.rs", "src/ast.rs", "examples"],
+    "proposed_fix": "Define AST node coverage for components and expressions, implement emitter functions, and add golden output tests.",
+    "acceptance_criteria": [
+      "Emitter handles components, text, attributes, interpolations",
+      "Generated TSX passes `pnpm tsc` smoke test"
+    ],
+    "links": []
+  },
+  {
+    "id": "A12",
+    "title": "Minimal codegen to HTML fallback",
+    "category": "compiler",
+    "severity": "medium",
+    "effort": "M",
+    "rationale": "For demos we need at least static HTML output for simple components, but no path exists today.",
+    "files_touched": ["src/codegen.rs", "src/js_emitter.rs", "dist"],
+    "proposed_fix": "Add simple renderer that converts component AST to static HTML and integrate into CLI build path as fallback.",
+    "acceptance_criteria": [
+      "`raven build` can output dist/index.html for static component",
+      "Documented limitations in guide"
+    ],
+    "links": []
+  },
+  {
+    "id": "A13",
+    "title": "Complete token documentation",
+    "category": "docs",
+    "severity": "medium",
+    "effort": "S",
+    "rationale": "No authoritative grammar/token reference exists, leading to inconsistent tutorial guidance.",
+    "files_touched": ["docs/reference/grammar.md", "src/token.rs"],
+    "proposed_fix": "Document token kinds, reserved keywords, and component syntax aligned with lexer implementation.",
+    "acceptance_criteria": [
+      "Grammar reference covers annotations, components, expressions",
+      "Guide links to grammar page"
+    ],
+    "links": []
+  },
+  {
+    "id": "A14",
+    "title": "Create CLI reference documentation",
+    "category": "docs",
+    "severity": "medium",
+    "effort": "S",
+    "rationale": "Numerous CLI subcommands exist but lack docs; many are placeholders. Need official reference with status per command.",
+    "files_touched": ["docs/reference/cli.md", "src/main.rs"],
+    "proposed_fix": "Document each subcommand, mark unimplemented ones, and align CLI help output with docs.",
+    "acceptance_criteria": [
+      "CLI reference page lists all commands with availability",
+      "`raven --help` matches documented options"
+    ],
+    "links": []
+  },
+  {
+    "id": "A15",
+    "title": "Streamline docs IA and archive legacy content",
+    "category": "docs",
+    "severity": "medium",
+    "effort": "M",
+    "rationale": "Docs folder contains outdated plans and marketing material; newcomers can't find a clear guide.",
+    "files_touched": ["docs/*", "README.md"],
+    "proposed_fix": "Adopt lean IA (README, guide, reference, contributing, changelog) and move historical files to /docs/_archive with index.",
+    "acceptance_criteria": [
+      "Docs tree matches proposed IA",
+      "Archive index lists relocated docs"
+    ],
+    "links": []
+  },
+  {
+    "id": "A16",
+    "title": "Add CONTRIBUTING and Conventional Commits guide",
+    "category": "docs",
+    "severity": "low",
+    "effort": "S",
+    "rationale": "Contributors lack guidance on coding standards, commit message format, or testing requirements.",
+    "files_touched": ["docs/contributing.md", "README.md"],
+    "proposed_fix": "Document dev setup, formatting commands, Conventional Commit examples, and PR expectations.",
+    "acceptance_criteria": [
+      "New doc published and linked from README",
+      "Checklist referenced in PR templates"
+    ],
+    "links": []
+  },
+  {
+    "id": "A17",
+    "title": "Establish showcase examples pipeline",
+    "category": "examples",
+    "severity": "medium",
+    "effort": "M",
+    "rationale": "Examples directory lacks structured builds; need curated showcase apps for demos.",
+    "files_touched": ["examples", "docs/guide", "package.json"],
+    "proposed_fix": "Create `examples/` subfolders with README + build instructions and integrate into dev server.",
+    "acceptance_criteria": [
+      "20 showcase stubs created with README",
+      "CI job verifies examples build"
+    ],
+    "links": []
+  },
+  {
+    "id": "A18",
+    "title": "Implement 5-minute tutorial",
+    "category": "docs",
+    "severity": "medium",
+    "effort": "S",
+    "rationale": "There is no guided tutorial demonstrating CLI init→dev→build, hindering onboarding.",
+    "files_touched": ["docs/guide/tutorial.md", "examples/hello"],
+    "proposed_fix": "Author step-by-step tutorial using functional features and align with CLI commands.",
+    "acceptance_criteria": [
+      "Tutorial can be completed end-to-end",
+      "Linked from README"
+    ],
+    "links": []
+  },
+  {
+    "id": "A19",
+    "title": "Add CHANGELOG and release notes process",
+    "category": "infra",
+    "severity": "low",
+    "effort": "S",
+    "rationale": "No changelog exists; releases cannot be tracked or communicated to users.",
+    "files_touched": ["docs/changelog.md"],
+    "proposed_fix": "Introduce Keep a Changelog-style file and document release cadence.",
+    "acceptance_criteria": [
+      "Changelog created with initial entries",
+      "Release checklist references changelog"
+    ],
+    "links": []
+  },
+  {
+    "id": "A20",
+    "title": "Create docs lint/links check tooling",
+    "category": "infra",
+    "severity": "low",
+    "effort": "S",
+    "rationale": "Need automated docs verification to prevent stale links and ensure new IA stays consistent.",
+    "files_touched": ["package.json", "scripts/docs-check.sh"],
+    "proposed_fix": "Add script to validate Markdown links/headings and wire into npm `docs:check` and CI.",
+    "acceptance_criteria": [
+      "`npm run docs:check` exits 0 with clean docs",
+      "CI executes docs check"
+    ],
+    "links": []
+  }
+]
