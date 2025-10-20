@@ -1,0 +1,59 @@
+:root {
+  font-family: "Inter", system-ui, -apple-system;
+  color: #101828;
+  background-color: #f8fafc;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.editor-shell {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 40px;
+}
+
+.editor-shell textarea {
+  width: 100%;
+  min-height: 60vh;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(16, 24, 40, 0.12);
+  font-size: 16px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.preview-pane {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  padding: 24px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.05);
+}
+
+.post-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.04);
+}
+
+.post-card h3 {
+  margin-top: 0;
+  font-size: 20px;
+}
+
+.comment {
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 16px 0;
+}
+
+.comment:first-child {
+  border-top: 0;
+}

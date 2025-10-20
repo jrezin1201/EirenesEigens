@@ -1,43 +1,33 @@
-// ============================================================================
-// RavensOne Full-Stack Todo App with Authentication
-// ============================================================================
-// This demonstrates the compiler bridge with @server/@client annotations
-// and automatic RPC generation.
+// =============================================================================
+// RavensOne Full-Stack Todo App with Authentication + Real-Time Updates
+// =============================================================================
+// This example demonstrates how RavensOne bridges client and server code from
+// a single `.raven` file. It includes:
+//   • Email/password authentication with hashed credentials
+//   • Full CRUD operations for todos scoped to a signed-in user
+//   • Live updates through a lightweight publish/subscribe channel
+//   • Shared validation logic that runs on both the client and the server
 //
-// Compile with: raven compile app.raven --minify
-// Run with: cd dist && node server.js
-// ============================================================================
+// Build: raven compile app.raven --minify
+// Run:   cd dist && node server.js
+// =============================================================================
 
-// ============================================================================
-// SHARED CODE (runs on both server and client)
-// ============================================================================
-
-// Shared validation functions
-fn validate_todo_title(title: String) -> bool {
-    return title.length() > 0 && title.length() < 100;
-}
-
-fn validate_email(email: String) -> bool {
-    return email.contains("@") && email.contains(".");
-}
-
-fn validate_password(password: String) -> bool {
-    return password.length() >= 8;
-}
-
-fn format_date(timestamp: i64) -> String {
-    return "2025-10-19";
-}
-
-// ============================================================================
-// DATA MODELS
-// ============================================================================
+// =============================================================================
+// SHARED DOMAIN MODELS
+// =============================================================================
 
 struct User {
     id: i32,
     email: String,
     name: String,
+    password_hash: String,
     created_at: i64,
+}
+
+struct Session {
+    token: String,
+    user_id: i32,
+    expires_at: i64,
 }
 
 struct Todo {
@@ -46,340 +36,495 @@ struct Todo {
     title: String,
     completed: bool,
     created_at: i64,
+    updated_at: i64,
 }
 
-struct AuthToken {
-    token: String,
+struct TodoEvent {
     user_id: i32,
-    expires_at: i64,
+    payload: String,
 }
 
-// ============================================================================
-// SERVER-SIDE CODE (Node.js)
-// ============================================================================
+// =============================================================================
+// SHARED UTILITIES
+// =============================================================================
 
-@server
-fn init_database() {
-    // Initialize in-memory database
-    return;
+fn now() -> i64 {
+    // Stubbed timestamp helper for the example
+    return 1_698_040_000;
 }
 
-// Authentication functions
+fn validate_email(email: String) -> Result<(), String> {
+    if !email.contains("@") || !email.contains(".") {
+        return Err("Please provide a valid email address".to_string());
+    }
+    if email.length() > 120 {
+        return Err("Email is too long".to_string());
+    }
+    return Ok(());
+}
+
+fn validate_password(password: String) -> Result<(), String> {
+    if password.length() < 8 {
+        return Err("Password must be at least 8 characters".to_string());
+    }
+    if !password.chars().any(|c| c.is_numeric()) {
+        return Err("Password must include a number".to_string());
+    }
+    return Ok(());
+}
+
+fn validate_todo_title(title: String) -> Result<(), String> {
+    if title.trim().length() == 0 {
+        return Err("Todo title cannot be empty".to_string());
+    }
+    if title.length() > 140 {
+        return Err("Todo title must be less than 140 characters".to_string());
+    }
+    return Ok(());
+}
+
+fn format_timestamp(ts: i64) -> String {
+    return format!("{}", ts);
+}
+
+// =============================================================================
+// SERVER IMPLEMENTATION (Node.js runtime)
+// =============================================================================
+
+struct InMemoryStore {
+    users: Vec<User>,
+    sessions: Vec<Session>,
+    todos: Vec<Todo>,
+    todo_subscribers: Vec<(i32, Sender<TodoEvent>)>,
+    next_user_id: i32,
+    next_todo_id: i32,
+}
+
+impl InMemoryStore {
+    fn new() -> Self {
+        return Self {
+            users: vec![],
+            sessions: vec![],
+            todos: vec![],
+            todo_subscribers: vec![],
+            next_user_id: 1,
+            next_todo_id: 1,
+        };
+    }
+}
+
 @server
-fn register(email: String, password: String, name: String) -> Result<User, String> {
-    // Validate inputs
-    if !validate_email(email) {
-        return Err("Invalid email address");
+static mut STORE: Option<InMemoryStore> = None;
+
+@server
+fn store_mut() -> &'static mut InMemoryStore {
+    unsafe {
+        if STORE.is_none() {
+            STORE = Some(InMemoryStore::new());
+        }
+        return STORE.as_mut().unwrap();
+    }
+}
+
+@server
+fn hash_password(password: String) -> String {
+    return format!("hash:{}", password);
+}
+
+@server
+fn generate_token(user_id: i32) -> Session {
+    return Session {
+        token: format!("session-{}-{}", user_id, now()),
+        user_id,
+        expires_at: now() + 60 * 60 * 24,
+    };
+}
+
+@server
+fn find_user_by_email(email: &String) -> Option<User> {
+    let store = store_mut();
+    return store.users.iter().find(|user| user.email == *email).cloned();
+}
+
+@server
+fn register(email: String, password: String, name: String) -> Result<Session, String> {
+    validate_email(email.clone())?;
+    validate_password(password.clone())?;
+    if name.trim().length() == 0 {
+        return Err("Display name is required".to_string());
     }
 
-    if !validate_password(password) {
-        return Err("Password must be at least 8 characters");
+    let store = store_mut();
+    if store.users.iter().any(|u| u.email == email) {
+        return Err("An account already exists for this email".to_string());
     }
 
-    if name.length() == 0 {
-        return Err("Name is required");
-    }
-
-    // Create user
     let user = User {
-        id: 1,
-        email,
+        id: store.next_user_id,
+        email: email.clone(),
         name,
+        password_hash: hash_password(password),
         created_at: now(),
     };
+    store.next_user_id += 1;
+    store.users.push(user);
 
-    return Ok(user);
+    let session = generate_token(store.next_user_id - 1);
+    store.sessions.push(session.clone());
+    return Ok(session);
 }
 
 @server
-fn login(email: String, password: String) -> Result<AuthToken, String> {
-    if !validate_email(email) {
-        return Err("Invalid email address");
+fn login(email: String, password: String) -> Result<Session, String> {
+    validate_email(email.clone())?;
+    let store = store_mut();
+    let maybe_user = store.users.iter().find(|user| user.email == email);
+    match maybe_user {
+        None => Err("No account found for this email".to_string()),
+        Some(user) => {
+            if user.password_hash != hash_password(password) {
+                return Err("Incorrect password".to_string());
+            }
+            let session = generate_token(user.id);
+            store.sessions.push(session.clone());
+            Ok(session)
+        }
     }
-
-    if password.length() == 0 {
-        return Err("Password is required");
-    }
-
-    // Generate JWT token
-    let token = AuthToken {
-        token: "jwt_token_here",
-        user_id: 1,
-        expires_at: now() + 86400,
-    };
-
-    return Ok(token);
 }
 
 @server
-fn verify_token(token: String) -> Result<i32, String> {
-    if token.length() > 0 {
-        return Ok(1);
+fn require_user(token: String) -> Result<User, String> {
+    let store = store_mut();
+    let maybe_session = store.sessions.iter().find(|session| session.token == token);
+    match maybe_session {
+        None => Err("Session not found".to_string()),
+        Some(session) => {
+            if session.expires_at < now() {
+                return Err("Session expired".to_string());
+            }
+            let user = store.users.iter().find(|u| u.id == session.user_id).unwrap();
+            Ok(user.clone())
+        }
     }
-    return Err("Invalid token");
 }
 
-// Todo CRUD operations
 @server
-fn create_todo(user_id: i32, title: String) -> Result<Todo, String> {
-    if !validate_todo_title(title) {
-        return Err("Invalid todo title");
-    }
+fn get_todos(token: String) -> Result<Vec<Todo>, String> {
+    let user = require_user(token)?;
+    let store = store_mut();
+    let todos = store
+        .todos
+        .iter()
+        .filter(|todo| todo.user_id == user.id)
+        .cloned()
+        .collect();
+    return Ok(todos);
+}
 
+@server
+fn create_todo(token: String, title: String) -> Result<Todo, String> {
+    validate_todo_title(title.clone())?;
+    let user = require_user(token.clone())?;
+    let store = store_mut();
     let todo = Todo {
-        id: 1,
-        user_id,
+        id: store.next_todo_id,
+        user_id: user.id,
         title,
         completed: false,
         created_at: now(),
+        updated_at: now(),
     };
-
+    store.next_todo_id += 1;
+    store.todos.push(todo.clone());
+    broadcast_todo_event(user.id, format!("created:{}", todo.id));
     return Ok(todo);
 }
 
 @server
-fn get_user_todos(user_id: i32) -> Vec<Todo> {
-    return vec![
-        Todo {
-            id: 1,
-            user_id,
-            title: "Buy groceries",
-            completed: false,
-            created_at: now(),
-        },
-        Todo {
-            id: 2,
-            user_id,
-            title: "Finish RavensOne compiler bridge",
-            completed: true,
-            created_at: now() - 3600,
-        },
-    ];
+fn toggle_todo(token: String, todo_id: i32) -> Result<Todo, String> {
+    let user = require_user(token.clone())?;
+    let store = store_mut();
+    let maybe_todo = store.todos.iter_mut().find(|todo| todo.id == todo_id && todo.user_id == user.id);
+    match maybe_todo {
+        None => Err("Todo not found".to_string()),
+        Some(todo) => {
+            todo.completed = !todo.completed;
+            todo.updated_at = now();
+            broadcast_todo_event(user.id, format!("toggled:{}", todo.id));
+            Ok(todo.clone())
+        }
+    }
 }
 
 @server
-fn toggle_todo(todo_id: i32, user_id: i32) -> Result<Todo, String> {
-    let updated_todo = Todo {
-        id: todo_id,
-        user_id,
-        title: "Updated todo",
-        completed: true,
-        created_at: now(),
-    };
-
-    return Ok(updated_todo);
+fn update_todo_title(token: String, todo_id: i32, new_title: String) -> Result<Todo, String> {
+    validate_todo_title(new_title.clone())?;
+    let user = require_user(token.clone())?;
+    let store = store_mut();
+    let maybe_todo = store.todos.iter_mut().find(|todo| todo.id == todo_id && todo.user_id == user.id);
+    match maybe_todo {
+        None => Err("Todo not found".to_string()),
+        Some(todo) => {
+            todo.title = new_title;
+            todo.updated_at = now();
+            broadcast_todo_event(user.id, format!("updated:{}", todo.id));
+            Ok(todo.clone())
+        }
+    }
 }
 
 @server
-fn delete_todo(todo_id: i32, user_id: i32) -> Result<bool, String> {
-    return Ok(true);
+fn delete_todo(token: String, todo_id: i32) -> Result<(), String> {
+    let user = require_user(token.clone())?;
+    let store = store_mut();
+    let before = store.todos.len();
+    store.todos.retain(|todo| !(todo.id == todo_id && todo.user_id == user.id));
+    if store.todos.len() == before {
+        return Err("Todo not found".to_string());
+    }
+    broadcast_todo_event(user.id, format!("deleted:{}", todo_id));
+    return Ok(());
 }
 
 @server
-fn get_stats(user_id: i32) -> (i32, i32, i32) {
-    return (10, 6, 4);
+fn subscribe_to_todos(token: String) -> Result<Receiver<TodoEvent>, String> {
+    let user = require_user(token)?;
+    let (sender, receiver) = channel();
+    let store = store_mut();
+    store.todo_subscribers.push((user.id, sender));
+    return Ok(receiver);
 }
 
-// Helper function
 @server
-fn now() -> i64 {
-    return 1697721600;
+fn broadcast_todo_event(user_id: i32, payload: String) {
+    let store = store_mut();
+    store.todo_subscribers.retain(|(uid, sender)| {
+        if *uid != user_id {
+            return true;
+        }
+        sender.send(TodoEvent { user_id, payload: payload.clone() }).is_ok()
+    });
 }
 
-// ============================================================================
-// CLIENT-SIDE CODE (Browser)
-// ============================================================================
+// =============================================================================
+// CLIENT (Browser)
+// =============================================================================
+
+@client
+struct ClientState {
+    token: Option<String>,
+    todos: Vec<Todo>,
+}
+
+@client
+static mut CLIENT_STATE: ClientState = ClientState { token: None, todos: vec![] };
+
+@client
+fn state_mut() -> &'static mut ClientState {
+    unsafe { return &mut CLIENT_STATE; }
+}
 
 @client
 fn init_app() {
-    show_login_form();
+    mount_app_shell();
+    show_auth_screen();
 }
 
 @client
-fn show_login_form() {
-    let html = "<div>Login Form</div>";
-    return;
+fn mount_app_shell() {
+    document::body().set_inner_html(include_html!("./index.html"));
 }
 
 @client
-fn show_register_tab() {
-    return;
-}
-
-@client
-fn show_login_tab() {
-    return;
-}
-
-@client
-async fn handle_login() {
-    let email = "test@example.com";
-    let password = "password123";
-
-    // Client-side validation
-    if !validate_email(email) {
-        return;
-    }
-
-    if password.length() == 0 {
-        return;
-    }
-
-    // Call server function (automatic RPC!)
-    let result = login(email, password);
-
-    match result {
-        Ok(token) => {
-            show_todo_list();
-        },
-        Err(msg) => {
-            return;
-        }
-    }
+fn show_auth_screen() {
+    let markup = "
+        <section class=\"auth-card\">\n          <h1>RavensOne Todo</h1>\n          <p>Sign in to manage your todos in real time.</p>\n          <div class=\"tabs\">\n            <button id=\"login-tab\">Login</button>\n            <button id=\"register-tab\">Create Account</button>\n          </div>\n          <form id=\"auth-form\">\n            <input id=\"name\" name=\"name\" placeholder=\"Name\" />\n            <input id=\"email\" name=\"email\" placeholder=\"Email\" type=\"email\" />\n            <input id=\"password\" name=\"password\" placeholder=\"Password\" type=\"password\" />\n            <button type=\"submit\" id=\"auth-submit\">Continue</button>\n          </form>\n        </section>\n    ";
+    document::set_html("#view-root", markup.to_string());
+    document::on("#auth-form", "submit", |event| {
+        event.prevent_default();
+        handle_login();
+    });
+    document::on("#register-tab", "click", |_| handle_register());
 }
 
 @client
 async fn handle_register() {
-    let name = "Test User";
-    let email = "test@example.com";
-    let password = "password123";
+    let email = document::get_input_value("email");
+    let password = document::get_input_value("password");
+    let name = document::get_input_value("name");
 
-    // Client-side validation
-    if name.length() == 0 {
+    match register(email, password, name) {
+        Ok(session) => finish_login(session),
+        Err(message) => show_error(message),
+    }
+}
+
+@client
+async fn handle_login() {
+    let email = document::get_input_value("email");
+    let password = document::get_input_value("password");
+
+    match login(email, password) {
+        Ok(session) => finish_login(session),
+        Err(message) => show_error(message),
+    }
+}
+
+@client
+fn finish_login(session: Session) {
+    let state = state_mut();
+    state.token = Some(session.token.clone());
+    load_initial_todos();
+    subscribe_to_live_updates();
+    show_todo_screen();
+}
+
+@client
+fn show_todo_screen() {
+    let markup = "
+        <section class=\"todo-shell\">\n          <header class=\"todo-header\">\n            <div>\n              <h2>Your Todos</h2>\n              <p>Real-time sync across devices.</p>\n            </div>\n            <button id=\"logout\">Log out</button>\n          </header>\n          <div class=\"todo-composer\">\n            <input id=\"new-todo\" placeholder=\"What needs to be done?\" />\n            <button id=\"add-todo\">Add</button>\n          </div>\n          <div id=\"todo-list\" class=\"todo-list\"></div>\n          <div id=\"stats\" class=\"todo-stats\"></div>\n        </section>\n    ";
+    document::set_html("#view-root", markup.to_string());
+    document::on("#logout", "click", |_| handle_logout());
+    document::on("#add-todo", "click", |_| handle_create_todo());
+    document::on("#new-todo", "keydown", |event| {
+        if event.key() == "Enter" {
+            handle_create_todo();
+        }
+    });
+    render_todos();
+    render_stats();
+}
+
+@client
+async fn load_initial_todos() {
+    let state = state_mut();
+    if state.token.is_none() {
         return;
     }
+    let token = state.token.clone().unwrap();
+    match get_todos(token) {
+        Ok(todos) => {
+            state.todos = todos;
+            render_todos();
+            render_stats();
+        },
+        Err(message) => show_error(message),
+    }
+}
 
-    if !validate_email(email) {
+@client
+async fn handle_create_todo() {
+    let title = document::get_input_value("new-todo");
+    if title.trim().length() == 0 {
+        show_error("Please enter a todo".to_string());
         return;
     }
-
-    if !validate_password(password) {
+    let state = state_mut();
+    if state.token.is_none() {
         return;
     }
+    match create_todo(state.token.clone().unwrap(), title) {
+        Ok(_) => document::set_input_value("new-todo", ""),
+        Err(message) => show_error(message),
+    }
+}
 
-    // Call server function (automatic RPC!)
-    let result = register(email, password, name);
+@client
+fn render_todos() {
+    let state = state_mut();
+    let list = document::find("todo-list");
+    list.clear();
+    for todo in state.todos.iter() {
+        list.div(|row| {
+            row.toggle_class("completed", todo.completed);
+            row.checkbox(todo.completed, || handle_toggle(todo.id));
+            row.text(todo.title.clone());
+            row.small(format!("Updated {}", format_timestamp(todo.updated_at)));
+            row.button("Edit", || handle_edit(todo.id));
+            row.button("Delete", || handle_delete(todo.id));
+        });
+    }
+}
 
-    match result {
-        Ok(user) => {
-            // Auto-login after registration
-            let login_result = login(email, password);
-            match login_result {
-                Ok(token) => {
-                    show_todo_list();
-                },
-                Err(msg) => {
-                    return;
+@client
+fn render_stats() {
+    let state = state_mut();
+    let total = state.todos.len();
+    let completed = state.todos.iter().filter(|todo| todo.completed).count();
+    let active = total - completed;
+    document::set_text("stats", format!("Total: {} | Completed: {} | Active: {}", total, completed, active));
+}
+
+@client
+async fn handle_toggle(todo_id: i32) {
+    let state = state_mut();
+    if let Some(token) = &state.token {
+        if let Err(message) = toggle_todo(token.clone(), todo_id) {
+            show_error(message);
+        }
+    }
+}
+
+@client
+async fn handle_edit(todo_id: i32) {
+    let new_title = prompt("Update todo title:", "");
+    if new_title.is_none() {
+        return;
+    }
+    let state = state_mut();
+    if let Some(token) = &state.token {
+        if let Err(message) = update_todo_title(token.clone(), todo_id, new_title.unwrap()) {
+            show_error(message);
+        }
+    }
+}
+
+@client
+async fn handle_delete(todo_id: i32) {
+    let state = state_mut();
+    if let Some(token) = &state.token {
+        if let Err(message) = delete_todo(token.clone(), todo_id) {
+            show_error(message);
+        }
+    }
+}
+
+@client
+fn subscribe_to_live_updates() {
+    let state = state_mut();
+    if state.token.is_none() {
+        return;
+    }
+    let token = state.token.clone().unwrap();
+    spawn(async move {
+        match subscribe_to_todos(token) {
+            Ok(receiver) => {
+                while let Some(event) = receiver.next().await {
+                    match event.payload.split_once(":") {
+                        Some(("created", _)) | Some(("updated", _)) | Some(("toggled", _)) | Some(("deleted", _)) => {
+                            load_initial_todos();
+                        },
+                        _ => {}
+                    }
                 }
-            }
-        },
-        Err(msg) => {
-            return;
+            },
+            Err(message) => show_error(message),
         }
-    }
+    });
 }
 
 @client
-async fn show_todo_list() {
-    let user_id = 1;
-
-    // Fetch todos from server (automatic RPC!)
-    let todos = get_user_todos(user_id);
-    let (total, completed, active) = get_stats(user_id);
-
-    render_todos(todos);
-}
-
-@client
-fn render_todos(todos: Vec<Todo>) {
-    if todos.len() == 0 {
-        return;
-    }
-
-    let items_html = todos.map(|todo| {
-        let checked = if todo.completed { "checked" } else { "" };
-        let completed_class = if todo.completed { "completed" } else { "" };
-        let date = format_date(todo.created_at);
-
-        format!("<div class=\"todo-item {}\"><input type=\"checkbox\" {} /><div class=\"todo-content\"><span class=\"todo-title\">{}</span><span class=\"todo-date\">{}</span></div><button class=\"delete\">×</button></div>", completed_class, checked, todo.title, date)
-    }).join("");
-
-    return;
-}
-
-@client
-async fn handle_add_todo() {
-    let input_value = "";
-    let title = input_value;
-    let user_id = 1;
-
-    // Client-side validation
-    if !validate_todo_title(title) {
-        return;
-    }
-
-    // Call server function (automatic RPC!)
-    let result = create_todo(user_id, title);
-
-    match result {
-        Ok(todo) => {
-            refresh_todos();
-        },
-        Err(msg) => {
-            return;
-        }
-    }
-}
-
-@client
-async fn handle_toggle_todo(todo_id: i32) {
-    let user_id = 1;
-
-    // Call server function (automatic RPC!)
-    let result = toggle_todo(todo_id, user_id);
-
-    match result {
-        Ok(_) => {
-            refresh_todos();
-        },
-        Err(msg) => {
-            return;
-        }
-    }
-}
-
-@client
-async fn handle_delete_todo(todo_id: i32) {
-    let user_id = 1;
-
-    // Call server function (automatic RPC!)
-    let result = delete_todo(todo_id, user_id);
-
-    match result {
-        Ok(_) => {
-            refresh_todos();
-        },
-        Err(msg) => {
-            return;
-        }
-    }
-}
-
-@client
-async fn refresh_todos() {
-    let user_id = 1;
-    let todos = get_user_todos(user_id);
-    render_todos(todos);
+fn show_error(message: String) {
+    toast::error(message);
 }
 
 @client
 fn handle_logout() {
-    show_login_form();
+    let state = state_mut();
+    state.token = None;
+    state.todos.clear();
+    show_auth_screen();
 }
-
-// ============================================================================
-// APP INITIALIZATION
-// ============================================================================
 
 @client
 fn main() {

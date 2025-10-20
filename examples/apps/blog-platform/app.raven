@@ -1,0 +1,362 @@
+// =============================================================================
+// RavensOne Blog Platform Example
+// =============================================================================
+// Features:
+//   • Markdown-powered editor with live preview on the client
+//   • Media upload pipeline with server-side storage hooks
+//   • Comment threads with optimistic UI updates and moderation tools
+//   • Shared validation + type-safe RPCs across the stack
+// =============================================================================
+
+// Shared models ----------------------------------------------------------------
+
+struct Author {
+    id: i32,
+    email: String,
+    display_name: String,
+}
+
+struct MediaAsset {
+    id: i32,
+    owner_id: i32,
+    url: String,
+    alt_text: String,
+    created_at: i64,
+}
+
+struct Post {
+    id: i32,
+    slug: String,
+    title: String,
+    markdown: String,
+    html: String,
+    author_id: i32,
+    published_at: Option<i64>,
+    hero_image: Option<MediaAsset>,
+    tags: Vec<String>,
+}
+
+struct Comment {
+    id: i32,
+    post_id: i32,
+    author: Author,
+    body: String,
+    created_at: i64,
+    is_approved: bool,
+}
+
+// Shared helpers ---------------------------------------------------------------
+
+fn slugify(input: String) -> String {
+    return input
+        .to_lowercase()
+        .replace(" ", "-")
+        .replace("--", "-");
+}
+
+fn validate_post(title: String, markdown: String) -> Result<(), String> {
+    if title.trim().length() < 5 {
+        return Err("Title must be at least 5 characters".to_string());
+    }
+    if markdown.trim().length() < 20 {
+        return Err("Post content must be at least 20 characters".to_string());
+    }
+    return Ok(());
+}
+
+fn render_markdown(markdown: String) -> String {
+    return markdown.replace("**", "<strong>");
+}
+
+fn now() -> i64 {
+    return 1_698_040_000;
+}
+
+// Server implementation --------------------------------------------------------
+
+struct BlogStore {
+    posts: Vec<Post>,
+    comments: Vec<Comment>,
+    media: Vec<MediaAsset>,
+    next_post_id: i32,
+    next_comment_id: i32,
+    next_media_id: i32,
+}
+
+impl BlogStore {
+    fn new() -> Self {
+        return Self {
+            posts: vec![],
+            comments: vec![],
+            media: vec![],
+            next_post_id: 1,
+            next_comment_id: 1,
+            next_media_id: 1,
+        };
+    }
+}
+
+@server
+static mut BLOG_STORE: Option<BlogStore> = None;
+
+@server
+fn store() -> &'static mut BlogStore {
+    unsafe {
+        if BLOG_STORE.is_none() {
+            BLOG_STORE = Some(BlogStore::new());
+        }
+        return BLOG_STORE.as_mut().unwrap();
+    }
+}
+
+@server
+fn save_post(author: Author, title: String, markdown: String, tags: Vec<String>) -> Result<Post, String> {
+    validate_post(title.clone(), markdown.clone())?;
+    let mut html = render_markdown(markdown.clone());
+    let slug = slugify(title.clone());
+    let store = store();
+    let post = Post {
+        id: store.next_post_id,
+        slug,
+        title,
+        markdown,
+        html,
+        author_id: author.id,
+        published_at: None,
+        hero_image: None,
+        tags,
+    };
+    store.next_post_id += 1;
+    store.posts.push(post.clone());
+    return Ok(post);
+}
+
+@server
+fn publish_post(post_id: i32) -> Result<Post, String> {
+    let store = store();
+    let post = store.posts.iter_mut().find(|p| p.id == post_id);
+    match post {
+        Some(post) => {
+            post.published_at = Some(now());
+            Ok(post.clone())
+        },
+        None => Err("Post not found".to_string()),
+    }
+}
+
+@server
+fn upload_media(owner: Author, filename: String, bytes: Vec<u8>, alt_text: String) -> Result<MediaAsset, String> {
+    if bytes.len() > 5_000_000 {
+        return Err("File is too large".to_string());
+    }
+    let store = store();
+    let asset = MediaAsset {
+        id: store.next_media_id,
+        owner_id: owner.id,
+        url: format!("https://cdn.ravensone.dev/{}/{}", owner.id, filename),
+        alt_text,
+        created_at: now(),
+    };
+    store.next_media_id += 1;
+    store.media.push(asset.clone());
+    return Ok(asset);
+}
+
+@server
+fn attach_hero(post_id: i32, media_id: i32) -> Result<Post, String> {
+    let store = store();
+    let hero = store.media.iter().find(|m| m.id == media_id);
+    let post = store.posts.iter_mut().find(|p| p.id == post_id);
+    match (hero, post) {
+        (Some(hero), Some(post)) => {
+            post.hero_image = Some(hero.clone());
+            Ok(post.clone())
+        },
+        _ => Err("Could not attach hero image".to_string()),
+    }
+}
+
+@server
+fn list_posts(include_drafts: bool) -> Vec<Post> {
+    let store = store();
+    if include_drafts {
+        return store.posts.clone();
+    }
+    return store
+        .posts
+        .iter()
+        .filter(|post| post.published_at.is_some())
+        .cloned()
+        .collect();
+}
+
+@server
+fn add_comment(post_id: i32, author: Author, body: String) -> Result<Comment, String> {
+    if body.trim().length() < 3 {
+        return Err("Comment must be at least 3 characters".to_string());
+    }
+    let store = store();
+    let comment = Comment {
+        id: store.next_comment_id,
+        post_id,
+        author,
+        body,
+        created_at: now(),
+        is_approved: false,
+    };
+    store.next_comment_id += 1;
+    store.comments.push(comment.clone());
+    return Ok(comment);
+}
+
+@server
+fn moderate_comment(comment_id: i32, approve: bool) -> Result<Comment, String> {
+    let store = store();
+    let comment = store.comments.iter_mut().find(|c| c.id == comment_id);
+    match comment {
+        Some(comment) => {
+            comment.is_approved = approve;
+            Ok(comment.clone())
+        },
+        None => Err("Comment not found".to_string()),
+    }
+}
+
+@server
+fn list_comments(post_id: i32) -> Vec<Comment> {
+    let store = store();
+    return store
+        .comments
+        .iter()
+        .filter(|comment| comment.post_id == post_id && comment.is_approved)
+        .cloned()
+        .collect();
+}
+
+// Client implementation --------------------------------------------------------
+
+@client
+fn init_blog_dashboard() {
+    mount_editor();
+    load_posts();
+}
+
+@client
+fn mount_editor() {
+    document::body().set_inner_html(include_html!("./editor.html"));
+    bind_markdown_preview();
+}
+
+@client
+fn bind_markdown_preview() {
+    document::on("#markdown", "input", |event| {
+        let markdown = event.target_value();
+        let preview_html = render_markdown(markdown.clone());
+        document::set_html("#preview", preview_html);
+    });
+}
+
+@client
+async fn handle_save_post() {
+    let title = document::get_input_value("title");
+    let markdown = document::get_textarea_value("markdown");
+    let tags = document::get_tag_values("tags");
+    let author = current_author();
+
+    match save_post(author, title, markdown, tags) {
+        Ok(post) => notify_success(format!("Draft saved ({})", post.slug)),
+        Err(message) => notify_error(message),
+    }
+}
+
+@client
+async fn handle_publish(post_id: i32) {
+    match publish_post(post_id) {
+        Ok(_) => notify_success("Post published".to_string()),
+        Err(message) => notify_error(message),
+    }
+}
+
+@client
+async fn handle_upload(file: File) {
+    let author = current_author();
+    match upload_media(author, file.name(), file.bytes(), file.alt_text()) {
+        Ok(asset) => {
+            document::insert_text("#markdown", format!("![]({})", asset.url));
+            notify_success("Image uploaded".to_string());
+        },
+        Err(message) => notify_error(message),
+    }
+}
+
+@client
+fn load_posts() {
+    let posts = list_posts(true);
+    document::render_list("#post-list", posts, |node, post| {
+        node.h3(post.title.clone());
+        node.p(format!("/{}", post.slug));
+        node.button("Publish", || handle_publish(post.id));
+    });
+}
+
+@client
+fn show_public_post(slug: String) {
+    let posts = list_posts(false);
+    let post = posts.into_iter().find(|p| p.slug == slug);
+    match post {
+        Some(post) => {
+            document::set_html("#content", post.html.clone());
+            render_comments(post.id);
+        },
+        None => notify_error("Post not found".to_string()),
+    }
+}
+
+@client
+fn render_comments(post_id: i32) {
+    let comments = list_comments(post_id);
+    document::render_list("#comments", comments, |node, comment| {
+        node.h4(comment.author.display_name.clone());
+        node.p(comment.body.clone());
+    });
+}
+
+@client
+async fn handle_submit_comment(post_id: i32) {
+    let body = document::get_textarea_value("comment-body");
+    let author = current_reader();
+    match add_comment(post_id, author, body) {
+        Ok(comment) => {
+            notify_success("Thanks! Your comment awaits moderation.".to_string());
+            document::clear_textarea("comment-body");
+        },
+        Err(message) => notify_error(message),
+    }
+}
+
+// Client utilities -------------------------------------------------------------
+
+@client
+fn current_author() -> Author {
+    return Author { id: 1, email: "editor@ravensone.dev".to_string(), display_name: "Editor".to_string() };
+}
+
+@client
+fn current_reader() -> Author {
+    return Author { id: 2, email: "reader@ravensone.dev".to_string(), display_name: "Reader".to_string() };
+}
+
+@client
+fn notify_success(message: String) {
+    toast::success(message);
+}
+
+@client
+fn notify_error(message: String) {
+    toast::error(message);
+}
+
+@client
+fn main() {
+    init_blog_dashboard();
+}
