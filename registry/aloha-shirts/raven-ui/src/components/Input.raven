@@ -1,0 +1,53 @@
+// Input component with validation and error states
+
+enum InputType {
+    Text,
+    Email,
+    Password,
+    Number,
+    Tel,
+    Url,
+    Search
+}
+
+struct InputProps {
+    label: String,
+    input_type: InputType,
+    value: String,
+    placeholder: String,
+    disabled: Bool,
+    error: String,
+    oninput: fn(String)
+}
+
+component Input(props: InputProps) {
+    let has_error = props.error != "";
+    let error_class = if has_error { "input-error" } else { "" };
+    
+    let type_str = match props.input_type {
+        InputType::Text => "text",
+        InputType::Email => "email",
+        InputType::Password => "password",
+        InputType::Number => "number",
+        InputType::Tel => "tel",
+        InputType::Url => "url",
+        InputType::Search => "search"
+    };
+    
+    <div class="input-group">
+        {if props.label != "" {
+            <label class="input-label">{props.label}</label>
+        }}
+        <input
+            type={type_str}
+            class={"input " + error_class}
+            value={props.value}
+            placeholder={props.placeholder}
+            disabled={props.disabled}
+            oninput={|e| props.oninput(e.target.value)}
+        />
+        {if has_error {
+            <span class="input-error-message">{props.error}</span>
+        }}
+    </div>
+}

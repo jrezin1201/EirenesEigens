@@ -28,6 +28,10 @@ pub mod hmr; // Hot Module Replacement
 pub mod package_manager; // Package Manager
 pub mod sourcemap; // Source map generation for debugging
 pub mod profiler; // Performance profiling
+pub mod code_splitter; // Code splitting for server/client separation
+pub mod rpc_generator; // RPC stub generation for client/server communication
+pub mod js_emitter; // JavaScript code generation for server and client bundles
+pub mod js_minifier; // JavaScript minification for production builds
 
 use borrow_checker::BorrowChecker;
 use codegen::CodeGenerator;

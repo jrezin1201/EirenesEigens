@@ -1,0 +1,16 @@
+// Test file for @server and @client annotations
+
+@server
+fn get_user_data(id: i32) -> String {
+    return "User data from server";
+}
+
+@client
+fn render_user(name: String) -> String {
+    return "Rendered user: " + name;
+}
+
+// No annotation = shared
+fn format_name(first: String, last: String) -> String {
+    return first + " " + last;
+}

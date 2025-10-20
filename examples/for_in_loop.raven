@@ -1,0 +1,97 @@
+// Example demonstrating for-in loop iteration
+// This shows how for-in loops work with RavensOne's Iterator protocol
+
+use std::vec::Vec;
+use std::iterator::IntoIterator;
+
+fn main() {
+    // Example 1: Iterating over a Vec
+    let numbers = Vec::new();
+    numbers.push(1);
+    numbers.push(2);
+    numbers.push(3);
+    numbers.push(4);
+    numbers.push(5);
+
+    let sum = 0;
+    for num in numbers {
+        sum = sum + num;
+    }
+    println!("Sum: {}", sum);  // Should print: Sum: 15
+
+    // Example 2: Iterating over a range
+    let count = 0;
+    for i in 0..10 {
+        count = count + 1;
+    }
+    println!("Count: {}", count);  // Should print: Count: 10
+
+    // Example 3: Nested for-in loops
+    for i in 1..4 {
+        for j in 1..4 {
+            let product = i * j;
+            println!("{} * {} = {}", i, j, product);
+        }
+    }
+
+    // Example 4: Iterating with break condition
+    let found = false;
+    for i in 0..100 {
+        if i == 42 {
+            found = true;
+            break;
+        }
+    }
+    println!("Found 42: {}", found);
+
+    return 0;
+}
+
+// Example 5: Custom iterator implementation
+struct Counter {
+    current: i32,
+    max: i32,
+}
+
+impl Counter {
+    fn new(max: i32) -> Counter {
+        return Counter {
+            current: 0,
+            max: max,
+        };
+    }
+}
+
+impl Iterator for Counter {
+    type Item = i32;
+
+    fn next(self: &mut Counter) -> Option<i32> {
+        if self.current < self.max {
+            let value = self.current;
+            self.current = self.current + 1;
+            return Option::Some(value);
+        } else {
+            return Option::None;
+        }
+    }
+}
+
+impl IntoIterator for Counter {
+    type Item = i32;
+    type IntoIter = Counter;
+
+    fn into_iter(self: Counter) -> Counter {
+        return self;
+    }
+}
+
+fn count_to_ten() -> i32 {
+    let counter = Counter::new(10);
+    let sum = 0;
+
+    for num in counter {
+        sum = sum + num;
+    }
+
+    return sum;  // Should be 0+1+2+...+9 = 45
+}

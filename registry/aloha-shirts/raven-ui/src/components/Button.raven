@@ -1,0 +1,52 @@
+// Button component with multiple variants
+
+enum ButtonVariant {
+    Primary,
+    Secondary,
+    Danger,
+    Success,
+    Ghost,
+    Link
+}
+
+enum ButtonSize {
+    Small,
+    Medium,
+    Large
+}
+
+struct ButtonProps {
+    variant: ButtonVariant,
+    size: ButtonSize,
+    disabled: Bool,
+    onclick: fn(),
+    children: String
+}
+
+component Button(props: ButtonProps) {
+    let variant_class = match props.variant {
+        ButtonVariant::Primary => "btn-primary",
+        ButtonVariant::Secondary => "btn-secondary",
+        ButtonVariant::Danger => "btn-danger",
+        ButtonVariant::Success => "btn-success",
+        ButtonVariant::Ghost => "btn-ghost",
+        ButtonVariant::Link => "btn-link"
+    };
+    
+    let size_class = match props.size {
+        ButtonSize::Small => "btn-sm",
+        ButtonSize::Medium => "btn-md",
+        ButtonSize::Large => "btn-lg"
+    };
+    
+    let disabled_class = if props.disabled { "btn-disabled" } else { "" };
+    let class_names = ["btn", variant_class, size_class, disabled_class].join(" ");
+    
+    <button
+        class={class_names}
+        disabled={props.disabled}
+        onclick={props.onclick}
+    >
+        {props.children}
+    </button>
+}

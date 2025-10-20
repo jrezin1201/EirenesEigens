@@ -1,33 +1,38 @@
-// Test array literal support
+// Example demonstrating array literal syntax and operations
+// Arrays are stored in WASM linear memory with layout: [length][elements...]
 
-fn test_empty_array() -> i32 {
-    let empty = [];
-    return 0;  // Successfully created empty array
-}
-
-fn test_int_array() -> i32 {
+fn main() {
+    // Example 1: Basic array literal
     let numbers = [1, 2, 3, 4, 5];
-    return 1;  // Successfully created int array
-}
+    println!("Array created");
 
-fn test_nested_arrays() -> i32 {
-    let matrix = [[1, 2], [3, 4]];
-    return 2;  // Successfully created nested array
-}
+    // Example 2: Empty array
+    let empty = [];
+    println!("Empty array");
 
-fn test_array_with_expressions() -> i32 {
-    let a = 10;
-    let b = 20;
-    let computed = [a, b, a + b];
-    return 3;  // Successfully created array with expressions
-}
+    // Example 3: Array indexing
+    let first = numbers[0];     // Should be 1
+    let third = numbers[2];     // Should be 3
+    let last = numbers[4];      // Should be 5
 
-fn main() -> i32 {
-    let r1 = test_empty_array();        // 0
-    let r2 = test_int_array();          // 1
-    let r3 = test_nested_arrays();      // 2
-    let r4 = test_array_with_expressions();  // 3
+    println!("first: {}, third: {}, last: {}", first, third, last);
 
-    // Return sum: 0 + 1 + 2 + 3 = 6
-    return r1 + r2 + r3 + r4;
+    // Example 4: Array length (using .len() method)
+    let length = numbers.len();
+    println!("Array length: {}", length);  // Should print 5
+
+    // Example 5: Array with computed values
+    let x = 10;
+    let y = 20;
+    let computed = [x, y, x + y, x * y];
+    println!("Computed array");
+
+    // Example 6: Array iteration with for-in loop
+    let sum = 0;
+    for num in numbers {
+        sum = sum + num;
+    }
+    println!("Sum: {}", sum);  // Should print 15
+
+    return 0;
 }

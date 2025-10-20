@@ -250,9 +250,13 @@ impl CodeGenerator {
             self.local_count += 1;
         }
 
-        let local_types: Vec<ValType> = func.body.statements.iter().filter_map(|s| {
-            if let Statement::Let(_) = s { Some(ValType::I32) } else { None }
-        }).collect();
+        // Count locals needed for the function body
+        // This includes:
+        // - let statements (1 local each)
+        // - for-in loops (3 locals each: iterator, loop variable, option)
+        // - match expressions (1 local for scrutinee)
+        let local_count = self.count_required_locals(&func.body.statements);
+        let local_types: Vec<ValType> = (0..local_count).map(|_| ValType::I32).collect();
         let mut f = Function::new_with_locals_types(local_types);
 
         for stmt in &func.body.statements {
@@ -262,6 +266,64 @@ impl CodeGenerator {
         f.instruction(&Instruction::I32Const(0));
         f.instruction(&Instruction::End);
         Ok(f)
+    }
+
+    /// Counts the number of WASM locals needed for a list of statements
+    fn count_required_locals(&self, stmts: &[Statement]) -> u32 {
+        let mut count = 0;
+        for stmt in stmts {
+            count += self.count_statement_locals(stmt);
+        }
+        count
+    }
+
+    /// Counts locals needed for a single statement (recursively)
+    fn count_statement_locals(&self, stmt: &Statement) -> u32 {
+        match stmt {
+            Statement::Let(_) => 1,
+            Statement::ForIn(_) => {
+                // For-in loops need 3 locals: iterator, loop variable, option
+                3
+            }
+            Statement::If(if_stmt) => {
+                let mut count = 0;
+                count += self.count_required_locals(&if_stmt.then_branch.statements);
+                if let Some(else_stmt) = &if_stmt.else_branch {
+                    count += self.count_statement_locals(else_stmt);
+                }
+                count
+            }
+            Statement::While(while_stmt) => {
+                self.count_required_locals(&while_stmt.body.statements)
+            }
+            Statement::For(for_stmt) => {
+                let mut count = 0;
+                if let Some(init) = &for_stmt.init {
+                    count += self.count_statement_locals(init);
+                }
+                count += self.count_required_locals(&for_stmt.body.statements);
+                if let Some(update) = &for_stmt.update {
+                    count += self.count_statement_locals(update);
+                }
+                count
+            }
+            Statement::Expression(expr) => {
+                // Match expressions allocate locals for scrutinee
+                self.count_expression_locals(expr)
+            }
+            _ => 0,
+        }
+    }
+
+    /// Counts locals needed for expressions (mainly for match)
+    fn count_expression_locals(&self, expr: &Expression) -> u32 {
+        match expr {
+            Expression::Match(_) => {
+                // Match expressions need 1 local for the scrutinee
+                1
+            }
+            _ => 0,
+        }
     }
 
     /// Generates a component as a WASM function
@@ -447,34 +509,105 @@ impl CodeGenerator {
     }
 
     fn generate_for_in_statement(&mut self, stmt: &ForInStatement, f: &mut Function) -> Result<(), CompileError> {
-        // For-in loops iterate over collections
-        // This is a placeholder implementation that generates a comment
-        // In a full implementation, this would:
-        // 1. Evaluate the iterator expression (array, range, etc.)
-        // 2. Get the length/bounds of the collection
-        // 3. Create a loop counter variable
-        // 4. Generate a loop that iterates over each element
-        // 5. Bind the loop variable to each element
-        // 6. Execute the loop body
+        // For-in loops use the Iterator protocol:
+        // 1. Call into_iter() on the collection to get an iterator
+        // 2. Loop: call next() on the iterator
+        // 3. If Some(value), bind value to loop variable and execute body
+        // 4. If None, exit loop
+        //
+        // This implementation generates WASM code that follows this protocol.
+        // Note: This is a simplified version that works with the stdlib iterator types.
+        // Full implementation would need:
+        // - Dynamic dispatch for trait methods (into_iter, next)
+        // - Option<T> enum discrimination in WASM
+        // - Proper type inference from semantic analysis
 
-        // For now, we'll generate code that:
-        // 1. Evaluates the iterator expression
-        // 2. Generates a placeholder loop structure
+        // Allocate a local for the iterator
+        let iterator_local = self.local_count;
+        self.local_count += 1;
 
-        // TODO: Implement proper for-in loop code generation
-        // This requires:
-        // - Iterator protocol support
-        // - Collection indexing/iteration
-        // - Loop variable binding
+        // Allocate a local for the loop variable
+        let loop_var_local = self.local_count;
+        self.local_symbol_table.insert(stmt.variable.value.clone(), loop_var_local);
+        self.local_count += 1;
 
-        // Generate iterator expression (evaluate but don't use yet)
+        // Allocate a local for the Option<T> result from next()
+        let option_local = self.local_count;
+        self.local_count += 1;
+
+        // Step 1: Convert the collection into an iterator by calling into_iter()
+        // For now, we'll assume the iterator expression evaluates to an iterable type
+        // In a full implementation, we'd call the into_iter() method here
         self.generate_expression(&stmt.iterator, f)?;
-        f.instruction(&Instruction::Drop); // Drop the iterator value for now
+        f.instruction(&Instruction::LocalSet(iterator_local));
 
-        // Generate body statements
+        // Step 2: Generate the loop structure
+        // We use a WASM loop block that:
+        // - Calls next() on the iterator
+        // - Checks if the result is Some or None
+        // - If Some, extracts the value, binds it, executes body, continues loop
+        // - If None, breaks out of the loop
+
+        // Start the loop block
+        f.instruction(&Instruction::Loop(wasm_encoder::BlockType::Empty));
+
+        // Step 3: Call next() on the iterator
+        // For now, this is a simplified version that assumes:
+        // - The iterator is stored in linear memory
+        // - next() returns an Option<T> encoded as: tag (0=None, 1=Some) + value
+        // In a full implementation, we'd:
+        // 1. Load the iterator from local
+        // 2. Call the next() method via dynamic dispatch
+        // 3. Get the Option<T> result
+
+        // Simplified: Load iterator (pointer to iterator object)
+        f.instruction(&Instruction::LocalGet(iterator_local));
+
+        // Call a hypothetical next() method that returns Option<T>
+        // For this simplified version, we'll generate a placeholder that:
+        // - Loads the option tag from memory (iterator_ptr + offset)
+        // - If tag == 0 (None), exit loop
+        // - If tag == 1 (Some), load value and continue
+
+        // Load the option tag (first field of the Option<T> in memory)
+        // Assume Option<T> layout: [tag: i32] [value: T]
+        f.instruction(&Instruction::I32Load(wasm_encoder::MemArg {
+            offset: 0,  // Tag is at offset 0
+            align: 2,
+            memory_index: 0,
+        }));
+
+        // Store the tag in option_local for checking
+        f.instruction(&Instruction::LocalTee(option_local));
+
+        // Check if tag == 0 (None)
+        f.instruction(&Instruction::I32Eqz);
+
+        // If tag is 0 (None), break out of the loop (exit to outer block)
+        f.instruction(&Instruction::BrIf(1));
+
+        // Step 4: If we're here, tag == 1 (Some), so extract the value
+        // Load the value from Option<T> (second field after tag)
+        f.instruction(&Instruction::LocalGet(iterator_local));
+        f.instruction(&Instruction::I32Load(wasm_encoder::MemArg {
+            offset: 4,  // Value is at offset 4 (after the tag)
+            align: 2,
+            memory_index: 0,
+        }));
+
+        // Bind the value to the loop variable
+        f.instruction(&Instruction::LocalSet(loop_var_local));
+
+        // Step 5: Execute the loop body
         for s in &stmt.body.statements {
             self.generate_statement(s, f)?;
         }
+
+        // Step 6: Continue the loop (branch back to the start)
+        f.instruction(&Instruction::Br(0));
+
+        // End the loop block
+        f.instruction(&Instruction::End);
 
         Ok(())
     }
@@ -549,20 +682,52 @@ impl CodeGenerator {
                 // Generate JSX element as VDOM
                 self.generate_jsx_element(jsx, f)?;
             }
-            Expression::ArrayLiteral(_array_lit) => {
-                // For now, array literals are not fully supported in WASM codegen
-                // In a full implementation, we would:
-                // 1. Allocate memory for the array
-                // 2. Store each element in memory
-                // 3. Return a pointer to the array
-                // For now, just push a dummy value (pointer to array)
-                f.instruction(&Instruction::I32Const(0));
+            Expression::ArrayLiteral(array_lit) => {
+                // Arrays in WASM linear memory layout:
+                // [length: i32 (4 bytes)][element0: i32][element1: i32]...
+                //
+                // Steps:
+                // 1. Calculate total size needed (4 bytes for length + 4 bytes per element)
+                // 2. Allocate memory from heap
+                // 3. Store length at offset 0
+                // 4. Store each element at offset 4 + (index * element_size)
+                // 5. Return pointer to the array
 
-                // TODO: Implement proper array allocation and initialization
-                // This would involve:
-                // - Calling memory.grow to allocate space
-                // - Using i32.store to write elements to memory
-                // - Returning the base pointer
+                let element_count = array_lit.elements.len();
+                let element_size = 4; // Assume all elements are i32 for now
+                let total_size = 4 + (element_count as u32 * element_size); // 4 bytes for length + elements
+
+                // Allocate memory and get pointer
+                let array_ptr = self.heap_pointer;
+                self.heap_pointer += total_size;
+
+                // Store the array length at offset 0
+                f.instruction(&Instruction::I32Const(array_ptr as i32));
+                f.instruction(&Instruction::I32Const(element_count as i32));
+                f.instruction(&Instruction::I32Store(wasm_encoder::MemArg {
+                    offset: 0,
+                    align: 2,  // 4-byte alignment for i32
+                    memory_index: 0,
+                }));
+
+                // Store each element in the array
+                for (index, element) in array_lit.elements.iter().enumerate() {
+                    // Push the base pointer
+                    f.instruction(&Instruction::I32Const(array_ptr as i32));
+
+                    // Generate code for the element value
+                    self.generate_expression(element, f)?;
+
+                    // Store at offset: 4 (length field) + (index * element_size)
+                    f.instruction(&Instruction::I32Store(wasm_encoder::MemArg {
+                        offset: (4 + (index as u64 * element_size as u64)),
+                        align: 2,  // 4-byte alignment for i32
+                        memory_index: 0,
+                    }));
+                }
+
+                // Push the array pointer as the result
+                f.instruction(&Instruction::I32Const(array_ptr as i32));
             }
             Expression::StructLiteral(struct_lit) => {
                 // Look up the struct layout

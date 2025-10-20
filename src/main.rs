@@ -18,6 +18,8 @@ enum Commands {
         path: PathBuf,
         #[arg(short, long)]
         output: Option<PathBuf>,
+        #[arg(short, long)]
+        minify: bool,
     },
     /// Creates a new RavensOne project
     New {
@@ -136,33 +138,137 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Compile { path, output } => {
-            // FIX: Added logic to handle compilation
-            let output_path = output.unwrap_or_else(|| path.with_extension("wasm"));
-            println!("🔥 Compiling {} -> {}", path.display(), output_path.display());
+        Commands::Compile { path, output, minify } => {
+            use ravensone_compiler::lexer::Lexer;
+            use ravensone_compiler::parser::Parser;
+            use ravensone_compiler::js_emitter::JSEmitter;
+            use ravensone_compiler::js_minifier::JSMinifier;
+            use ravensone_compiler::LexerExt;
 
+            println!("🔥 Compiling full-stack application: {}", path.display());
+            if minify {
+                println!("   🗜️  Minification: enabled");
+            }
+            println!("   📦 Output: server.js + client.js + app.wasm\n");
+
+            // Read source code
             let source_code = match fs::read_to_string(&path) {
                 Ok(code) => code,
                 Err(e) => {
-                    eprintln!("Error reading file '{}': {}", path.display(), e);
+                    eprintln!("❌ Error reading file '{}': {}", path.display(), e);
                     return;
                 }
             };
 
-            let compiler = Compiler::new();
-            // We compile for the client target by default for now
-            match compiler.compile_source(&source_code, BuildTarget::Client) {
-                Ok(wasm_bytes) => {
-                    if let Err(e) = fs::write(&output_path, wasm_bytes) {
-                        eprintln!("Error writing output file: {}", e);
-                    } else {
-                        println!("✨ Artifact written to {}", output_path.display());
-                    }
+            // Parse the source
+            println!("   Parsing...");
+            let mut lexer = Lexer::new(source_code.clone());
+            let tokens = match lexer.collect_tokens() {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("❌ Lexing failed: {}", e);
+                    return;
+                }
+            };
+
+            let mut parser = Parser::new(tokens);
+            let program = match parser.parse_program() {
+                Ok(p) => {
+                    println!("   ✓ Parsed {} statements", p.statements.len());
+                    p
                 }
                 Err(e) => {
-                    eprintln!("❌ Compilation failed: {}", e);
+                    eprintln!("❌ Parsing failed: {:?}", e);
+                    return;
                 }
+            };
+
+            // Generate JavaScript bundles
+            println!("   Generating JavaScript bundles...");
+            let emitter = JSEmitter::new(&program);
+            let mut server_js = emitter.generate_server_js();
+            let mut client_js = emitter.generate_client_js();
+
+            let stats = emitter.stats();
+            println!("   ✓ Split: {} server, {} client, {} shared functions",
+                stats.server_functions, stats.client_functions, stats.shared_functions);
+
+            // Minify if requested
+            if minify {
+                println!("   Minifying JavaScript...");
+                let minifier = JSMinifier::new();
+
+                let server_minified = minifier.minify(&server_js);
+                let client_minified = minifier.minify(&client_js);
+
+                let server_stats = minifier.stats(&server_js, &server_minified);
+                let client_stats = minifier.stats(&client_js, &client_minified);
+
+                println!("   ✓ server.js: {} → {} bytes (-{:.1}%)",
+                    server_stats.original_size, server_stats.minified_size, server_stats.reduction_percent);
+                println!("   ✓ client.js: {} → {} bytes (-{:.1}%)",
+                    client_stats.original_size, client_stats.minified_size, client_stats.reduction_percent);
+
+                server_js = server_minified;
+                client_js = client_minified;
             }
+
+            // Compile to WASM
+            println!("   Compiling to WebAssembly...");
+            let compiler = Compiler::new();
+            let wasm_bytes = match compiler.compile_source(&source_code, BuildTarget::Client) {
+                Ok(bytes) => {
+                    println!("   ✓ Generated WASM module ({} bytes)", bytes.len());
+                    bytes
+                }
+                Err(e) => {
+                    eprintln!("❌ WASM compilation failed: {}", e);
+                    return;
+                }
+            };
+
+            // Determine output directory
+            let output_dir = output.unwrap_or_else(|| PathBuf::from("dist"));
+            if let Err(e) = fs::create_dir_all(&output_dir) {
+                eprintln!("❌ Failed to create output directory: {}", e);
+                return;
+            }
+
+            // Write output files
+            println!("\n   Writing output files...");
+
+            let server_path = output_dir.join("server.js");
+            if let Err(e) = fs::write(&server_path, server_js) {
+                eprintln!("❌ Failed to write server.js: {}", e);
+                return;
+            }
+            println!("   ✓ {}", server_path.display());
+
+            let client_path = output_dir.join("client.js");
+            if let Err(e) = fs::write(&client_path, client_js) {
+                eprintln!("❌ Failed to write client.js: {}", e);
+                return;
+            }
+            println!("   ✓ {}", client_path.display());
+
+            let wasm_path = output_dir.join("app.wasm");
+            if let Err(e) = fs::write(&wasm_path, wasm_bytes) {
+                eprintln!("❌ Failed to write app.wasm: {}", e);
+                return;
+            }
+            println!("   ✓ {}", wasm_path.display());
+
+            // Create index.html
+            let html_content = generate_index_html();
+            let html_path = output_dir.join("index.html");
+            if let Err(e) = fs::write(&html_path, html_content) {
+                eprintln!("⚠️  Warning: Failed to write index.html: {}", e);
+            } else {
+                println!("   ✓ {}", html_path.display());
+            }
+
+            println!("\n✨ Compilation complete!");
+            println!("   Run: cd {} && node server.js", output_dir.display());
         }
         Commands::New { name } => {
             // FIX: Added logic for creating a new project
@@ -834,6 +940,39 @@ fn serve_project(port: u16, open: bool) -> Result<(), Box<dyn std::error::Error>
     }
 
     Ok(())
+}
+
+fn generate_index_html() -> String {
+    r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RavensOne App</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        #app {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>Loading RavensOne App...</h1>
+    </div>
+    <script type="module" src="client.js"></script>
+</body>
+</html>"#.to_string()
 }
 
 fn run_doctor() {

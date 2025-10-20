@@ -54,7 +54,21 @@ impl Parser {
             TokenKind::Impl => self.parse_impl_block().map(Statement::ImplBlock),
             TokenKind::Trait => self.parse_trait_definition().map(Statement::Trait),
             TokenKind::Component => self.parse_component_definition().map(Statement::Component),
-            TokenKind::Fn | TokenKind::Server | TokenKind::Async => self.parse_function_definition().map(Statement::Function),
+            TokenKind::At => {
+                // Check if this is @client component or @server/@client function
+                let peek = self.peek_token().kind.clone();
+                if peek == TokenKind::Client && self.position + 2 < self.tokens.len() {
+                    let peek2 = self.tokens[self.position + 2].kind.clone();
+                    if peek2 == TokenKind::Component {
+                        self.parse_component_definition().map(Statement::Component)
+                    } else {
+                        self.parse_function_definition().map(Statement::Function)
+                    }
+                } else {
+                    self.parse_function_definition().map(Statement::Function)
+                }
+            }
+            TokenKind::Fn | TokenKind::Server | TokenKind::Client | TokenKind::Async => self.parse_function_definition().map(Statement::Function),
             TokenKind::Let => self.parse_let_statement().map(Statement::Let),
             TokenKind::Return => self.parse_return_statement().map(Statement::Return),
             TokenKind::If => self.parse_if_statement().map(Statement::If),
@@ -324,6 +338,14 @@ impl Parser {
     }
 
     fn parse_component_definition(&mut self) -> Result<ComponentDefinition, CompileError> {
+        // Check for optional @client annotation (components are client-only by default)
+        let has_at = self.consume_if_matches(&TokenKind::At);
+        let is_client = if has_at {
+            self.consume_if_matches(&TokenKind::Client)
+        } else {
+            true  // Components are client-side by default
+        };
+
         self.expect_and_consume(&TokenKind::Component)?;
         let name = self.parse_identifier()?;
         self.expect_and_consume(&TokenKind::LParen)?;
@@ -350,13 +372,30 @@ impl Parser {
         Ok(ComponentDefinition {
             name,
             parameters,
+            is_client,
             body: Box::new(body),
         })
     }
 
     fn parse_function_definition(&mut self) -> Result<FunctionDefinition, CompileError> {
-        // Check for optional @server or async modifiers
-        let is_server = self.consume_if_matches(&TokenKind::Server);
+        // Check for optional @ symbol (for @server or @client)
+        let has_at = self.consume_if_matches(&TokenKind::At);
+
+        // Check for server/client annotations (with or without @)
+        let is_server = if has_at {
+            self.consume_if_matches(&TokenKind::Server)
+        } else {
+            self.consume_if_matches(&TokenKind::Server)
+        };
+
+        let is_client = if has_at && !is_server {
+            self.consume_if_matches(&TokenKind::Client)
+        } else if !has_at {
+            self.consume_if_matches(&TokenKind::Client)
+        } else {
+            false
+        };
+
         let is_async = self.consume_if_matches(&TokenKind::Async);
 
         // Expect fn keyword
@@ -404,6 +443,7 @@ impl Parser {
             type_params,
             parameters,
             is_server,
+            is_client,
             is_async,
             body: BlockStatement { statements },
         })

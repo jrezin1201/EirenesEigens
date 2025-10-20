@@ -112,6 +112,7 @@ pub struct FunctionDefinition {
     pub type_params: Vec<Identifier>,  // Generic type parameters like <T, U>
     pub parameters: Vec<FunctionParameter>,
     pub is_server: bool,
+    pub is_client: bool,
     pub is_async: bool,
     pub body: BlockStatement,
 }
@@ -336,6 +337,7 @@ pub struct LambdaExpression {
 pub struct ComponentDefinition {
     pub name: Identifier,
     pub parameters: Vec<FunctionParameter>,
+    pub is_client: bool,  // Components are client-side by default
     pub body: Box<Expression>,
 }
 

@@ -17,7 +17,7 @@ impl Token {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TokenKind {
     // Keywords
-    Let, Fn, Struct, Enum, Impl, Trait, Component, Extern, Return, Server, Async, Await, Use, True, False, If, Else, While, For, In, Match, Mut,
+    Let, Fn, Struct, Enum, Impl, Trait, Component, Extern, Return, Server, Client, Async, Await, Use, True, False, If, Else, While, For, In, Match, Mut,
 
     // Identifiers & Literals
     Identifier,
@@ -28,6 +28,7 @@ pub enum TokenKind {
     Bool(bool),
 
     // Symbols & Punctuation
+    At,          // @
     Assign,      // =
     Semicolon,   // ;
     Colon,       // :
@@ -83,6 +84,7 @@ lazy_static::lazy_static! {
         map.insert("extern", TokenKind::Extern);
         map.insert("return", TokenKind::Return);
         map.insert("server", TokenKind::Server);
+        map.insert("client", TokenKind::Client);
         map.insert("async", TokenKind::Async);
         map.insert("await", TokenKind::Await);
         map.insert("use", TokenKind::Use);

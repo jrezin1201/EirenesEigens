@@ -1,0 +1,25 @@
+// Card component for content containers
+
+struct CardProps {
+    title: String,
+    footer: String,
+    children: Any
+}
+
+component Card(props: CardProps) {
+    <div class="card">
+        {if props.title != "" {
+            <div class="card-header">
+                <h3 class="card-title">{props.title}</h3>
+            </div>
+        }}
+        <div class="card-body">
+            {props.children}
+        </div>
+        {if props.footer != "" {
+            <div class="card-footer">
+                {props.footer}
+            </div>
+        }}
+    </div>
+}

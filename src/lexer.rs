@@ -115,6 +115,7 @@ impl Lexer {
                     Token::new(TokenKind::Minus, "-".to_string(), self.line, start_col)
                 }
             }
+            '@' => Token::new(TokenKind::At, "@".to_string(), self.line, start_col),
             '\0' => Token::new(TokenKind::Eof, "".to_string(), self.line, start_col),
             '"' => return self.read_string(),
             '\'' => {

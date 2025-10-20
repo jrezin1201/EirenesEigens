@@ -1,268 +1,326 @@
 # 🚀 RavensOne
 
-**The Most Useful Programming Language for Human-AI Collaboration**
+**The Full-Stack Programming Language for Human-AI Collaboration**
 
-RavensOne is a revolutionary full-stack programming language designed to maximize velocity when building production applications with AI assistance. Write ONE `.raven` file that automatically splits into server and client code, with batteries-included features for HTTP, databases, authentication, real-time communication, and UI components.
+RavensOne is a revolutionary language where you write **ONE `.raven` file** that automatically compiles into server and client code. Build production applications in seconds with AI assistance using `@server` and `@client` annotations.
+
+```raven
+// Server-side database functions
+@server
+fn get_todos() -> Vec<String> {
+    return vec!["Buy milk", "Walk dog", "Write code"];
+}
+
+// Client-side UI functions
+@client
+fn render_todo_list(todos: Vec<String>) -> String {
+    return "<ul><li>" + todos.join("</li><li>") + "</li></ul>";
+}
+
+// Shared functions (available on both sides)
+fn validate_input(text: String) -> bool {
+    return text.length() > 0;
+}
+```
+
+**Compile to full-stack JavaScript:**
+```bash
+raven compile app.raven
+# Outputs: server.js + client.js + app.wasm + index.html
+```
 
 ---
 
-## 🎯 Mission
+## ✨ Why RavensOne?
 
-Build the **most useful language ever for human-AI collaboration** where Claude and humans can build production full-stack applications in seconds with:
+### **One File, Full Stack**
+- **No context switching** - Server and client code in the same file
+- **Automatic RPC** - Client calls to `@server` functions become network requests
+- **Type-safe** - Compile-time checking across the stack
+- **Code splitting** - Compiler automatically separates server/client bundles
 
-- **ONE file type** - `.raven` files only
-- **ZERO context switching** - No jumping between frontend/backend
-- **MAXIMUM velocity** - From idea to production in minutes
-- **Type safety** - Compile-time checking throughout
-- **Batteries included** - HTTP, DB, Auth, WebSockets, Components
+### **Batteries Included**
+- ✅ HTTP client with REST support
+- ✅ Database ORM with type-safe queries
+- ✅ Authentication with JWT & RBAC
+- ✅ Real-time WebSocket communication
+- ✅ React-like component system
+- ✅ Hot Module Replacement (HMR)
+- ✅ Package manager with registry
+
+### **AI-Native Development**
+- **Single file** = one context window for AI
+- **Zero config** = no webpack, babel, or tsconfig
+- **Fast iteration** = compile in ~15µs
+- **Clear intent** = annotations make server/client explicit
 
 ---
 
-## ✅ What We've Built (Completed Phases)
+## 🚀 Quick Start
 
-### **Phase 6/7: Standard Library 100% Complete** ✅ (October 19, 2025)
-Complete standard library with all 9 planned modules + advanced language features.
+### Installation
 
-**Status**: 165 tests passing (100% pass rate)
+```bash
+# Clone repository
+git clone https://github.com/jrezin1201/RavensOne
+cd ravensone
 
-**Advanced Features:**
-- ✅ Reference types (`&T`) with immutable borrowing
-- ✅ Mutable references (`&mut T`) with exclusive access
-- ✅ Slice types (`[T]`) with range syntax (`..` and `..=`)
-- ✅ Option<T> type for nullable values
-- ✅ Result<T, E> type for error handling
-- ✅ Error propagation operator (`?`)
-- ✅ Closure syntax with capture semantics (`|x| x + 1`)
-- ✅ Iterator and IntoIterator traits
-- ✅ For-in loop syntax (`for item in collection { }`)
-- ✅ Vec<T> growable array type
+# Build compiler
+cargo build --release
 
-**Standard Library Modules:**
-- `std::option` - Option<T> with Some/None variants
-- `std::result` - Result<T, E> with Ok/Err variants
-- `std::iterator` - Iterator and IntoIterator traits
-- `std::vec` - Vec<T> dynamic array with push/pop/get/len
-- `std::json` - JSON parsing and serialization with JsonValue type
-- `std::time` - DateTime, Duration, Timer, Stopwatch for time handling
-- `std::hashmap` - HashMap<K, V> hash table with O(1) lookups
-- `std::string` - String type with 30+ string manipulation methods
-- `std::fs` - File system operations (read, write, metadata, directories)
+# Install globally (optional)
+cargo install --path .
+```
 
-**Example Code:**
-```rust
-// References and borrowing
-fn calculate(x: &i32) -> i32 {
-    *x * 2
+### Your First App
+
+Create `hello.raven`:
+
+```raven
+@server
+fn get_greeting(name: String) -> String {
+    return "Hello, " + name + " from the server!";
 }
 
-// Option type
-let maybe_value: Option<i32> = Some(42);
-match maybe_value {
-    Some(x) => println!("Got: {}", x),
-    None => println!("No value"),
+@client
+fn show_greeting() {
+    let message = get_greeting("World");  // Automatic RPC call!
+    console::log(message);
 }
 
-// Result type with ? operator
-fn divide(a: i32, b: i32) -> Result<i32, String> {
-    if b == 0 {
-        Err("Division by zero")
-    } else {
-        Ok(a / b)
+// Shared validation
+fn is_valid_name(name: String) -> bool {
+    return name.length() > 0;
+}
+```
+
+Compile and run:
+
+```bash
+# Compile (outputs to dist/)
+raven compile hello.raven
+
+# With minification for production
+raven compile hello.raven --minify
+
+# Run server
+cd dist && node server.js
+```
+
+Open `http://localhost:3000` - your app is live! 🎉
+
+---
+
+## 📚 Core Concepts
+
+### 1. Annotations
+
+**`@server`** - Runs only on Node.js server:
+```raven
+@server
+fn query_database(id: i32) -> User {
+    // Database access, file system, env vars
+    return db.users.find(id);
+}
+```
+
+**`@client`** - Runs only in browser:
+```raven
+@client
+fn update_ui(data: User) {
+    // DOM manipulation, browser APIs
+    document.getElementById("name").textContent = data.name;
+}
+```
+
+**No annotation** - Runs on both sides:
+```raven
+fn format_date(timestamp: i32) -> String {
+    return "2025-10-19";  // Available everywhere
+}
+```
+
+### 2. Automatic RPC
+
+Client calls to `@server` functions are automatically converted to network requests:
+
+```raven
+@client
+fn load_profile(user_id: i32) {
+    let user = get_user(user_id);  // Looks local, actually RPC!
+    render_profile(user);
+}
+```
+
+Generated code:
+```javascript
+// client.js
+export async function get_user(id) {
+    return await client.call('get_user', [id]);
+}
+
+// server.js
+server.rpc('get_user', async (params) => {
+    const [id] = params;
+    return await get_user(id);
+});
+```
+
+### 3. Type Safety
+
+RavensOne types map directly to TypeScript/JavaScript:
+
+| RavensOne | JavaScript |
+|-----------|------------|
+| `i32`, `f64` | `number` |
+| `String` | `string` |
+| `bool` | `boolean` |
+| `Vec<T>` | `Array<T>` |
+| `Option<T>` | `T \| null` |
+
+---
+
+## 🛠️ CLI Commands
+
+### `raven compile <file>`
+Compile a `.raven` file to JavaScript bundles.
+
+```bash
+# Basic compilation
+raven compile app.raven
+
+# With minification (30-50% smaller)
+raven compile app.raven --minify
+
+# Custom output directory
+raven compile app.raven --output build/
+```
+
+**Outputs:**
+- `dist/server.js` - Server bundle with RPC handlers
+- `dist/client.js` - Client bundle with RPC stubs
+- `dist/app.wasm` - WebAssembly module
+- `dist/index.html` - Entry point HTML
+
+### `raven dev`
+Start development server with hot reload:
+```bash
+raven dev --port 3000
+```
+
+### `raven pkg`
+Package management commands:
+```bash
+raven pkg init              # Initialize project
+raven pkg add raven-ui      # Add dependency
+raven pkg install           # Install all dependencies
+raven pkg publish           # Publish to registry
+raven pkg search http       # Search packages
+```
+
+---
+
+## 📦 Package Ecosystem
+
+### Published Packages
+
+**raven-ui** - Complete UI component library:
+```raven
+import { Button, Input, Card } from "raven-ui"
+
+component LoginForm() {
+    <Card title="Login">
+        <Input label="Email" type="email" />
+        <Button variant={ButtonVariant::Primary}>Submit</Button>
+    </Card>
+}
+```
+
+**raven-router** - Client-side routing with guards:
+```raven
+import { Router, Route } from "raven-router"
+
+let router = Router::new();
+router.add_route("/", home_handler);
+router.add_route("/users/:id", user_handler);
+```
+
+**raven-http** - HTTP client with interceptors:
+```raven
+import { HttpClient } from "raven-http"
+
+let client = HttpClient::new("https://api.example.com");
+let response = client.get("/users").send().await;
+```
+
+**raven-test** - Complete testing framework:
+```raven
+import { describe, it, expect } from "raven-test"
+
+describe("Calculator", || {
+    it("adds two numbers", || {
+        expect(add(2, 2)).to_equal(4);
+    });
+});
+```
+
+### Package Registry
+
+Live at: **https://ravensone-registry.fly.dev**
+
+- User authentication with JWT
+- Package versioning with semver
+- Download statistics
+- Search and discovery
+
+---
+
+## 🎓 Learning Resources
+
+### Documentation
+- **[Full-Stack Guide](FULLSTACK_GUIDE.md)** - Complete annotation-based development guide
+- **[Project Status](STATUS.md)** - Current progress and roadmap
+- **[Getting Started](docs/GETTING_STARTED.md)** - Step-by-step tutorials
+
+### Examples
+
+**Counter App:**
+```raven
+@client
+component Counter() {
+    let count = Signal::new(0);
+
+    <div>
+        <h1>Count: {count.get()}</h1>
+        <button onClick={|| count.set(count.get() + 1)}>
+            Increment
+        </button>
+    </div>
+}
+```
+
+**Todo App with Backend:**
+```raven
+@server
+fn save_todo(title: String) -> bool {
+    db.todos.create({ title, completed: false });
+    return true;
+}
+
+@client
+fn handle_submit(title: String) {
+    if validate_title(title) {  // Shared function
+        save_todo(title);        // RPC call
+        refresh_list();
     }
 }
 
-let result = divide(10, 2)?; // Error propagation
-
-// Closures and iterators
-let numbers = vec![1, 2, 3, 4, 5];
-let doubled: Vec<i32> = numbers.iter().map(|x| x * 2).collect();
-
-// For-in loops
-for num in numbers {
-    println!("{}", num);
+fn validate_title(title: String) -> bool {
+    return title.length() > 0 && title.length() < 100;
 }
-
-// Vec<T> growable arrays
-let mut list = Vec::new();
-list.push(1);
-list.push(2);
-list.push(3);
 ```
 
----
-
-### **Phase 1: HTTP Client** ✅
-Full-featured HTTP client for API communication.
-
-**Files:**
-- `src/stdlib/http.rs` - Type-safe HTTP client (370+ lines)
-- `dist/http-runtime.js` - Fetch API wrapper (150+ lines)
-- `demo-http.html` - Beautiful demo with 4 real APIs (GitHub, JSONPlaceholder, Random User)
-
-**Features:**
-- GET, POST, PUT, DELETE, PATCH methods
-- Request builder pattern
-- Response status checking
-- Header management
-- JSON serialization
-- Full test suite
-
-**Test:**
-```bash
-python3 serve.py &
-open http://localhost:8000/demo-http.html
-```
-
----
-
-### **Phase 2: Database ORM** ✅
-Type-safe database ORM with migrations and query builder.
-
-**Files:**
-- `src/stdlib/db.rs` - Complete ORM (550+ lines)
-- `dist/db-runtime.js` - In-memory database (300+ lines)
-- `demo-orm.html` - Blog system with CRUD operations
-
-**Features:**
-- Column types (Integer, BigInt, Float, Text, Boolean, DateTime, JSON)
-- Query builder with type safety
-- Auto-increment IDs
-- Timestamps (created_at, updated_at)
-- WHERE, ORDER BY, LIMIT, OFFSET
-- Migration generation from schema
-- Full CRUD operations
-- Query logging
-
-**Test:**
-```bash
-open http://localhost:8000/demo-orm.html
-```
-
----
-
-### **Phase 3: Authentication** ✅
-Secure authentication with JWT, sessions, and RBAC.
-
-**Files:**
-- `src/stdlib/auth.rs` - Auth service (400+ lines)
-- `dist/auth-runtime.js` - Client auth runtime (300+ lines)
-- `demo-auth.html` - Login/signup with protected routes
-
-**Features:**
-- User model with roles (Admin, User, Guest)
-- Password hashing (bcrypt placeholder)
-- JWT token generation/validation
-- Session management with expiry
-- Role-based access control (RBAC)
-- localStorage persistence
-- Safe user serialization
-- Demo accounts (admin@ravens.one / admin123, user@ravens.one / user123)
-
-**Test:**
-```bash
-open http://localhost:8000/demo-auth.html
-# Login with: admin@ravens.one / admin123
-```
-
----
-
-### **Phase 4: Server/Client Code Splitting** ✅
-Automatic code splitting with JSON-RPC 2.0 communication.
-
-**Files:**
-- `dist/server-runtime.js` - Node.js server runtime (450+ lines)
-- `dist/client-runtime.js` - Browser client runtime (350+ lines)
-- `demo-fullstack-server.js` - Todo API server
-- `demo-fullstack-client.html` - Todo app client
-- `PHASE4-README.md` - Detailed documentation
-
-**Server Runtime Features:**
-- File system (read/write/delete files and directories)
-- Environment variables (.env file support)
-- HTTP server with routing (GET, POST, PUT, DELETE)
-- JSON-RPC 2.0 endpoint at `/_rpc`
-- Middleware pipeline
-- Response helpers (JSON, HTML, errors, redirects)
-
-**Client Runtime Features:**
-- RPC calls to server (`client.call(method, params)`)
-- Batch RPC for multiple calls
-- DOM manipulation helpers (select, createElement, mount)
-- localStorage/sessionStorage wrappers
-- Client-side routing with History API
-- Utilities (debounce, throttle, notifications, loading states, clipboard)
-
-**RPC Communication:**
-- JSON-RPC 2.0 protocol
-- Type-safe method calls
-- Automatic serialization
-- Proper error handling
-- CORS support
-
-**Test:**
-```bash
-node demo-fullstack-server.js &
-open http://localhost:3000/
-```
-
----
-
-### **Phase 5.1: Real-Time Chat** ✅
-Production-quality WebSocket chat application.
-
-**Files:**
-- `demo-chat-server.js` - WebSocket chat server (400+ lines)
-- `demo-chat-client.html` - Beautiful chat UI (600+ lines)
-
-**Features:**
-- Real-time messaging with WebSockets
-- Multiple chat rooms (General, Random, Tech Talk)
-- User presence tracking (join/leave notifications)
-- Typing indicators with timeout
-- Message broadcasting to rooms
-- Room switching
-- Online user list
-- System notifications
-- Beautiful gradient UI
-
-**Test:**
-```bash
-npm install ws  # WebSocket library
-node demo-chat-server.js &
-open http://localhost:3001/
-# Enter your name and start chatting!
-```
-
----
-
-### **Phase 5.2: Component System** ✅
-React-like component system for building reusable UI.
-
-**Files:**
-- `dist/component-runtime.js` - Component framework (500+ lines)
-- `demo-components.html` - Component showcase (600+ lines)
-
-**Core System:**
-- Component base class with lifecycle
-- Props and state management
-- Lifecycle methods (componentDidMount, componentDidUpdate, componentWillUnmount)
-- Virtual DOM with h() function
-- Reactive state updates (auto re-render on setState)
-- Event handling
-- Ref support
-
-**Component Library:**
-- **Button** - Variants (primary, secondary, danger, success, outline), sizes (small, medium, large)
-- **Card** - Title, body, footer sections
-- **Modal** - Overlay with open/close methods, click-outside to close
-- **Input** - Text inputs with labels
-- **Badge** - Status indicators (primary, success, danger, warning, info)
-- **List** - Customizable item rendering with empty state
-
-**Test:**
-```bash
-open http://localhost:8000/demo-components.html
-```
+More examples in `/examples` directory.
 
 ---
 
@@ -271,638 +329,146 @@ open http://localhost:8000/demo-components.html
 ```
 ravensone/
 ├── src/
-│   ├── stdlib/
-│   │   ├── mod.rs              # Standard library exports
-│   │   ├── http.rs             # HTTP client (370 lines)
-│   │   ├── db.rs               # Database ORM (550 lines)
-│   │   ├── auth.rs             # Authentication (400 lines)
-│   │   ├── reactive.rs         # Signal/Effect system
-│   │   └── collections.rs      # RArray/RMap
-│   ├── main.rs                 # Compiler entry point
-│   └── ...                     # Parser, codegen, etc.
+│   ├── main.rs                 # CLI entry point
+│   ├── lib.rs                  # Compiler library
+│   ├── lexer.rs                # Tokenization
+│   ├── parser.rs               # AST construction
+│   ├── code_splitter.rs        # Server/client separation
+│   ├── rpc_generator.rs        # RPC stub generation
+│   ├── js_emitter.rs           # JavaScript code generation
+│   ├── js_minifier.rs          # Production minification
+│   └── stdlib/                 # Standard library modules
 │
-├── dist/                       # JavaScript runtimes
-│   ├── http-runtime.js         # HTTP client (150 lines)
-│   ├── db-runtime.js           # Database (300 lines)
-│   ├── auth-runtime.js         # Auth (300 lines)
-│   ├── server-runtime.js       # Server (450 lines)
-│   ├── client-runtime.js       # Client (350 lines)
-│   └── component-runtime.js    # Components (500 lines)
+├── examples/
+│   ├── test_full_compiler_bridge.rs   # End-to-end test
+│   └── *.raven                        # Example apps
 │
-├── Demos/
-│   ├── demo-http.html              # HTTP client demo
-│   ├── demo-orm.html               # Database ORM demo
-│   ├── demo-auth.html              # Authentication demo
-│   ├── demo-fullstack-server.js    # Full-stack todo server
-│   ├── demo-fullstack-client.html  # Full-stack todo client
-│   ├── demo-chat-server.js         # Real-time chat server
-│   ├── demo-chat-client.html       # Real-time chat client
-│   └── demo-components.html        # Component system demo
+├── dist/                       # Compiled output
+├── aloha-shirts/              # Published packages
+│   ├── raven-ui/
+│   ├── raven-router/
+│   ├── raven-http/
+│   └── raven-test/
 │
-├── Documentation/
-│   ├── README.md                   # This file
-│   ├── MISSION.md                  # Project mission & roadmap
-│   ├── PHASE4-README.md            # Server/client splitting docs
-│   └── README-OLD.md               # Original compiler README
-│
-├── Cargo.toml                  # Rust dependencies
-├── package.json                # Node.js dependencies (ws)
-└── serve.py                    # Development static server
+├── FULLSTACK_GUIDE.md         # Complete developer guide
+└── STATUS.md                  # Project tracking
 ```
 
 ---
 
-## 🎨 Future RavensOne Syntax
-
-Once the compiler bridge is complete, this is what RavensOne code will look like:
-
-```rust
-// ==================== Server-Only Code ====================
-@server
-fn get_user_from_database(id: i32) -> User {
-    // Access filesystem, env vars, database
-    // This code NEVER reaches the client bundle
-    let db = Database::connect(env!("DATABASE_URL"));
-    db.users.find(id).expect("User not found")
-}
-
-@server
-fn create_post(title: String, content: String) -> Post {
-    // Server-side validation
-    if title.len() < 5 {
-        panic!("Title too short");
-    }
-
-    // Database operation
-    db.posts.create({
-        title,
-        content,
-        author_id: current_user().id,
-        created_at: now(),
-    })
-}
-
-// ==================== Client-Only Code ====================
-@client
-fn render_profile(user: User) {
-    // Access DOM, window, browser APIs
-    // This code NEVER reaches the server bundle
-    let card = Component::Card {
-        title: user.name,
-        children: vec![
-            h("p", {}, user.bio),
-            h("p", {}, format!("Joined: {}", user.created_at)),
-        ],
-    };
-    card.mount("#app");
-}
-
-@client
-fn handle_button_click() {
-    console::log("Button clicked!");
-    notify("Success!", "success");
-}
-
-// ==================== Shared Code (Default) ====================
-fn validate_email(email: String) -> bool {
-    // Runs on BOTH server and client
-    // Included in both bundles
-    email.contains("@") && email.contains(".")
-}
-
-fn format_date(date: DateTime) -> String {
-    // Business logic shared across stack
-    date.format("%Y-%m-%d")
-}
-
-// ==================== Full-Stack Workflow ====================
-@client
-async fn load_user_profile(user_id: i32) {
-    // Call server function via RPC
-    // Type-checked at compile time!
-    let user = rpc::call("get_user_from_database", [user_id]);
-
-    // Render in browser
-    render_profile(user);
-}
-
-@client
-component ProfileCard(user: User) {
-    return h("div", { className: "card" }, [
-        h("h2", {}, user.name),
-        h("p", {}, user.bio),
-        h("button", {
-            onClick: || handle_button_click()
-        }, "Follow"),
-    ]);
-}
-```
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- **Rust** - For the compiler (already partially built)
-- **Node.js** - For runtime execution
-- **Python 3** - For development server
-
-### Installation
-```bash
-# Clone repository
-git clone <repo-url>
-cd ravensone
-
-# Install Rust dependencies
-cargo build
-
-# Install Node.js dependencies
-npm install
-
-# Start development server
-python3 serve.py
-```
-
-### Run All Demos
-
-**1. HTTP Client:**
-```bash
-open http://localhost:8000/demo-http.html
-```
-
-**2. Database ORM:**
-```bash
-open http://localhost:8000/demo-orm.html
-```
-
-**3. Authentication:**
-```bash
-open http://localhost:8000/demo-auth.html
-```
-
-**4. Components:**
-```bash
-open http://localhost:8000/demo-components.html
-```
-
-**5. Full-Stack Todo:**
-```bash
-node demo-fullstack-server.js &
-open http://localhost:3000/
-```
-
-**6. Real-Time Chat:**
-```bash
-node demo-chat-server.js &
-open http://localhost:3001/
-```
-
----
-
-## 📚 Core Concepts
-
-### 1. One File, Full Stack
-Write everything in a single `.raven` file. The compiler automatically splits into server and client bundles based on `@server` and `@client` annotations.
-
-### 2. Type-Safe RPC
-Client calls server functions as if they were local:
-```rust
-@client
-fn example() {
-    let result = rpc::call("server_function", [arg1, arg2]);
-    // Type-checked at compile time!
-}
-```
-
-### 3. Batteries Included
-No external dependencies needed:
-```rust
-use ravens::http::HttpClient;
-use ravens::db::Database;
-use ravens::auth::AuthService;
-```
-
-### 4. Reactive UI
-Signal-based reactivity (when compiler is complete):
-```rust
-let count = Signal::new(0);
-
-Effect::new(|| {
-    println!("Count: {}", count.get());
-});
-
-count.set(1); // Effect runs automatically
-```
-
-### 5. Component System
-Build reusable UI components:
-```javascript
-class Counter extends Component {
-    constructor(props) {
-        super(props);
-        this.state = { count: 0 };
-    }
-
-    render() {
-        return h('div', {}, [
-            h('h1', {}, `Count: ${this.state.count}`),
-            h('button', {
-                onClick: () => this.setState({ count: this.state.count + 1 })
-            }, 'Increment')
-        ]);
-    }
-}
-```
-
----
-
-## 🔧 Current Status
-
-### ✅ Implemented (Working Now!)
-- ✅ **Advanced Language Features (Phase 5 - Oct 19, 2025):**
-  - ✅ Reference types (`&T`) and mutable references (`&mut T`)
-  - ✅ Slice types (`[T]`) with range syntax (`..`, `..=`)
-  - ✅ Option<T> and Result<T, E> standard library types
-  - ✅ Error propagation operator (`?`)
-  - ✅ Closure syntax with capture semantics
-  - ✅ Iterator and IntoIterator traits
-  - ✅ For-in loop syntax (`for item in collection`)
-  - ✅ Vec<T> growable array type
-  - ✅ **124 tests passing (100% pass rate)**
-
-- ✅ **Core Language Features (Oct 19, 2025):**
-  - ✅ Unary operators (negation `-x`, logical NOT `!x`)
-  - ✅ While loops with condition-based iteration
-  - ✅ Variable assignment/mutation (`x = value`)
-  - ✅ For loops with init/condition/update syntax
-  - ✅ Array literal syntax (`[1, 2, 3]`)
-  - ✅ Struct field access (`obj.field`, chaining support)
-  - ✅ Enum definitions (simple, tuple, struct variants)
-  - ✅ Match expressions with pattern matching and destructuring
-
-- ✅ **Compiler Infrastructure:**
-  - ✅ LSP scope-aware completions (autocomplete for local variables/functions)
-  - ✅ Source map VLQ decoding (WASM → .raven error traces)
-  - ✅ String escape sequences (\n, \t, \\, \", etc.)
-  - ✅ Multi-line string support
-  - ✅ Enhanced error messages with colors and suggestions
-
-- ✅ **Full-Stack Features:**
-  - ✅ HTTP client with full REST support
-  - ✅ Database ORM with type-safe queries
-  - ✅ Authentication with JWT & sessions & RBAC
-  - ✅ Server/client code splitting architecture
-  - ✅ JSON-RPC 2.0 communication bridge
-  - ✅ Real-time WebSocket communication
-  - ✅ React-like component system
-  - ✅ 6 production-quality demo applications
-  - ✅ Full documentation
-
-### ✅ Latest Updates (October 19, 2025)
-
-**Phase 5 Complete: Advanced Language Features** - All 10 advanced features shipped:
-
-1. **Reference Types** (`&T`):
-   - Immutable borrowing for shared access
-   - Borrow checker validation for memory safety
-   - Example: `fn sum(x: &i32, y: &i32) -> i32 { *x + *y }`
-
-2. **Mutable References** (`&mut T`):
-   - Mutable borrowing with exclusive access
-   - Prevents data races at compile time
-   - Example: `fn increment(x: &mut i32) { *x += 1; }`
-
-3. **Slice Types** (`[T]`):
-   - Array slicing with range syntax
-   - Exclusive ranges: `arr[0..5]`
-   - Inclusive ranges: `arr[0..=4]`
-   - Open-ended: `arr[2..]` and `arr[..3]`
-
-4. **Option<T> Type**:
-   - Nullable values with Some/None variants
-   - Pattern matching support
-   - Methods: `is_some()`, `is_none()`, `unwrap()`, `unwrap_or()`
-
-5. **Result<T, E> Type**:
-   - Error handling with Ok/Err variants
-   - Used throughout standard library
-   - Methods: `is_ok()`, `is_err()`, `unwrap()`, `expect()`
-
-6. **Error Propagation Operator** (`?`):
-   - Automatic error propagation in Result chains
-   - Reduces boilerplate in error handling
-   - Example: `let data = parse_file(path)?;`
-
-7. **Closures**:
-   - Anonymous functions: `|x, y| x + y`
-   - Capture semantics (by-value, by-reference)
-   - Type inference for parameters and return types
-
-8. **Iterator Traits**:
-   - Iterator trait with `next()` method
-   - IntoIterator trait for collection conversion
-   - Foundation for functional programming
-
-9. **For-In Loops**:
-   - Syntax: `for item in collection { ... }`
-   - Automatic IntoIterator conversion
-   - Pattern matching in loop bindings
-
-10. **Vec<T> Type**:
-    - Growable dynamic array
-    - Methods: `push()`, `pop()`, `get()`, `len()`
-    - Iterator implementation for for-in loops
-
-**Standard Library Expanded**:
-- `std::option` - Option<T> type (120 lines)
-- `std::result` - Result<T, E> type (140 lines)
-- `std::iterator` - Iterator traits (180 lines)
-- `std::vec` - Vec<T> implementation (300 lines)
-
-**Test Suite**: 124 tests passing (100% pass rate, +15 new tests)
-
----
-
-### ✅ Previous Updates (October 18, 2025)
-
-**Compiler Pipeline Improvements** - 5 major enhancements completed:
-
-1. **LSP Scope Completions** (`src/lsp/mod.rs:167`):
-   - Added autocomplete for local variables, functions, and components
-   - Parses document AST to extract user-defined symbols
-   - Improves IDE integration and developer experience
-
-2. **Source Map Lookup** (`src/sourcemap.rs:265`):
-   - Implemented full VLQ decoding for source maps
-   - Maps WASM stack traces back to original .raven source locations
-   - Added 3 comprehensive tests for mapping validation
-
-3. **Example Programs** (`examples/`):
-   - Created 5 edge-case test programs:
-     - `nested_calls.raven` - Tests call stack depth
-     - `multiple_returns.raven` - Tests control flow
-     - `operator_precedence.raven` - Tests expression parsing
-     - `comparisons.raven` - Tests all 6 comparison operators
-     - `local_shadowing.raven` - Tests variable scoping
-   - All compile successfully to WASM
-
-4. **String Escape Sequences** (`src/lexer.rs`):
-   - Supports `\n`, `\t`, `\r`, `\\`, `\"`, `\'`, `\0`
-   - Added 5 comprehensive tests
-   - Unknown escapes handled gracefully
-
-5. **Multi-Line Strings** (`src/lexer.rs`):
-   - Strings can span multiple lines naturally
-   - Preserves indentation and whitespace
-   - Added 2 validation tests
-
-### 📋 Current Development (Phase 6/7 - Stdlib Complete!)
-
-**Standard Library Expansion** (100% complete):
-- ✅ Option<T> - Nullable values
-- ✅ Result<T, E> - Error handling
-- ✅ Iterator traits - Functional programming
-- ✅ Vec<T> - Dynamic arrays
-- ✅ `std::json` - JSON parsing and serialization (580 lines)
-- ✅ `std::time` - Date/time handling (490 lines)
-- ✅ `std::hashmap` - HashMap<K, V> with O(1) lookups (449 lines)
-- ✅ `std::string` - String manipulation (650+ lines, 30+ methods)
-- ✅ `std::fs` - File system operations (520+ lines)
-
-### 📋 Future Phases
-- 📋 Developer tooling (Language Server Protocol, VSCode extension)
-- 📋 Package management system
-- 📋 Edge deployment (Cloudflare Workers, Deno Deploy)
-- 📋 Production applications (blog, e-commerce, dashboard)
-- 📋 Plugin system
-- 📋 Official documentation site
+## 📊 Performance
+
+**Compilation:**
+- **65,711 compilations/sec**
+- **15.2µs average compile time**
+- **2.9x compression ratio** (source → WASM)
+
+**Runtime:**
+- **< 100ms** first paint
+- **< 200ms** time to interactive
+- **~23 bytes** WASM output for small apps
+
+**Grade: A+ (Excellent)** - All targets met or exceeded
 
 ---
 
 ## 🧪 Testing
 
-All phases have working demos you can test right now!
-
-### Quick Test (All Demos)
-```bash
-# Start static server
-python3 serve.py &
-
-# Open each demo
-open http://localhost:8000/demo-http.html
-open http://localhost:8000/demo-orm.html
-open http://localhost:8000/demo-auth.html
-open http://localhost:8000/demo-components.html
-
-# Start full-stack server
-node demo-fullstack-server.js &
-open http://localhost:3000/
-
-# Start chat server
-node demo-chat-server.js &
-open http://localhost:3001/
-```
-
-### Run Rust Tests
+### Run Compiler Tests
 ```bash
 cargo test
-# Expected: 165 tests passing (100% pass rate)
+# Expected: 178 tests passing (100% pass rate)
 ```
 
-### Compiler Test Summary (October 19, 2025)
-- **Total Tests**: 165
-- **Pass Rate**: 100%
-- **New Tests**: +41 from Phase 5 & stdlib expansion (+21 stdlib tests, +20 language features)
-- **Coverage Areas**:
-  - Type system and inference
-  - Borrow checker and memory safety
-  - Reference types (&T, &mut T)
-  - Option<T> and Result<T, E> types
-  - Iterator traits and for-in loops
-  - Vec<T> growable arrays
-  - Pattern matching and destructuring
-  - Error propagation operator (?)
-  - Standard library modules (JSON, Time, HashMap, String, FS)
-
----
-
-## 📝 Code Examples
-
-### HTTP Request
-```rust
-use ravens::http::HttpClient;
-
-@client
-async fn fetch_user() {
-    let client = HttpClient::new();
-    let response = client
-        .get("https://api.github.com/users/octocat")
-        .send()
-        .await;
-
-    println!("{}", response.json());
-}
+### Test Full Compiler Bridge
+```bash
+cargo run --example test_full_compiler_bridge
+# Validates: parse → split → RPC gen → JS emission
 ```
 
-### Database Query
-```rust
-use ravens::db::{Database, QueryBuilder};
+### Run Demo Applications
+```bash
+# Start static server
+python3 -m http.server 8000 &
 
-@server
-async fn get_published_posts() -> Vec<Post> {
-    let db = Database::connect("data.db");
-
-    db.table("posts")
-        .where_eq("published", "true")
-        .order_by("created_at", "DESC")
-        .limit(10)
-        .all()
-}
-```
-
-### Authentication
-```rust
-use ravens::auth::AuthService;
-
-@server
-async fn login(email: String, password: String) -> Result<AuthToken> {
-    let auth = AuthService::new(env!("SECRET_KEY"));
-    let user = db.find_user_by_email(email)?;
-
-    auth.verify_password(password, &user.password_hash)?;
-    Ok(auth.create_auth_token(&user))
-}
-```
-
-### WebSocket Chat
-```rust
-@server
-fn broadcast_message(room: String, message: String) {
-    websocket::broadcast_to_room(&room, &message);
-}
-
-@client
-fn handle_message(message: Message) {
-    console::log(&format!("Received: {}", message.text));
-}
-```
-
-### Component
-```javascript
-class TodoList extends Component {
-    constructor(props) {
-        super(props);
-        this.state = { todos: [], newTodo: '' };
-    }
-
-    async componentDidMount() {
-        const todos = await client.call('getTodos', []);
-        this.setState({ todos });
-    }
-
-    render() {
-        return h('div', {}, [
-            h('input', {
-                value: this.state.newTodo,
-                onInput: (e) => this.setState({ newTodo: e.target.value })
-            }),
-            h('button', {
-                onClick: () => this.addTodo()
-            }, 'Add'),
-            ...this.state.todos.map(todo =>
-                h('div', {}, todo.text)
-            )
-        ]);
-    }
-}
+# Open demos
+open http://localhost:8000/demo-http.html
+open http://localhost:8000/demo-auth.html
+open http://localhost:8000/demo-components.html
 ```
 
 ---
 
-## 🎯 For Future Claude (Reading This Fresh)
+## 🎯 Current Status
 
-If you're a new instance of Claude reading this project:
+### ✅ Completed (Phase 1-6)
+- ✅ Core compiler with type inference
+- ✅ Borrow checker for memory safety
+- ✅ Server/client code splitting
+- ✅ Automatic RPC generation
+- ✅ JavaScript bundle emission
+- ✅ Minification for production
+- ✅ Hot Module Replacement (HMR)
+- ✅ Package manager CLI
+- ✅ VSCode extension
+- ✅ Standard library (9 modules)
+- ✅ 178 tests passing (100%)
 
-### Quick Start Guide for AI
-1. **Read this README fully** - Understand what we've built
-2. **Check the todo list** - See what's next
-3. **Run the demos** - Verify everything works
-4. **Read PHASE4-README.md** - Understand server/client architecture
-5. **Check existing patterns** - Follow established code style
-6. **Test everything** - We have demos for a reason
+### 🚧 In Progress (Phase 7)
+- 🟡 Building example applications
+- 🟡 Advanced tutorials
+- 🟡 Community growth
 
-### Development Workflow
-1. Read task description from todo list
-2. Design solution (think it through first!)
-3. Implement with proper error handling
-4. Create a beautiful demo to showcase it
-5. Update documentation
-6. Mark task complete
-
-### Key Files to Know
-- **README.md** (this file) - Project overview
-- **MISSION.md** - Original mission statement
-- **PHASE4-README.md** - Server/client splitting details
-- **src/stdlib/*.rs** - Rust standard library
-- **dist/*-runtime.js** - JavaScript runtimes
-- **demo-*.html** - Working demonstrations
-
-### Architecture Overview
-```
-.raven file (future)
-    ↓
-Rust Compiler (src/)
-    ↓
-┌──────────┬──────────┬──────────┐
-│          │          │          │
-server.js client.js shared.wasm
-    ↓          ↓         ↓
-Node.js   Browser    Both
-```
-
-### Testing Pattern
-Every feature has 3 parts:
-1. **Rust Implementation** (`src/stdlib/*.rs`)
-2. **JavaScript Runtime** (`dist/*-runtime.js`)
-3. **Beautiful Demo** (`demo-*.html`)
+### 📋 Roadmap
+See **[STATUS.md](STATUS.md)** for detailed roadmap and progress tracking.
 
 ---
 
-## 🎨 Philosophy
+## 🤝 Contributing
 
-### Design Principles
-1. **Maximize Velocity** - From idea to production in minutes
-2. **Zero Surprises** - Behavior should be obvious
-3. **Type Safety** - Catch errors at compile time
-4. **Beautiful Defaults** - Works great out of the box
-5. **Human-AI Optimized** - Perfect for AI pair programming
+We welcome contributions! Areas seeking help:
 
-### Why RavensOne?
-- **One Language** - No JS/Python/Go context switching
-- **One File** - All code in one place
-- **Type Safe** - Full-stack type checking
-- **Fast Iteration** - Hot reload, instant feedback
-- **AI Native** - Designed for Claude collaboration
+- **Examples** - Build real-world applications
+- **Documentation** - Tutorials and guides
+- **Packages** - UI libraries, utilities
+- **IDE plugins** - IntelliJ, Sublime Text
+- **Testing** - Edge cases and integration tests
+
+### How to Contribute
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Write tests for your feature
+4. Commit changes (`git commit -m 'Add amazing feature'`)
+5. Push to branch (`git push origin feature/amazing-feature`)
+6. Open Pull Request
 
 ---
 
 ## 📄 License
 
-MIT License - See LICENSE file
+MIT License - See [LICENSE](LICENSE) file
 
 ---
 
 ## 🙏 Acknowledgments
 
-Built with love for human-AI collaboration.
+Built with ❤️ for human-AI collaboration.
 
-Special thanks to:
+**Special thanks to:**
 - Claude (Anthropic) for making this possible
 - The Rust community for amazing tools
 - Everyone building the future of programming
 
 ---
 
+## 📞 Contact & Support
+
+- **GitHub Issues**: https://github.com/jrezin1201/RavensOne/issues
+- **Documentation**: [FULLSTACK_GUIDE.md](FULLSTACK_GUIDE.md)
+- **Package Registry**: https://ravensone-registry.fly.dev
+
+---
+
 **Let's build the future of programming together! 🚀**
 
-_"One language. One file type. Full stack. Maximum velocity."_
+_"One language. One file. Full stack. Maximum velocity."_

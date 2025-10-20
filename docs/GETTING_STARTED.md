@@ -203,6 +203,65 @@ let load_user = async || {
 
 ---
 
+## Package Management
+
+RavensOne has a built-in package manager with a live registry at [ravensone-registry.fly.dev](https://ravensone-registry.fly.dev).
+
+### Initialize a New Package
+
+```bash
+raven pkg init
+```
+
+This creates a `raven.toml` manifest file for your package.
+
+### Install Packages
+
+```bash
+# Install a specific package
+raven pkg add raven-ui
+
+# Install all dependencies from raven.toml
+raven pkg install
+```
+
+### Browse Available Packages
+
+```bash
+# Search for packages
+raven pkg search http
+
+# View package info
+raven pkg info raven-ui
+```
+
+### Publishing Packages
+
+First, create an account on the registry:
+
+```bash
+# Login to the registry
+raven pkg login
+# You'll be prompted for email and password
+```
+
+Then publish your package:
+
+```bash
+# Publish to the registry
+raven pkg publish
+```
+
+### Popular Packages
+
+- **raven-ui** - Component library with buttons, inputs, modals, etc.
+- **raven-router** - Client-side routing
+- **raven-http** - HTTP client with automatic JSON serialization
+- **raven-forms** - Form validation and handling
+- **raven-i18n** - Internationalization support
+
+---
+
 ## Building for Production
 
 ### Compile Your App
@@ -415,5 +474,6 @@ You now know the basics! Here are some next steps:
 
 ---
 
-*Last Updated: October 17, 2025*
+*Last Updated: October 19, 2025*
 *RavensOne Version: 0.1.0*
+*Registry: https://ravensone-registry.fly.dev*

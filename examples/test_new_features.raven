@@ -1,0 +1,19 @@
+// Simple test of array literals and for-in loops
+
+// Test 1: Array literal
+let numbers = [1, 2, 3, 4, 5];
+
+// Test 2: For-in loop with array
+let sum = 0;
+
+fn calculate_sum() {
+    for num in numbers {
+        sum = sum + num;
+    }
+    return sum;
+}
+
+fn main() {
+    let result = calculate_sum();
+    return result;
+}
